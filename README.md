@@ -105,10 +105,36 @@ src/
 
 ## 📖 Documentation
 
-- [Development Roadmap](docs/RudeBase3D%20Development%20Roadmap.md)
-- [Architecture Overview](docs/MODERN_3D_ARCHITECTURE.md)
-- [Camera Controls](docs/CAMERA_CONTROLS.md)
-- [Modeling Techniques](docs/modelingtechniques.md)
+- [🗺️ Development Roadmap](docs/ROADMAP.md) - Project phases and feature timeline
+- [🏛️ Project Governance](docs/GOVERNANCE.md) - Leadership structure and decision making
+- [🌳 Branching Strategy](docs/BRANCHING_STRATEGY.md) - Git workflow and release process
+- [🏗️ Architecture Overview](docs/MODERN_3D_ARCHITECTURE.md) - Technical architecture details
+- [📹 Camera Controls](docs/CAMERA_CONTROLS.md) - Viewport navigation guide
+- [🎨 Modeling Techniques](docs/modelingtechniques.md) - User guides and tutorials
+
+## 🤝 Contributing
+
+We welcome contributions from developers, artists, designers, and users! 
+
+- [📋 Contributing Guidelines](CONTRIBUTING.md) - How to contribute to the project
+- [🔒 Security Policy](SECURITY.md) - Reporting security vulnerabilities  
+- [📝 Changelog](CHANGELOG.md) - Project history and release notes
+
+### Quick Start for Contributors
+1. Read our [Contributing Guidelines](CONTRIBUTING.md)
+2. Check the [Development Roadmap](docs/ROADMAP.md) for current priorities
+3. Look for issues labeled `good first issue` 
+4. Join our Discord community for discussions
+5. Follow the [Branching Strategy](docs/BRANCHING_STRATEGY.md) for development
+
+## 🤝 Community
+
+Join our growing community of 3D artists, developers, and enthusiasts!
+
+- **💬 Discord**: [The No Hands Company Community](https://discord.gg/YOUR_INVITE_HERE) *(Discord server setup guide available)*
+- **🐛 Issues**: [GitHub Issues](https://github.com/The-No-Hands-company/RudeBase3D/issues)
+- **💡 Discussions**: [GitHub Discussions](https://github.com/The-No-Hands-company/RudeBase3D/discussions)
+- **📧 Email**: contact@no-hands-company.org
 
 ## 🚀 Development Status
 

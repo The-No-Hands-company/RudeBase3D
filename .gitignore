@@ -93,3 +93,6 @@ compile_commands.json
 settings.ini
 config.json
 *.settings
+
+# Community documentation (not part of codebase)
+docs/DISCORD_SETUP.md
