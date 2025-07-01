@@ -85,6 +85,16 @@ Thumbs.db
 .clangd/
 compile_commands.json
 
+# Internal development documentation (keep private)
+docs/DISCORD_SETUP.md
+docs/ARCHITECTURE_IMPROVEMENTS.md
+docs/HYBRID_IMPLEMENTATION_SUMMARY.md
+docs/PROJECT_OVERVIEW.md
+docs/RESTRUCTURE_PLAN.md
+docs/RudeBase3D Development Roadmap.md
+docs/internal/
+docs/private/
+
 # Assets that shouldn't be tracked (if very large)
 # assets/models/large/
 # assets/textures/4k/
@@ -93,3 +103,6 @@ compile_commands.json
 settings.ini
 config.json
 *.settings
+
+# Community documentation (not part of codebase)
+docs/DISCORD_SETUP.md

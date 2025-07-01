@@ -73,6 +73,31 @@ cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_CXX_STANDARD=23
 cmake --build . --config Release --parallel
 ```
 
+### Troubleshooting
+
+#### Qt6 Not Found
+If you get "Qt6 not found" errors, set the Qt path:
+
+**Windows:**
+```batch
+cmake .. -DCMAKE_PREFIX_PATH="D:/Qt/6.6.1/msvc2022_64"
+```
+
+**Linux:**
+```bash
+cmake .. -DCMAKE_PREFIX_PATH="/opt/Qt/6.6.1/gcc_64"
+```
+
+**macOS:**
+```bash
+cmake .. -DCMAKE_PREFIX_PATH="/Users/$(whoami)/Qt/6.6.1/macos"
+```
+
+#### Common Issues
+- **C++23 Support**: Ensure you have Visual Studio 2022 17.8+ or GCC 13+
+- **OpenGL Issues**: Update your graphics drivers
+- **Build Errors**: Try a clean build: `rm -rf build && mkdir build`
+
 ### Running
 
 After building, the executable will be in `build/bin/RudeBase3D.exe`
@@ -105,10 +130,37 @@ src/
 
 ## 📖 Documentation
 
-- [Development Roadmap](docs/RudeBase3D%20Development%20Roadmap.md)
-- [Architecture Overview](docs/MODERN_3D_ARCHITECTURE.md)
-- [Camera Controls](docs/CAMERA_CONTROLS.md)
-- [Modeling Techniques](docs/modelingtechniques.md)
+- **[🗺️ Development Roadmap](ROADMAP.md)** - Project phases and feature timeline
+- **[⚙️ Git Workflow](docs/GIT_WORKFLOW.md)** - Contribution workflow and branching strategy
+- **[🏛️ Project Governance](docs/GOVERNANCE.md)** - Leadership structure and decision making
+- **[️ Architecture Overview](docs/MODERN_3D_ARCHITECTURE.md)** - Technical architecture details
+- **[📹 Camera Controls](docs/CAMERA_CONTROLS.md)** - Viewport navigation guide
+- **[🎨 Modeling Techniques](docs/modelingtechniques.md)** - User guides and tutorials
+- **[📚 Full Documentation](docs/README.md)** - Complete documentation index
+
+## 🤝 Contributing
+
+We welcome contributions from developers, artists, designers, and users! 
+
+- [📋 Contributing Guidelines](CONTRIBUTING.md) - How to contribute to the project
+- [🔒 Security Policy](SECURITY.md) - Reporting security vulnerabilities  
+- [📝 Changelog](CHANGELOG.md) - Project history and release notes
+
+### Quick Start for Contributors
+1. Read our [Contributing Guidelines](CONTRIBUTING.md)
+2. Check the [Development Roadmap](docs/ROADMAP.md) for current priorities
+3. Look for issues labeled `good first issue` 
+4. Join our Discord community for discussions
+5. Follow the [Branching Strategy](docs/BRANCHING_STRATEGY.md) for development
+
+## 🤝 Community
+
+Join our growing community of 3D artists, developers, and enthusiasts!
+
+- **💬 Discord**: [The No Hands Company Community](https://discord.gg/YOUR_INVITE_HERE) *(Discord server setup guide available)*
+- **🐛 Issues**: [GitHub Issues](https://github.com/The-No-Hands-company/RudeBase3D/issues)
+- **💡 Discussions**: [GitHub Discussions](https://github.com/The-No-Hands-company/RudeBase3D/discussions)
+- **📧 Email**: contact@no-hands-company.org
 
 ## 🚀 Development Status
 
