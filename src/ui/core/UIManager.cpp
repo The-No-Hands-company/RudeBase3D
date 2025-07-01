@@ -146,6 +146,27 @@ void UIManager::createActions()
     m_deselectAllAction->setShortcut(QKeySequence("Ctrl+Shift+A"));
     m_deselectAllAction->setStatusTip("Deselect all objects");
     
+    // Modeling actions
+    m_extrudeAction = new QAction("&Extrude", this);
+    m_extrudeAction->setShortcut(QKeySequence("E"));
+    m_extrudeAction->setStatusTip("Extrude selected faces or edges");
+    
+    m_insetAction = new QAction("&Inset", this);
+    m_insetAction->setShortcut(QKeySequence("I"));
+    m_insetAction->setStatusTip("Inset selected faces");
+    
+    m_loopCutAction = new QAction("&Loop Cut", this);
+    m_loopCutAction->setShortcut(QKeySequence("Ctrl+R"));
+    m_loopCutAction->setStatusTip("Add loop cuts to selected edges");
+    
+    m_subdivisionAction = new QAction("&Subdivide", this);
+    m_subdivisionAction->setShortcut(QKeySequence("Ctrl+2"));
+    m_subdivisionAction->setStatusTip("Subdivide selected faces");
+    
+    m_bevelAction = new QAction("&Bevel", this);
+    m_bevelAction->setShortcut(QKeySequence("Ctrl+B"));
+    m_bevelAction->setStatusTip("Bevel selected edges or vertices");
+    
     // Create actions
     m_createCubeAction = new QAction("&Cube", this);
     m_createCubeAction->setStatusTip("Create a cube");
@@ -279,6 +300,15 @@ void UIManager::createEditMenu()
     m_editMenu->addSeparator();
     m_editMenu->addAction(m_selectAllAction);
     m_editMenu->addAction(m_deselectAllAction);
+    m_editMenu->addSeparator();
+    
+    // Modeling tools submenu
+    QMenu* modelingMenu = m_editMenu->addMenu("&Modeling");
+    modelingMenu->addAction(m_extrudeAction);
+    modelingMenu->addAction(m_insetAction);
+    modelingMenu->addAction(m_loopCutAction);
+    modelingMenu->addAction(m_subdivisionAction);
+    modelingMenu->addAction(m_bevelAction);
 }
 
 void UIManager::createCreateMenu()
@@ -396,6 +426,13 @@ void UIManager::connectSignals()
     connect(m_duplicateAction, &QAction::triggered, this, &UIManager::duplicateSelected);
     connect(m_selectAllAction, &QAction::triggered, this, &UIManager::selectAll);
     connect(m_deselectAllAction, &QAction::triggered, this, &UIManager::deselectAll);
+    
+    // Modeling operations
+    connect(m_extrudeAction, &QAction::triggered, this, &UIManager::extrudeSelected);
+    connect(m_insetAction, &QAction::triggered, this, &UIManager::insetSelected);
+    connect(m_loopCutAction, &QAction::triggered, this, &UIManager::loopCutSelected);
+    connect(m_subdivisionAction, &QAction::triggered, this, &UIManager::subdivideSelected);
+    connect(m_bevelAction, &QAction::triggered, this, &UIManager::bevelSelected);
     
     // Create operations
     connect(m_createCubeAction, &QAction::triggered, this, &UIManager::createCube);
