@@ -229,7 +229,7 @@ bool BaseComponent::event(QEvent* event)
 
 QColor BaseComponent::getThemeColor(ThemeManager::ColorRole role) const
 {
-    return m_themeManager ? m_themeManager->getColor(role) : QColor();
+    return ThemeManager::instance()->getColor(role);
 }
 
 void BaseComponent::showLoadingState()

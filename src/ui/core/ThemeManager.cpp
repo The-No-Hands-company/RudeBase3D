@@ -201,7 +201,9 @@ void ThemeManager::applyTheme(const QString& themeId)
     
     // Generate and apply Qt stylesheet
     QString styleSheet = generateStyleSheet(theme);
-    QApplication::instance()->setStyleSheet(styleSheet);
+    if (QApplication* app = qobject_cast<QApplication*>(QApplication::instance())) {
+        app->setStyleSheet(styleSheet);
+    }
     
     emit themeChanged(themeId);
 }

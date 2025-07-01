@@ -5,11 +5,10 @@
 #include <QEvent>
 #include <QColor>
 #include <QPalette>
+#include "../core/ThemeManager.h"
 
 namespace rudebase3d {
 namespace ui {
-
-class ThemeManager;
 
 /**
  * @brief Base class for all UI components
@@ -110,7 +109,7 @@ private slots:
 private:
     void updateTooltip();
 
-    ThemeManager* m_themeManager;
+    ThemeManager* m_themeManager = nullptr;
     ComponentState m_state = ComponentState::Normal;
     QString m_baseTooltip;
     QString m_disabledTooltip;
