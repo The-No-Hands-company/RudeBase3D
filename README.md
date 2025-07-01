@@ -41,7 +41,8 @@ RudeBase3D aims to be a complete 3D modeling solution comparable to industry sta
 
 ### Prerequisites
 
-- **Qt 6.5+** with OpenGL support
+- **Qt 6.9+**
+- **CMake 4.0+** with OpenGL support
 - **CMake 3.28+** (required for C++23 support)
 - **Visual Studio 2022 17.8+** or GCC 13+ / Clang 17+
 - **OpenGL 3.3+** compatible graphics card
@@ -105,12 +106,13 @@ src/
 
 ## 📖 Documentation
 
-- [🗺️ Development Roadmap](docs/ROADMAP.md) - Project phases and feature timeline
-- [🏛️ Project Governance](docs/GOVERNANCE.md) - Leadership structure and decision making
-- [🌳 Branching Strategy](docs/BRANCHING_STRATEGY.md) - Git workflow and release process
-- [🏗️ Architecture Overview](docs/MODERN_3D_ARCHITECTURE.md) - Technical architecture details
-- [📹 Camera Controls](docs/CAMERA_CONTROLS.md) - Viewport navigation guide
-- [🎨 Modeling Techniques](docs/modelingtechniques.md) - User guides and tutorials
+- **[🗺️ Development Roadmap](ROADMAP.md)** - Project phases and feature timeline
+- **[⚙️ Git Workflow](docs/GIT_WORKFLOW.md)** - Contribution workflow and branching strategy
+- **[🏛️ Project Governance](docs/GOVERNANCE.md)** - Leadership structure and decision making
+- **[️ Architecture Overview](docs/MODERN_3D_ARCHITECTURE.md)** - Technical architecture details
+- **[📹 Camera Controls](docs/CAMERA_CONTROLS.md)** - Viewport navigation guide
+- **[🎨 Modeling Techniques](docs/modelingtechniques.md)** - User guides and tutorials
+- **[📚 Full Documentation](docs/README.md)** - Complete documentation index
 
 ## 🤝 Contributing
 
