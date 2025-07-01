@@ -69,6 +69,13 @@ signals:
     void selectAll();
     void deselectAll();
     
+    // Modeling operations
+    void extrudeSelected();
+    void insetSelected();
+    void loopCutSelected();
+    void subdivideSelected();
+    void bevelSelected();
+    
     // Object creation
     void createCube();
     void createSphere();
@@ -142,6 +149,13 @@ private:
     QAction* m_duplicateAction;
     QAction* m_selectAllAction;
     QAction* m_deselectAllAction;
+    
+    // Modeling actions
+    QAction* m_extrudeAction;
+    QAction* m_insetAction;
+    QAction* m_loopCutAction;
+    QAction* m_subdivisionAction;
+    QAction* m_bevelAction;
     
     // Create actions
     QAction* m_createCubeAction;

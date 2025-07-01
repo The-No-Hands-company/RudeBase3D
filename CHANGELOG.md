@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detailed development roadmap with phases and milestones
 - Enhanced security policy with vulnerability classification
 - Multi-branch development workflow (main, develop, feature branches)
+- Professional theme system with multiple dark mode options
+- Theme switching UI with system dark mode detection
+- Advanced modeling tools: InsetTool, LoopCutTool, SubdivisionTool
+- ModelingToolManager for centralized tool access and execution
+- Enhanced UI with modeling tools integrated into Edit menu
+- EditContext integration for proper selection handling
+- Half-edge mesh operations for professional 3D modeling
 
 ### Changed
 - Improved repository organization for open source collaboration
@@ -21,13 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Discord community setup guide
 - Security policy for responsible disclosure
 - Enhanced documentation structure
-
-### Changed
 - Repository structure now includes multiple development branches
 - Improved contribution guidelines
+- Integrated modeling tools into main application UI
 
 ### Fixed
 - Build system compatibility across different platforms
+- Shutdown assertion error (_CrtIsValidHeapPointer) by fixing object lifecycle management
+- Double deletion issues with Qt parent relationships and shared_ptr objects
+- Use-after-free errors during application shutdown
+- Application shutdown assertion error (_CrtIsValidHeapPointer) by properly managing shared_ptr object lifecycles
 
 ## [0.1.0-alpha] - 2025-07-01
 

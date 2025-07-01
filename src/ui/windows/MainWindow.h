@@ -23,6 +23,8 @@ class RenderSystem;
 class AssetManager;
 class UIManager;
 class ExtrudeTool; // Add ExtrudeTool forward declaration
+class ModelingToolManager; // Add ModelingToolManager forward declaration
+class EditContext; // Add EditContext forward declaration
 class LightingSystem;
 class GridSystem;
 
@@ -70,6 +72,10 @@ private slots:
     
     // Edit menu tools
     void beginExtrude();
+    void beginInset();
+    void beginLoopCut();
+    void beginSubdivision();
+    void beginBevel();
     void confirmEdit();
     void cancelEdit();
     
@@ -96,6 +102,8 @@ private:
     std::shared_ptr<AssetManager> m_assetManager;
     std::shared_ptr<UIManager> m_uiManager;
     std::shared_ptr<ExtrudeTool> m_extrudeTool; // Add ExtrudeTool member
+    std::shared_ptr<ModelingToolManager> m_modelingToolManager; // Add ModelingToolManager member
+    std::shared_ptr<EditContext> m_editContext; // Add EditContext member
     std::shared_ptr<LightingSystem> m_lightingSystem;
     std::shared_ptr<GridSystem> m_gridSystem;
     
@@ -163,6 +171,10 @@ private:
     
     // Edit tool actions
     QAction* m_extrudeAction;
+    QAction* m_insetAction;
+    QAction* m_loopCutAction;
+    QAction* m_subdivisionAction;
+    QAction* m_bevelAction;
     QAction* m_confirmEditAction;
     QAction* m_cancelEditAction;
     

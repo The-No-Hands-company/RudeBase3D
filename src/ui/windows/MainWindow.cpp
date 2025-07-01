@@ -16,6 +16,8 @@
 #include "AssetManager.h"
 #include "FileFormatHandlers.h"
 #include "ExtrudeTool.h"
+#include "ModelingToolManager.h" // Add ModelingToolManager include
+#include "EditContext.h" // Add EditContext include
 #include "GeometryConverter.h" // Add GeometryConverter include
 #include <QFileDialog>
 #include <QApplication>
@@ -33,13 +35,15 @@
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
-    , m_sceneManager(std::make_shared<SceneManager>(this))
-    , m_cameraController(std::make_shared<CameraController>(this))
-    , m_inputController(std::make_shared<InputController>(this))
-    , m_renderSystem(std::make_shared<RenderSystem>(this))
-    , m_assetManager(std::make_shared<AssetManager>(this))
+    , m_sceneManager(std::make_shared<SceneManager>())
+    , m_cameraController(std::make_shared<CameraController>())
+    , m_inputController(std::make_shared<InputController>())
+    , m_renderSystem(std::make_shared<RenderSystem>())
+    , m_assetManager(std::make_shared<AssetManager>())
     , m_uiManager(std::make_shared<UIManager>(this, this))
     , m_extrudeTool(std::make_shared<ExtrudeTool>())
+    , m_modelingToolManager(std::make_shared<ModelingToolManager>())
+    , m_editContext(std::make_shared<EditContext>())
     , m_lightingSystem(std::make_shared<LightingSystem>())
     , m_gridSystem(std::make_shared<GridSystem>())
     , m_sceneModified(false)
@@ -108,6 +112,9 @@ void MainWindow::setupUI()
     m_inputController->setSelectionManager(m_viewport->getSelectionManager()); // Connect SelectionManager to InputController
     m_renderSystem->setCamera(m_viewport->getCamera());
     
+    // Set up modeling tools
+    m_modelingToolManager->setEditContext(m_editContext.get());
+    
     // Connect component signals
     connectSignals();
 }
@@ -130,6 +137,13 @@ void MainWindow::connectSignals()
     connect(m_uiManager.get(), &UIManager::createCone, this, &MainWindow::createCone);
     connect(m_uiManager.get(), &UIManager::createTorus, this, &MainWindow::createTorus);
     connect(m_uiManager.get(), &UIManager::createIcosphere, this, &MainWindow::createIcosphere);
+    
+    // Modeling tool connections
+    connect(m_uiManager.get(), &UIManager::extrudeSelected, this, &MainWindow::beginExtrude);
+    connect(m_uiManager.get(), &UIManager::insetSelected, this, &MainWindow::beginInset);
+    connect(m_uiManager.get(), &UIManager::loopCutSelected, this, &MainWindow::beginLoopCut);
+    connect(m_uiManager.get(), &UIManager::subdivideSelected, this, &MainWindow::beginSubdivision);
+    connect(m_uiManager.get(), &UIManager::bevelSelected, this, &MainWindow::beginBevel);
     
     // View operations
     connect(m_uiManager.get(), &UIManager::resetCamera, this, &MainWindow::resetCamera);
@@ -628,6 +642,13 @@ void MainWindow::createTestScene()
 
 MainWindow::~MainWindow()
 {
+    qDebug() << "MainWindow destructor called";
+    
+    // Disconnect all signals to prevent callback issues during destruction
+    if (m_uiManager) {
+        disconnect(m_uiManager.get(), nullptr, this, nullptr);
+    }
+    
     // Critical: Clear viewport's shared_ptr references before MainWindow's 
     // shared_ptr members are destroyed to prevent use-after-free
     if (m_viewport) {
@@ -658,6 +679,34 @@ MainWindow::~MainWindow()
         m_renderSystem->setScene(nullptr);
         m_renderSystem->setCamera(nullptr);
     }
+    
+    // Clear modeling tool manager and edit context
+    if (m_modelingToolManager) {
+        m_modelingToolManager->setEditContext(nullptr);
+    }
+    if (m_editContext) {
+        m_editContext->setActiveObject(nullptr);
+        m_editContext->clearSelection();
+    }
+    
+    // Explicitly reset shared_ptrs to control destruction order
+    // Reset in reverse dependency order
+    m_modelingToolManager.reset();
+    m_editContext.reset();
+    m_extrudeTool.reset();
+    m_lightingSystem.reset();
+    m_gridSystem.reset();
+    m_renderSystem.reset();
+    m_assetManager.reset();
+    m_inputController.reset();
+    m_cameraController.reset();
+    
+    // Reset UI manager last since other components may depend on it
+    m_uiManager.reset();
+    m_sceneManager.reset();
+    
+    qDebug() << "MainWindow destructor completed";
+    // Note: m_scene is owned by SceneManager, so it will be cleaned up when SceneManager is destroyed
 }
 
 // Edit tool methods
@@ -720,5 +769,77 @@ void MainWindow::cancelEdit()
         
         // Update the viewport
         m_viewport->update();
+    }
+}
+
+void MainWindow::beginInset()
+{
+    if (!m_modelingToolManager) {
+        qDebug() << "Cannot begin inset: ModelingToolManager not available";
+        return;
+    }
+    
+    // TODO: Set up EditContext with current selection
+    if (m_modelingToolManager->executeInset()) {
+        qDebug() << "Inset operation started";
+        statusBar()->showMessage("Inset operation completed", 2000);
+        m_viewport->update();
+    } else {
+        qDebug() << "Failed to execute inset operation";
+        statusBar()->showMessage("Inset failed - ensure faces are selected", 2000);
+    }
+}
+
+void MainWindow::beginLoopCut()
+{
+    if (!m_modelingToolManager) {
+        qDebug() << "Cannot begin loop cut: ModelingToolManager not available";
+        return;
+    }
+    
+    // TODO: Set up EditContext with current selection
+    if (m_modelingToolManager->executeLoopCut()) {
+        qDebug() << "Loop cut operation started";
+        statusBar()->showMessage("Loop cut operation completed", 2000);
+        m_viewport->update();
+    } else {
+        qDebug() << "Failed to execute loop cut operation";
+        statusBar()->showMessage("Loop cut failed - ensure edges are selected", 2000);
+    }
+}
+
+void MainWindow::beginSubdivision()
+{
+    if (!m_modelingToolManager) {
+        qDebug() << "Cannot begin subdivision: ModelingToolManager not available";
+        return;
+    }
+    
+    // TODO: Set up EditContext with current selection
+    if (m_modelingToolManager->executeSubdivision()) {
+        qDebug() << "Subdivision operation started";
+        statusBar()->showMessage("Subdivision operation completed", 2000);
+        m_viewport->update();
+    } else {
+        qDebug() << "Failed to execute subdivision operation";
+        statusBar()->showMessage("Subdivision failed - ensure faces are selected", 2000);
+    }
+}
+
+void MainWindow::beginBevel()
+{
+    if (!m_modelingToolManager) {
+        qDebug() << "Cannot begin bevel: ModelingToolManager not available";
+        return;
+    }
+    
+    // TODO: Set up EditContext with current selection
+    if (m_modelingToolManager->executeBevel()) {
+        qDebug() << "Bevel operation started";
+        statusBar()->showMessage("Bevel operation completed", 2000);
+        m_viewport->update();
+    } else {
+        qDebug() << "Failed to execute bevel operation";
+        statusBar()->showMessage("Bevel failed - ensure edges or vertices are selected", 2000);
     }
 }
