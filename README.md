@@ -41,8 +41,7 @@ RudeBase3D aims to be a complete 3D modeling solution comparable to industry sta
 
 ### Prerequisites
 
-- **Qt 6.9+**
-- **CMake 4.0+** with OpenGL support
+- **Qt 6.5+** with OpenGL support
 - **CMake 3.28+** (required for C++23 support)
 - **Visual Studio 2022 17.8+** or GCC 13+ / Clang 17+
 - **OpenGL 3.3+** compatible graphics card
@@ -73,6 +72,31 @@ mkdir build && cd build
 cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_CXX_STANDARD=23
 cmake --build . --config Release --parallel
 ```
+
+### Troubleshooting
+
+#### Qt6 Not Found
+If you get "Qt6 not found" errors, set the Qt path:
+
+**Windows:**
+```batch
+cmake .. -DCMAKE_PREFIX_PATH="D:/Qt/6.6.1/msvc2022_64"
+```
+
+**Linux:**
+```bash
+cmake .. -DCMAKE_PREFIX_PATH="/opt/Qt/6.6.1/gcc_64"
+```
+
+**macOS:**
+```bash
+cmake .. -DCMAKE_PREFIX_PATH="/Users/$(whoami)/Qt/6.6.1/macos"
+```
+
+#### Common Issues
+- **C++23 Support**: Ensure you have Visual Studio 2022 17.8+ or GCC 13+
+- **OpenGL Issues**: Update your graphics drivers
+- **Build Errors**: Try a clean build: `rm -rf build && mkdir build`
 
 ### Running
 

@@ -14,7 +14,18 @@ if(MSVC)
 endif()
 
 # Find required Qt components
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGL OpenGLWidgets)
+message(STATUS "Looking for Qt6...")
+find_package(Qt6 COMPONENTS Core Widgets OpenGL OpenGLWidgets)
+if(NOT Qt6_FOUND)
+    message(FATAL_ERROR "Qt6 not found! Please set CMAKE_PREFIX_PATH or Qt6_DIR to your Qt installation.\n"
+                        "Examples:\n"
+                        "  Windows: -DCMAKE_PREFIX_PATH=\"D:/Qt/6.6.1/msvc2022_64\"\n"
+                        "  Linux:   -DCMAKE_PREFIX_PATH=\"/opt/Qt/6.6.1/gcc_64\"\n"
+                        "  macOS:   -DCMAKE_PREFIX_PATH=\"/Users/$(whoami)/Qt/6.6.1/macos\"\n"
+                        "Or set Qt6_DIR directly:\n"
+                        "  -DQt6_DIR=\"/path/to/Qt/6.6.1/lib/cmake/Qt6\"")
+endif()
+message(STATUS "Found Qt6: ${Qt6_VERSION} at ${Qt6_DIR}")
 
 # Find OpenGL
 find_package(OpenGL REQUIRED)
