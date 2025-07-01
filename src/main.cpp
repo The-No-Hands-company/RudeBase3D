@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QDebug>
-#include "MainWindow.h"
+#include "ui/windows/MainWindow.h"
+#include "ui/core/ThemeManager.h"
 
 int main(int argc, char *argv[])
 {
@@ -11,6 +12,10 @@ int main(int argc, char *argv[])
     app.setApplicationVersion("2.0.0");  // Version 2.0 with modern hybrid geometry
     app.setOrganizationName("RudeBase3D");
     app.setApplicationDisplayName("RudeBase3D - Professional 3D Modeling Suite");
+    
+    // Initialize theme system and apply system theme
+    auto* themeManager = rudebase3d::ui::ThemeManager::instance();
+    themeManager->applySystemTheme(); // Auto-detect and apply dark/light mode
     
     qDebug() << "Creating main window...";
     

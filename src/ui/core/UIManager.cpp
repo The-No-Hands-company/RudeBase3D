@@ -2,6 +2,7 @@
 #include "Viewport3D.h"
 #include "SceneHierarchyPanel.h"
 #include "PropertiesPanel.h"
+#include "../components/ThemeSelector.h"
 #include <QMainWindow>
 #include <QSplitter>
 #include <QVBoxLayout>
@@ -23,6 +24,7 @@ UIManager::UIManager(QMainWindow* mainWindow, QObject* parent)
     , m_viewport(nullptr)
     , m_sceneHierarchy(nullptr)
     , m_propertiesPanel(nullptr)
+    , m_themeSelector(nullptr)
 {
 }
 
@@ -345,6 +347,11 @@ void UIManager::createMainToolbar()
     m_mainToolBar->addAction(m_createCubeAction);
     m_mainToolBar->addAction(m_createSphereAction);
     m_mainToolBar->addAction(m_createPlaneAction);
+    
+    // Add theme selector to the main toolbar
+    m_mainToolBar->addSeparator();
+    m_themeSelector = new rudebase3d::ui::ThemeSelector(m_mainWindow);
+    m_mainToolBar->addWidget(m_themeSelector);
 }
 
 void UIManager::createViewToolbar()

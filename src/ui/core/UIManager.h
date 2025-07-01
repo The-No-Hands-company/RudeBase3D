@@ -17,6 +17,12 @@ class SceneHierarchyPanel;
 class PropertiesPanel;
 class SceneManager;
 
+namespace rudebase3d {
+namespace ui {
+class ThemeSelector;
+}
+}
+
 class UIManager : public QObject
 {
     Q_OBJECT
@@ -164,4 +170,7 @@ private:
     // Recent files
     QList<QAction*> m_recentFileActions;
     static const int MaxRecentFiles = 5;
+    
+    // Theme system
+    rudebase3d::ui::ThemeSelector* m_themeSelector;
 };

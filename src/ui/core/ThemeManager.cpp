@@ -6,6 +6,12 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 #include <QDebug>
+#include <QStyleHints>
+#include <QPalette>
+
+#ifdef Q_OS_WIN
+#include <QSettings>
+#endif
 
 namespace rudebase3d {
 namespace ui {
@@ -100,6 +106,82 @@ void ThemeManager::loadBuiltInThemes()
     blueTheme.colors[ColorRole::Selection] = QColor(52, 152, 219, 120);
     
     m_themes[blueTheme.id] = blueTheme;
+    
+    // High Contrast Dark Theme (for accessibility)
+    Theme highContrastDark;
+    highContrastDark.name = "High Contrast Dark";
+    highContrastDark.id = "high-contrast-dark";
+    highContrastDark.colors[ColorRole::Background] = QColor(0, 0, 0);
+    highContrastDark.colors[ColorRole::BackgroundAlternate] = QColor(20, 20, 20);
+    highContrastDark.colors[ColorRole::Foreground] = QColor(255, 255, 255);
+    highContrastDark.colors[ColorRole::Primary] = QColor(0, 150, 255);
+    highContrastDark.colors[ColorRole::Secondary] = QColor(150, 150, 150);
+    highContrastDark.colors[ColorRole::Success] = QColor(0, 255, 0);
+    highContrastDark.colors[ColorRole::Warning] = QColor(255, 255, 0);
+    highContrastDark.colors[ColorRole::Error] = QColor(255, 0, 0);
+    highContrastDark.colors[ColorRole::Border] = QColor(100, 100, 100);
+    highContrastDark.colors[ColorRole::Shadow] = QColor(0, 0, 0, 200);
+    highContrastDark.colors[ColorRole::Highlight] = QColor(0, 150, 255, 80);
+    highContrastDark.colors[ColorRole::Selection] = QColor(0, 150, 255, 150);
+    
+    m_themes[highContrastDark.id] = highContrastDark;
+    
+    // Modern Dark Theme (popular GitHub/VS Code style)
+    Theme modernDark;
+    modernDark.name = "Modern Dark";
+    modernDark.id = "modern-dark";
+    modernDark.colors[ColorRole::Background] = QColor(30, 30, 30);
+    modernDark.colors[ColorRole::BackgroundAlternate] = QColor(40, 40, 40);
+    modernDark.colors[ColorRole::Foreground] = QColor(212, 212, 212);
+    modernDark.colors[ColorRole::Primary] = QColor(0, 122, 204);
+    modernDark.colors[ColorRole::Secondary] = QColor(150, 150, 150);
+    modernDark.colors[ColorRole::Success] = QColor(22, 163, 74);
+    modernDark.colors[ColorRole::Warning] = QColor(245, 158, 11);
+    modernDark.colors[ColorRole::Error] = QColor(239, 68, 68);
+    modernDark.colors[ColorRole::Border] = QColor(60, 60, 60);
+    modernDark.colors[ColorRole::Shadow] = QColor(0, 0, 0, 120);
+    modernDark.colors[ColorRole::Highlight] = QColor(0, 122, 204, 60);
+    modernDark.colors[ColorRole::Selection] = QColor(0, 122, 204, 120);
+    
+    m_themes[modernDark.id] = modernDark;
+    
+    // Warm Dark Theme (easier on eyes for long sessions)
+    Theme warmDark;
+    warmDark.name = "Warm Dark";
+    warmDark.id = "warm-dark";
+    warmDark.colors[ColorRole::Background] = QColor(42, 39, 37);
+    warmDark.colors[ColorRole::BackgroundAlternate] = QColor(52, 48, 45);
+    warmDark.colors[ColorRole::Foreground] = QColor(235, 219, 178);
+    warmDark.colors[ColorRole::Primary] = QColor(131, 165, 152);
+    warmDark.colors[ColorRole::Secondary] = QColor(168, 153, 132);
+    warmDark.colors[ColorRole::Success] = QColor(142, 192, 124);
+    warmDark.colors[ColorRole::Warning] = QColor(250, 189, 47);
+    warmDark.colors[ColorRole::Error] = QColor(251, 73, 52);
+    warmDark.colors[ColorRole::Border] = QColor(80, 73, 69);
+    warmDark.colors[ColorRole::Shadow] = QColor(0, 0, 0, 100);
+    warmDark.colors[ColorRole::Highlight] = QColor(131, 165, 152, 50);
+    warmDark.colors[ColorRole::Selection] = QColor(131, 165, 152, 100);
+    
+    m_themes[warmDark.id] = warmDark;
+    
+    // Purple Dark Theme (creative/modern feel)
+    Theme purpleDark;
+    purpleDark.name = "Purple Dark";
+    purpleDark.id = "purple-dark";
+    purpleDark.colors[ColorRole::Background] = QColor(35, 31, 49);
+    purpleDark.colors[ColorRole::BackgroundAlternate] = QColor(45, 40, 60);
+    purpleDark.colors[ColorRole::Foreground] = QColor(230, 225, 240);
+    purpleDark.colors[ColorRole::Primary] = QColor(147, 112, 219);
+    purpleDark.colors[ColorRole::Secondary] = QColor(150, 140, 160);
+    purpleDark.colors[ColorRole::Success] = QColor(102, 187, 106);
+    purpleDark.colors[ColorRole::Warning] = QColor(255, 193, 7);
+    purpleDark.colors[ColorRole::Error] = QColor(244, 67, 54);
+    purpleDark.colors[ColorRole::Border] = QColor(80, 70, 100);
+    purpleDark.colors[ColorRole::Shadow] = QColor(0, 0, 0, 120);
+    purpleDark.colors[ColorRole::Highlight] = QColor(147, 112, 219, 60);
+    purpleDark.colors[ColorRole::Selection] = QColor(147, 112, 219, 120);
+    
+    m_themes[purpleDark.id] = purpleDark;
 }
 
 void ThemeManager::loadThemesFromDirectory(const QString& directory)
@@ -385,6 +467,58 @@ QString ThemeManager::generateStyleSheet(const Theme& theme)
     .arg(theme.colors.value(ColorRole::Primary).darker(110).name()); // %9
     
     return styleSheet;
+}
+
+void ThemeManager::applySystemTheme()
+{
+    if (isSystemDarkMode()) {
+        applyTheme(getRecommendedDarkTheme());
+    } else {
+        applyTheme(getRecommendedLightTheme());
+    }
+}
+
+bool ThemeManager::isSystemDarkMode() const
+{
+#ifdef Q_OS_WIN
+    // Windows 10/11 dark mode detection
+    QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", QSettings::NativeFormat);
+    return settings.value("AppsUseLightTheme", 1).toInt() == 0;
+#elif defined(Q_OS_MACOS)
+    // macOS dark mode detection
+    QStyleHints* hints = QApplication::styleHints();
+    return hints->colorScheme() == Qt::ColorScheme::Dark;
+#else
+    // Linux/Unix - fallback to Qt's detection
+    QStyleHints* hints = QApplication::styleHints();
+    return hints->colorScheme() == Qt::ColorScheme::Dark;
+#endif
+}
+
+QString ThemeManager::getRecommendedLightTheme() const
+{
+    return "light"; // Default light theme
+}
+
+QString ThemeManager::getRecommendedDarkTheme() const
+{
+    return "modern-dark"; // Modern dark is most popular
+}
+
+QStringList ThemeManager::getDarkThemes() const
+{
+    QStringList darkThemes;
+    darkThemes << "dark" << "modern-dark" << "warm-dark" << "purple-dark" 
+               << "high-contrast-dark" << "professional-blue";
+    return darkThemes;
+}
+
+QStringList ThemeManager::getLightThemes() const
+{
+    QStringList lightThemes;
+    lightThemes << "light";
+    // Add more light themes here as they're created
+    return lightThemes;
 }
 
 } // namespace ui
