@@ -4,7 +4,18 @@ A professional-grade 3D modeling application built with modern C++23 and Qt6, fo
 
 ## 🎯 Project Vision
 
-RudeBase3D aims to be a complete 3D modeling solution comparable to industry standards like Blender or Maya, with a focus on:
+Ru## 📊 Current Status
+
+- ✅ Basic 3D viewport and rendering
+- ✅ Scene management system  
+- ✅ Transform tools with gizmos
+- ✅ Modular architecture implementation
+- ✅ **Professional Theme System** - Multiple dark modes, auto-detection, real-time switching
+- ✅ **Modern UI Components** - BaseComponent architecture, ThemeManager, ThemeSelector
+- 🔄 Half-edge mesh operations
+- 🔄 Advanced modeling tools
+- ⏳ Plugin system
+- ⏳ Advanced materials and lighting aims to be a complete 3D modeling solution comparable to industry standards like Blender or Maya, with a focus on:
 - **Modern Architecture**: Clean, modular codebase following SOLID principles
 - **Performance**: Optimized for real-time 3D workflows
 - **Extensibility**: Plugin system for custom tools and workflows  
@@ -26,16 +37,23 @@ RudeBase3D aims to be a complete 3D modeling solution comparable to industry sta
 - **Material System**: PBR materials with texture support
 
 ### User Interface
+- **✅ Professional Theme System**: Multiple dark mode options (Modern Dark, High Contrast, Warm, Purple)
+  - Real-time theme switching without restart
+  - System dark mode auto-detection and following
+  - User-friendly theme selector integrated in main toolbar
 - **Modular UI**: Dockable panels with customizable layouts
 - **Scene Hierarchy**: Tree view of all scene objects with visibility controls
 - **Properties Panel**: Context-sensitive object and material properties
 - **Tool Panels**: Organized tool palette with keyboard shortcuts
+- **Responsive Design**: Theme-aware components with consistent styling
 
 ### Technical Features
+- **Modern UI Architecture**: Comprehensive theme system with BaseComponent foundation
 - **Command Pattern**: Full undo/redo system for all operations
 - **Plugin Architecture**: Extensible system for custom tools and importers
 - **File I/O**: Support for OBJ, STL, PLY formats with planned FBX/glTF support
 - **Performance**: Optimized rendering pipeline with spatial data structures
+- **Theme System**: Professional theming with multiple dark modes and auto-detection
 
 ## 🏗️ Building
 

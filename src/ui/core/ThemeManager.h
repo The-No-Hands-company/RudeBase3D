@@ -73,6 +73,32 @@ public:
      */
     QColor getColor(ColorRole role) const;
 
+    /**
+     * @brief Auto-detect and apply system theme (light/dark)
+     */
+    void applySystemTheme();
+
+    /**
+     * @brief Check if system is using dark mode
+     */
+    bool isSystemDarkMode() const;
+
+    /**
+     * @brief Get recommended theme IDs for light/dark modes
+     */
+    QString getRecommendedLightTheme() const;
+    QString getRecommendedDarkTheme() const;
+
+    /**
+     * @brief Get all dark theme IDs
+     */
+    QStringList getDarkThemes() const;
+
+    /**
+     * @brief Get all light theme IDs  
+     */
+    QStringList getLightThemes() const;
+
 signals:
     /**
      * @brief Emitted when theme changes
