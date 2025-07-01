@@ -67,9 +67,13 @@ target_include_directories(RudeBase3D PRIVATE
     src/rendering/opengl
     src/rendering/effects
     src/ui/core
+    src/ui/components
     src/ui/windows
     src/ui/panels
     src/ui/viewport
+    src/ui/dialogs
+    src/ui/menus
+    src/ui/themes
     src/tools/base
     src/tools/selection
     src/tools/modeling
