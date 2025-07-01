@@ -2,74 +2,97 @@
 
 #include <QObject>
 #include <QColor>
-#include <QFont>
-#include <QString>
 #include <QMap>
+#include <QString>
+#include <QStringList>
+#include <QJsonObject>
 
-namespace RudeBase3D::UI {
-    
+namespace rudebase3d {
+namespace ui {
+
+/**
+ * @brief Manages application themes and styling
+ * 
+ * The ThemeManager provides a centralized system for managing application
+ * themes, colors, and styling. It supports both built-in and custom themes.
+ */
+class ThemeManager : public QObject
+{
+    Q_OBJECT
+
+public:
     /**
-     * @brief Manages application themes and styling
-     * 
-     * Provides centralized theme management with support for light/dark modes
-     * and consistent styling across all UI components.
+     * @brief Color roles for theming
      */
-    class ThemeManager : public QObject {
-        Q_OBJECT
-        
-    public:
-        enum class Theme {
-            Light,
-            Dark,
-            Auto  // Follows system preference
-        };
-        
-        static ThemeManager& instance();
-        
-        // Theme management
-        void setTheme(Theme theme);
-        Theme currentTheme() const { return m_currentTheme; }
-        
-        // Color system
-        QColor color(const QString& colorName) const;
-        QColor primaryColor() const;
-        QColor backgroundColor() const;
-        QColor surfaceColor() const;
-        QColor textColor() const;
-        QColor borderColor() const;
-        
-        // Typography
-        QFont font(const QString& fontName) const;
-        QFont headerFont() const;
-        QFont bodyFont() const;
-        QFont codeFont() const;
-        
-        // Spacing system
-        int spacing(const QString& sizeName) const;
-        int spacingXS() const { return 4; }
-        int spacingS() const { return 8; }
-        int spacingM() const { return 16; }
-        int spacingL() const { return 24; }
-        int spacingXL() const { return 32; }
-        
-        // Style sheets
-        QString getComponentStyle(const QString& componentName) const;
-        QString getGlobalStyleSheet() const;
-        
-    signals:
-        void themeChanged(Theme newTheme);
-        
-    private:
-        ThemeManager();
-        void loadTheme(Theme theme);
-        void setupColorPalette();
-        void setupFonts();
-        void applyGlobalStyleSheet();
-        
-        Theme m_currentTheme = Theme::Dark;
-        QMap<QString, QColor> m_colors;
-        QMap<QString, QFont> m_fonts;
-        QMap<QString, QString> m_styleSheets;
+    enum class ColorRole {
+        Background,
+        BackgroundAlternate,
+        Foreground,
+        Primary,
+        Secondary,
+        Success,
+        Warning,
+        Error,
+        Border,
+        Shadow,
+        Highlight,
+        Selection
     };
+
+    /**
+     * @brief Theme data structure
+     */
+    struct Theme {
+        QString name;
+        QString id;
+        QMap<ColorRole, QColor> colors;
+    };
+
+    /**
+     * @brief Get the singleton instance
+     */
+    static ThemeManager* instance();
+
+    /**
+     * @brief Get list of available themes
+     */
+    QStringList availableThemes() const;
+
+    /**
+     * @brief Get current theme ID
+     */
+    QString currentTheme() const;
+
+    /**
+     * @brief Apply a theme by ID
+     */
+    void applyTheme(const QString& themeId);
+
+    /**
+     * @brief Get a color for the specified role
+     */
+    QColor getColor(ColorRole role) const;
+
+signals:
+    /**
+     * @brief Emitted when theme changes
+     */
+    void themeChanged(const QString& themeId);
+
+private:
+    explicit ThemeManager(QObject* parent = nullptr);
     
-} // namespace RudeBase3D::UI
+    void loadThemes();
+    void loadBuiltInThemes();
+    void loadThemesFromDirectory(const QString& directory);
+    void loadThemeFromFile(const QString& filePath);
+    Theme themeFromJson(const QJsonObject& json);
+    QString generateStyleSheet(const Theme& theme);
+
+    static ThemeManager* s_instance;
+    QMap<QString, Theme> m_themes;
+    QString m_currentTheme;
+};
+
+} // namespace ui
+} // namespace rudebase3d
