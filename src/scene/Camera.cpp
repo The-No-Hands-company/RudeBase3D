@@ -1,5 +1,8 @@
 #include "Camera.h"
+#include "core/qt_glm_utils.hpp"
 #include <cmath>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 Camera::Camera()
     : m_fov(50.0f)  // Slightly wider FOV for better workspace view
@@ -121,38 +124,6 @@ void Camera::moveUp(float distance)
     m_transform.translate(up * distance);
 }
 
-QMatrix4x4 Camera::getViewMatrix() const
-{
-    return m_transform.getModelMatrix().inverted();
-}
-
-QMatrix4x4 Camera::getViewProjectionMatrix() const
-{
-    return m_projectionMatrix * getViewMatrix();
-}
-
-QVector3D Camera::screenToWorldRay(const QVector2D& screenPos, const QSize& viewportSize) const
-{
-    // Convert screen coordinates to normalized device coordinates
-    float ndcX = (2.0f * screenPos.x()) / viewportSize.width() - 1.0f;
-    float ndcY = 1.0f - (2.0f * screenPos.y()) / viewportSize.height();
-    
-    // Convert to clip coordinates
-    QVector4D clipCoords(ndcX, ndcY, -1.0f, 1.0f);
-    
-    // Convert to eye coordinates
-    QMatrix4x4 invProjection = m_projectionMatrix.inverted();
-    QVector4D eyeCoords = invProjection * clipCoords;
-    eyeCoords.setZ(-1.0f);
-    eyeCoords.setW(0.0f);
-    
-    // Convert to world coordinates
-    QMatrix4x4 invView = getViewMatrix().inverted();
-    QVector4D worldCoords = invView * eyeCoords;
-    
-    return QVector3D(worldCoords).normalized();
-}
-
 void Camera::updateProjectionMatrix()
 {
     m_projectionMatrix.setToIdentity();
@@ -162,4 +133,18 @@ void Camera::updateProjectionMatrix()
     } else {
         m_projectionMatrix.ortho(m_left, m_right, m_bottom, m_top, m_nearPlane, m_farPlane);
     }
+}
+
+// GLM method implementations
+glm::mat4 Camera::getViewMatrixGLM() const {
+    return rude::qMatrixToGlm(getViewMatrix());
+}
+
+glm::mat4 Camera::getProjectionMatrixGLM() const {
+    return rude::qMatrixToGlm(m_projectionMatrix);
+}
+
+glm::vec3 Camera::getPosition() const {
+    QVector3D pos = m_transform.getPosition();
+    return glm::vec3(pos.x(), pos.y(), pos.z());
 }

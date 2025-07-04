@@ -3,7 +3,7 @@
 #include "SceneObject.h"
 #include "Camera.h"
 #include "Renderer.h"
-#include "CameraController.h"
+#include "ICameraController.h"
 #include "InputController.h"
 #include "SelectionManager.h"
 #include "LightingSystem.h"
@@ -43,11 +43,6 @@ void Viewport3D::setScene(std::shared_ptr<Scene> scene)
         m_cameraController->setScene(scene);
     }
     
-    // Set scene on input controller for object selection (if available)
-    if (m_inputController) {
-        m_inputController->setScene(scene);
-    }
-    
     if (m_scene) {
         connect(m_scene.get(), &Scene::selectionChanged, this, &Viewport3D::objectSelected);
     }
@@ -85,7 +80,7 @@ void Viewport3D::frameScene()
 void Viewport3D::frameSelectedObject()
 {
     if (m_cameraController) {
-        m_cameraController->frameSelectedObject();
+        m_cameraController->frameSelection();
     }
 }
 
@@ -134,19 +129,23 @@ void Viewport3D::resizeGL(int w, int h)
 {
     glViewport(0, 0, w, h);
     
-    m_cameraController->updateAspectRatio(static_cast<float>(w) / static_cast<float>(h));
+    if (m_cameraController) {
+        m_cameraController->updateAspectRatio(static_cast<float>(w) / static_cast<float>(h));
+    }
 }
 
 void Viewport3D::paintGL()
 {
-    // Clear with background color
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Don't clear here - let the renderer handle it
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     m_renderer->beginFrame();
     
     // Update camera and renderer matrices
-    m_renderer->setViewMatrix(m_cameraController->getViewMatrix());
-    m_renderer->setProjectionMatrix(m_cameraController->getProjectionMatrix());
+    if (m_cameraController) {
+        m_renderer->setViewMatrix(m_cameraController->getViewMatrix());
+        m_renderer->setProjectionMatrix(m_cameraController->getProjectionMatrix());
+    }
     
     // Set camera position for lighting calculations
     QVector3D cameraPos = m_camera->getTransform().getPosition();
@@ -158,7 +157,7 @@ void Viewport3D::paintGL()
     }
     
     // Render grid using GridSystem
-    if (m_gridSystem && m_gridSystem->isVisible()) {
+    if (m_gridSystem && m_gridSystem->isVisible() && m_cameraController) {
         m_gridSystem->render(m_renderer, m_cameraController->getViewMatrix(), m_cameraController->getProjectionMatrix());
     }
     
@@ -180,8 +179,10 @@ void Viewport3D::paintGL()
 
 void Viewport3D::mousePressEvent(QMouseEvent* event)
 {
+    qDebug() << "Viewport3D::mousePressEvent - Button:" << event->button() << "Modifiers:" << event->modifiers();
     if (m_inputController) {
         m_inputController->handleMousePress(event);
+        qDebug() << "Input controller handled mouse press event";
     }
     setFocus();
 }
@@ -190,6 +191,7 @@ void Viewport3D::mouseMoveEvent(QMouseEvent* event)
 {
     if (m_inputController) {
         m_inputController->handleMouseMove(event);
+        // Update is handled by InputController signals or CameraController changes
     }
 }
 
@@ -286,7 +288,7 @@ void Viewport3D::renderTransformGizmo()
     m_renderer->renderLine(QVector3D(0, 0, 0), QVector3D(0, 0, axisLength), QVector4D(0, 0, 1, 1));
 }
 
-void Viewport3D::setCameraController(std::shared_ptr<CameraController> controller)
+void Viewport3D::setCameraController(std::shared_ptr<ICameraController> controller)
 {
     m_cameraController = controller;
     
@@ -295,35 +297,18 @@ void Viewport3D::setCameraController(std::shared_ptr<CameraController> controlle
         m_cameraController->setCamera(m_camera);
         
         // Connect camera controller signals
-        connect(m_cameraController.get(), &CameraController::cameraChanged, this, [this]() {
+        connect(m_cameraController.get(), &ICameraController::cameraChanged, this, [this]() {
+            qDebug() << "Viewport3D::cameraChanged signal received - triggering update()";
             update();
         });
         
-        // Initialize camera to industry-standard isometric view
-        // Position camera at professional modeling angle (45 degrees from XZ plane)
-        QVector3D defaultPosition(7.0f, 7.0f, 7.0f);
-        QVector3D defaultTarget(0.0f, 0.0f, 0.0f);
-        
-        m_camera->getTransform().setPosition(defaultPosition);
-        m_camera->lookAt(defaultTarget);
-        
-        // Update camera controller to match
+        // Initialize camera to industry-standard isometric view using camera controller
         m_cameraController->resetCamera();
         
-        qDebug() << "Camera positioned at:" << defaultPosition << "looking at:" << defaultTarget;
+        qDebug() << "Camera controller set up and reset to default position";
     }
 }
 
-void Viewport3D::setInputController(std::shared_ptr<InputController> controller)
-{
-    m_inputController = controller;
-    
-    if (m_inputController) {
-        // Set up input controller
-        m_inputController->setViewport(this);
-        m_inputController->setCameraController(m_cameraController);
-    }
-}
 
 void Viewport3D::setLightingSystem(std::shared_ptr<LightingSystem> lightingSystem)
 {
@@ -458,4 +443,22 @@ void Viewport3D::renderSelection()
     // Reset renderer state
     m_renderer->enableDepthTest(true);
     m_renderer->setLineWidth(1.0f);
+}
+
+void Viewport3D::setInputController(std::shared_ptr<InputController> controller)
+{
+    m_inputController = controller;
+    
+    if (m_inputController) {
+        // Set up input controller dependencies
+        m_inputController->setViewport(this);
+        if (m_scene) {
+            m_inputController->setScene(m_scene);
+        }
+        if (m_selectionManager) {
+            m_inputController->setSelectionManager(m_selectionManager);
+        }
+        
+        qDebug() << "Input controller set up with dependencies";
+    }
 }

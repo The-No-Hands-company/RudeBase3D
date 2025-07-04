@@ -1,8 +1,8 @@
 #include "InputController.h"
 #include "CameraController.h"
-#include "Scene.h"
-#include "Viewport3D.h"
-#include "SelectionManager.h" // Add SelectionManager include
+#include "core/scene.hpp"
+#include "tools/selection/SelectionManager.h"
+#include "ui/viewport/Viewport3D.h"
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QKeyEvent>
@@ -275,33 +275,33 @@ void InputController::handleMayaNavigation(const QPoint& delta)
 {
     if (!m_cameraController) return;
     
+    bool altPressed = isModifierPressed(Qt::AltModifier);
     bool shiftPressed = isModifierPressed(Qt::ShiftModifier);
     
-    qDebug() << "Maya nav - Button:" << m_mouseButton << "Shift:" << shiftPressed << "Delta:" << delta;
+    qDebug() << "Maya nav - Button:" << m_mouseButton << "Alt:" << altPressed << "Shift:" << shiftPressed << "Delta:" << delta;
+    
+    // Maya navigation requires Alt modifier for most actions
+    if (!altPressed) {
+        qDebug() << "Maya navigation: Alt not pressed, ignoring";
+        return;
+    }
     
     if (m_mouseButton == Qt::LeftButton) {
-        if (shiftPressed) {
-            // Shift + LMB = Pan (alternative for users without MMB)
-            qDebug() << "PAN: Shift+LMB - Delta:" << delta;
-            m_cameraController->pan(QVector3D(-delta.x() * m_panSpeed * 50.0f, 
-                                             delta.y() * m_panSpeed * 50.0f, 0.0f));
-        } else {
-            // LMB = Orbit around scene center (mouse-only)
-            QVector3D target = getSceneCenter();
-            qDebug() << "ORBIT: LMB - Delta:" << delta << "Target:" << target;
-            m_cameraController->orbitAroundPoint(target, -delta.x() * m_cameraSensitivity * 0.5f, 
-                                                delta.y() * m_cameraSensitivity * 0.5f);
-        }
+        // Alt + LMB = Orbit around scene center
+        QVector3D target = getSceneCenter();
+        qDebug() << "ORBIT: Alt+LMB - Delta:" << delta << "Target:" << target;
+        m_cameraController->orbitAroundPoint(target, -delta.x() * m_cameraSensitivity * 0.5f, 
+                                            delta.y() * m_cameraSensitivity * 0.5f);
     } else if (m_mouseButton == Qt::MiddleButton) {
-        // MMB = Pan (mouse-only)
-        qDebug() << "PAN: MMB - Delta:" << delta;
+        // Alt + MMB = Pan
+        qDebug() << "PAN: Alt+MMB - Delta:" << delta;
         m_cameraController->pan(QVector3D(-delta.x() * m_panSpeed * 50.0f, 
                                          delta.y() * m_panSpeed * 50.0f, 0.0f));
     } else if (m_mouseButton == Qt::RightButton) {
-        // RMB = Pan (mouse-only)
-        qDebug() << "PAN: RMB - Delta:" << delta;
-        m_cameraController->pan(QVector3D(-delta.x() * m_panSpeed * 50.0f, 
-                                         delta.y() * m_panSpeed * 50.0f, 0.0f));
+        // Alt + RMB = Dolly (zoom)
+        qDebug() << "DOLLY: Alt+RMB - Delta:" << delta;
+        float zoomDelta = -delta.y() * m_zoomSpeed * 0.1f;
+        m_cameraController->dolly(zoomDelta);
     }
 }
 
@@ -401,9 +401,14 @@ void InputController::handleObjectSelection(const QPoint& pos)
     QVector3D rayDirection = m_cameraController->screenToWorldRay(screenPos, m_viewport->size());
     QVector3D rayOrigin = m_cameraController->getWorldPosition();
     
-    // Pick object
-    auto pickedObject = m_scene->pickObject(rayOrigin, rayDirection);
-    m_scene->setSelectedObject(pickedObject);
+    // Use scene manager to pick object using ray
+    // We need to add scene manager reference to InputController for this to work
+    // For now this is a stub implementation
+    Entity* pickedObject = nullptr;
+    
+    // We'll need to implement this in a real application
+    // For now just log a message
+    qDebug() << "Object selection at" << pos;
 }
 
 void InputController::handleMeshElementSelection(const QPoint& pos)
@@ -460,10 +465,10 @@ void InputController::handleMeshElementSelection(const QPoint& pos)
 
 QVector3D InputController::getSceneCenter() const
 {
-    if (m_scene && !m_scene->isEmpty()) {
-        QVector3D center = m_scene->getSceneBoundingBoxCenter();
-        return center;
-    }
+    if (!m_scene) return QVector3D(0, 0, 0);
+    
+    // In a real implementation, we would use SceneManager to get the center
+    // For now, return the origin as the center
     return QVector3D(0, 0, 0);
 }
 

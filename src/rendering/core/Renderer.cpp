@@ -209,17 +209,25 @@ void Renderer::renderMesh(MeshPtr mesh, RenderMode mode)
 
 void Renderer::renderLine(const QVector3D& start, const QVector3D& end, const QVector4D& color)
 {
+    qDebug() << "Renderer::renderLine() called - Start:" << start << "End:" << end << "Color:" << color;
+    
     useShaderProgram("line");
     
     if (!m_currentShader) {
+        qDebug() << "ERROR: No line shader available!";
         return;
     }
+    
+    qDebug() << "Using line shader, updating uniforms...";
     
     // Update uniforms
     updateUniforms();
     
     if (m_currentShader->colorLoc >= 0) {
         m_currentShader->program->setUniformValue(m_currentShader->colorLoc, color);
+        qDebug() << "Color uniform set successfully";
+    } else {
+        qDebug() << "WARNING: Color uniform location not found!";
     }
     
     // Upload line data
@@ -227,6 +235,8 @@ void Renderer::renderLine(const QVector3D& start, const QVector3D& end, const QV
         start.x(), start.y(), start.z(),
         end.x(), end.y(), end.z()
     };
+    
+    qDebug() << "Uploading vertex data and rendering line...";
     
     glBindVertexArray(m_lineVAO);
     glBindBuffer(GL_ARRAY_BUFFER, m_lineVBO);
@@ -238,6 +248,8 @@ void Renderer::renderLine(const QVector3D& start, const QVector3D& end, const QV
     glDrawArrays(GL_LINES, 0, 2);
     
     glBindVertexArray(0);
+    
+    qDebug() << "Renderer::renderLine() completed";
 }
 
 void Renderer::renderAABB(const QVector3D& min, const QVector3D& max, const QVector4D& color)

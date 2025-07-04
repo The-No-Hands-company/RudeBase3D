@@ -1,0 +1,24 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"array": "cpp",
+			"initializer_list": "cpp",
+			"list": "cpp",
+			"ranges": "cpp",
+			"span": "cpp",
+			"vector": "cpp",
+			"xhash": "cpp",
+			"xstring": "cpp",
+			"xutility": "cpp",
+			"algorithm": "cpp",
+			"utility": "cpp",
+			"memory": "cpp",
+			"regex": "cpp"
+		}
+	}
+}

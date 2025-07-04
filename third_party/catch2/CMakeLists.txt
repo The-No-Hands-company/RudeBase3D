@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(catch2)
+set(CATCH_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(CATCH_INSTALL_DOCS OFF CACHE BOOL "" FORCE)
+set(CATCH_INSTALL_HELPERS OFF CACHE BOOL "" FORCE)
+add_subdirectory(Catch2-3.5.2) 

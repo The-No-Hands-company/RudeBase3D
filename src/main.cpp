@@ -2,6 +2,12 @@
 #include <QDebug>
 #include "ui/windows/MainWindow.h"
 #include "ui/core/ThemeManager.h"
+#include "core/core_system.hpp"
+
+// Helper function to access CoreSystem singleton
+CoreSystem& core() {
+    return CoreSystem::getInstance();
+}
 
 int main(int argc, char *argv[])
 {
@@ -17,6 +23,11 @@ int main(int argc, char *argv[])
     auto* themeManager = rudebase3d::ui::ThemeManager::instance();
     themeManager->applySystemTheme(); // Auto-detect and apply dark/light mode
     
+    // Initialize the core system
+    qDebug() << "Initializing core systems...";
+    CoreSystem& coreSys = core();
+    coreSys.initialize();
+    
     qDebug() << "Creating main window...";
     
     // Create and show main window
@@ -28,6 +39,10 @@ int main(int argc, char *argv[])
     qDebug() << "Window shown, starting event loop...";
     int result = app.exec();
     qDebug() << "Event loop ended with result:" << result;
+    
+    // Shutdown core systems
+    qDebug() << "Shutting down core systems...";
+    coreSys.shutdown();
     
     return result;
 }

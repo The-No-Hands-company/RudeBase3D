@@ -12,21 +12,25 @@
 #include <memory>
 
 // Forward declarations
-class Viewport3D;
+class ViewportManager;
+class ViewportWidget;
 class Scene;
 class SceneHierarchyPanel;
 class PropertiesPanel;
 class SceneManager;
-class CameraController;
-class InputController;
 class RenderSystem;
 class AssetManager;
 class UIManager;
-class ExtrudeTool; // Add ExtrudeTool forward declaration
-class ModelingToolManager; // Add ModelingToolManager forward declaration
-class EditContext; // Add EditContext forward declaration
+class ExtrudeTool;
+class ModelingToolManager;
+class EditContext;
 class LightingSystem;
 class GridSystem;
+
+// New forward declarations for panel system
+class OutlinerPanel;
+class SelectionPanel;
+class ToolbarManager;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -91,23 +95,29 @@ private slots:
     // Object selection
     void onObjectSelected(SceneObjectPtr object);
     void onTransformModeChanged(TransformMode mode);
+    void onViewportChanged(ViewportWidget* viewport);
 
 private:
     // Core components
     std::shared_ptr<Scene> m_scene;
     std::shared_ptr<SceneManager> m_sceneManager;
-    std::shared_ptr<CameraController> m_cameraController;
-    std::shared_ptr<InputController> m_inputController;
     std::shared_ptr<RenderSystem> m_renderSystem;
     std::shared_ptr<AssetManager> m_assetManager;
     std::shared_ptr<UIManager> m_uiManager;
-    std::shared_ptr<ExtrudeTool> m_extrudeTool; // Add ExtrudeTool member
-    std::shared_ptr<ModelingToolManager> m_modelingToolManager; // Add ModelingToolManager member
-    std::shared_ptr<EditContext> m_editContext; // Add EditContext member
+    std::shared_ptr<ExtrudeTool> m_extrudeTool;
+    std::shared_ptr<ModelingToolManager> m_modelingToolManager;
+    std::shared_ptr<EditContext> m_editContext;
     std::shared_ptr<LightingSystem> m_lightingSystem;
     std::shared_ptr<GridSystem> m_gridSystem;
     
-    Viewport3D* m_viewport;
+    // Modern panel system
+    OutlinerPanel* m_outlinerPanel = nullptr;
+    PropertiesPanel* m_modernPropertiesPanel = nullptr;
+    SelectionPanel* m_selectionPanel = nullptr;
+    std::unique_ptr<ToolbarManager> m_toolbarManager;
+    
+    // Legacy components during transition
+    ViewportManager* m_viewportManager;
     SceneHierarchyPanel* m_hierarchyPanel;
     PropertiesPanel* m_propertiesPanel;
     
@@ -119,7 +129,7 @@ private:
     
     // Menus
     QMenu* m_fileMenu;
-    QMenu* m_editMenu; // Add Edit menu
+    QMenu* m_editMenu;
     QMenu* m_createMenu;
     QMenu* m_viewMenu;
     QMenu* m_transformMenu;
@@ -189,12 +199,13 @@ private:
     QString m_currentFile;
     bool m_sceneModified;
     
+    // Helper methods
+    void createPrimitiveHelper(const QString& primitiveType);
+    
+    // UI Setup methods
     void setupUI();
-    void createMenus();
-    void createToolBars();
-    void createStatusBar();
-    void createActions();
-    void createDockWidgets();
+    void setupModernPanels();
+    void setupModernToolbars();
     void connectSignals();
     
     void updateUI();

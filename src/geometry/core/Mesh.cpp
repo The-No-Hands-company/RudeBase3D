@@ -1,12 +1,17 @@
 #include "Mesh.h"
 #include <QOpenGLFunctions>
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 #include <algorithm>
+#include "../halfedge/HalfEdgeMesh.h"
 
 Mesh::Mesh()
     : m_VAO(0)
     , m_VBO(0)
     , m_EBO(0)
     , m_uploaded(false)
+    , m_halfEdgeMesh(std::make_unique<HalfEdgeMesh>())
 {
 }
 
@@ -268,4 +273,99 @@ void Mesh::cleanupGL()
         }
     }
     m_uploaded = false;
+}
+
+// Half-edge mesh interface
+HalfEdgeMesh& Mesh::getHalfEdgeMesh()
+{
+    return *m_halfEdgeMesh;
+}
+
+const HalfEdgeMesh& Mesh::getHalfEdgeMesh() const
+{
+    return *m_halfEdgeMesh;
+}
+
+// Data management
+void Mesh::setData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices)
+{
+    setVertices(vertices);
+    setIndices(indices);
+    
+    // Update half-edge mesh representation
+    if (m_halfEdgeMesh) {
+        // Convert vertices and indices to half-edge representation
+        // This is a simplified implementation - you may need to expand this
+        m_halfEdgeMesh->clear();
+        // TODO: Implement proper conversion from vertex/index data to half-edge mesh
+    }
+}
+
+void Mesh::setData(const std::vector<glm::vec3>& positions, const std::vector<unsigned int>& indices, 
+                   const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords)
+{
+    // Convert GLM data to Vertex structures
+    std::vector<Vertex> vertices;
+    vertices.reserve(positions.size());
+    
+    for (size_t i = 0; i < positions.size(); ++i) {
+        Vertex vertex;
+        vertex.position = QVector3D(positions[i].x, positions[i].y, positions[i].z);
+        
+        if (i < normals.size()) {
+            vertex.normal = QVector3D(normals[i].x, normals[i].y, normals[i].z);
+        }
+        
+        if (i < texCoords.size()) {
+            vertex.texCoord = QVector2D(texCoords[i].x, texCoords[i].y);
+        }
+        
+        vertices.push_back(vertex);
+    }
+    
+    setData(vertices, indices);
+}
+
+// Mesh operations
+bool Mesh::extrudeFace(const rude::FacePtr& face, float distance)
+{
+    if (!face || !m_halfEdgeMesh) {
+        return false;
+    }
+    
+    // TODO: Implement face extrusion using half-edge mesh operations
+    // This is a stub implementation
+    return true;
+}
+
+bool Mesh::bevelEdge(const rude::EdgePtr& edge, float amount)
+{
+    if (!edge || !m_halfEdgeMesh) {
+        return false;
+    }
+    
+    // TODO: Implement edge beveling using half-edge mesh operations
+    // This is a stub implementation
+    return true;
+}
+
+bool Mesh::subdivideFace(const rude::FacePtr& face, int subdivisions)
+{
+    if (!face || subdivisions <= 0 || !m_halfEdgeMesh) {
+        return false;
+    }
+    
+    // TODO: Implement face subdivision using half-edge mesh operations
+    // This is a stub implementation
+    return true;
+}
+
+void Mesh::updateNormals()
+{
+    calculateNormals();
+    
+    // Update GPU data if already uploaded
+    if (m_uploaded) {
+        uploadToGPU();
+    }
 }

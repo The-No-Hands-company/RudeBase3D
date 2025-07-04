@@ -1,7 +1,11 @@
 #pragma once
 
 #include "Common.h"
-#include <QOpenGLFunctions_3_3_Core>
+#include "core/mesh_forward.hpp"
+#include <QtOpenGL/QOpenGLFunctions_3_3_Core>
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 #include <vector>
 
 class Mesh : protected QOpenGLFunctions_3_3_Core {
@@ -31,6 +35,25 @@ public:
     QVector3D getBoundingBoxCenter() const;
     float getBoundingRadius() const;
     
+    // Half-edge mesh interface
+    HalfEdgeMesh& getHalfEdgeMesh();
+    const HalfEdgeMesh& getHalfEdgeMesh() const;
+    
+    // Data management
+    void setData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
+    void setData(const std::vector<glm::vec3>& positions, const std::vector<unsigned int>& indices, 
+                 const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords);
+    
+    // Mesh operations
+    bool extrudeFace(const rude::FacePtr& face, float distance = 1.0f);
+    bool bevelEdge(const rude::EdgePtr& edge, float amount = 0.1f);
+    bool subdivideFace(const rude::FacePtr& face, int subdivisions = 1);
+    void updateNormals();
+    
+    // OpenGL management
+    void initializeGL();
+    void cleanupGL();
+    
     // Utility
     void clear();
     bool isEmpty() const { return m_vertices.empty(); }
@@ -48,6 +71,6 @@ private:
     
     bool m_uploaded;
     
-    void initializeGL();
-    void cleanupGL();
+    // Half-edge mesh representation
+    std::unique_ptr<HalfEdgeMesh> m_halfEdgeMesh;
 };

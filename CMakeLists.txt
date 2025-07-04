@@ -30,6 +30,27 @@ message(STATUS "Found Qt6: ${Qt6_VERSION} at ${Qt6_DIR}")
 # Find OpenGL
 find_package(OpenGL REQUIRED)
 
+# Find GLM (header-only library)
+find_package(glm QUIET)
+if(NOT glm_FOUND)
+    # Try to find GLM manually
+    find_path(GLM_INCLUDE_DIRS glm/glm.hpp
+        HINTS
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm
+        /usr/include
+        /usr/local/include
+        DOC "GLM include directory"
+    )
+    if(GLM_INCLUDE_DIRS)
+        message(STATUS "Found GLM: ${GLM_INCLUDE_DIRS}")
+        set(GLM_FOUND TRUE)
+    else()
+        message(STATUS "GLM found in third_party/glm")
+        set(GLM_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm")
+        set(GLM_FOUND TRUE)
+    endif()
+endif()
+
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -43,6 +64,7 @@ file(GLOB_RECURSE SOURCES
 # Collect header files from organized directories  
 file(GLOB_RECURSE HEADERS
     "src/*.h"
+    "include/*.hpp"
 )
 
 # Remove any backup or old files that might have been collected
@@ -51,13 +73,33 @@ list(FILTER SOURCES EXCLUDE REGEX ".*_old\\.(cpp|h)$")
 list(FILTER HEADERS EXCLUDE REGEX ".*_backup\\.(cpp|h)$")
 list(FILTER HEADERS EXCLUDE REGEX ".*_old\\.(cpp|h)$")
 
+# Add subdirectories for libraries
+add_subdirectory(src/core)
+add_subdirectory(src/gizmo)
+add_subdirectory(src/panels)
+add_subdirectory(src/toolbars)
+add_subdirectory(src/event)
+add_subdirectory(src/input)
+
 # Create executable
 add_executable(RudeBase3D ${SOURCES} ${HEADERS})
 
 # Include directories for organized structure
 target_include_directories(RudeBase3D PRIVATE 
+    include
+    include/core
+    include/gizmo
+    include/toolbars
+    include/panels
+    include/event
+    include/input
     src
     src/core
+    src/gizmo
+    src/toolbars
+    src/panels
+    src/event
+    src/input
     src/geometry/core
     src/geometry/halfedge  
     src/geometry/hybrid
@@ -82,7 +124,15 @@ target_include_directories(RudeBase3D PRIVATE
     src/io/formats
     src/io/project
     src/commands
+    third_party/glm
+    third_party/fmt/include
+    third_party/imgui
 )
+
+# Add GLM include directory if found
+if(GLM_FOUND AND GLM_INCLUDE_DIRS)
+    target_include_directories(RudeBase3D PRIVATE ${GLM_INCLUDE_DIRS})
+endif()
 
 # Set target properties for modern C++
 set_target_properties(RudeBase3D PROPERTIES
@@ -104,6 +154,12 @@ target_link_libraries(RudeBase3D
     Qt6::OpenGL 
     Qt6::OpenGLWidgets
     OpenGL::GL
+    core
+    gizmo
+    panels
+    toolbars
+    event
+    input
 )
 
 # Set compiler-specific options for Visual Studio 2022 and C++23

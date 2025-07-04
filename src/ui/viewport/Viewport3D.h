@@ -13,7 +13,7 @@
 class Scene;
 class Camera;
 class Renderer;
-class CameraController;
+class ICameraController;
 class InputController;
 class SelectionManager;
 class LightingSystem;
@@ -40,12 +40,12 @@ public:
     TransformMode getTransformMode() const { return m_transformMode; }
     
     // Controllers and systems
-    void setCameraController(std::shared_ptr<CameraController> controller);
+    void setCameraController(std::shared_ptr<ICameraController> controller);
     void setInputController(std::shared_ptr<InputController> controller);
     void setLightingSystem(std::shared_ptr<LightingSystem> lightingSystem);
     void setGridSystem(std::shared_ptr<GridSystem> gridSystem);
     
-    std::shared_ptr<CameraController> getCameraController() const { return m_cameraController; }
+    std::shared_ptr<ICameraController> getCameraController() const { return m_cameraController; }
     std::shared_ptr<InputController> getInputController() const { return m_inputController; }
     std::shared_ptr<LightingSystem> getLightingSystem() const { return m_lightingSystem; }
     std::shared_ptr<GridSystem> getGridSystem() const { return m_gridSystem; }
@@ -86,7 +86,7 @@ private:
     std::shared_ptr<Scene> m_scene;
     std::shared_ptr<Camera> m_camera;
     std::shared_ptr<Renderer> m_renderer;
-    std::shared_ptr<CameraController> m_cameraController;
+    std::shared_ptr<ICameraController> m_cameraController;
     std::shared_ptr<InputController> m_inputController;
     std::shared_ptr<SelectionManager> m_selectionManager;
     std::shared_ptr<LightingSystem> m_lightingSystem;

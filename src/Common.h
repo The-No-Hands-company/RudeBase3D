@@ -1,11 +1,14 @@
 #pragma once
 
-#include <QtOpenGL>
-#include <QOpenGLWidget>
-#include <QMatrix4x4>
-#include <QVector3D>
-#include <QVector4D>
-#include <QQuaternion>
+// Include Qt components with proper paths
+#include <QtCore/QString>
+#include <QtCore/QObject>
+#include <QtOpenGLWidgets/QOpenGLWidget>
+#include <QtGui/QMatrix4x4>
+#include <QtGui/QVector3D>
+#include <QtGui/QVector2D>
+#include <QtGui/QVector4D>
+#include <QtGui/QQuaternion>
 #include <memory>
 #include <vector>
 #include <string>
@@ -37,16 +40,10 @@ class HybridGeometry;
 class HybridGeometryManager;
 class GeometryProcessingPipeline;
 
-// Enum for primitive types
-enum class PrimitiveType {
-    Cube,
-    Sphere,
-    Cylinder,
-    Plane,
-    Torus,
-    Cone,
-    Icosphere
-};
+// Forward declaration of PrimitiveType from rude namespace
+namespace rude {
+    enum class PrimitiveType;
+}
 
 // Enum for transform modes
 enum class TransformMode {

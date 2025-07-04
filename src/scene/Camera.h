@@ -2,6 +2,7 @@
 
 #include "Common.h"
 #include "core/math/Transform.h"
+#include <glm/glm.hpp>
 
 class Camera {
 public:
@@ -35,10 +36,14 @@ public:
     void moveRight(float distance);
     void moveUp(float distance);
     
-    // Matrix getters
+    // Matrix getters (Qt versions)
     QMatrix4x4 getViewMatrix() const;
     QMatrix4x4 getProjectionMatrix() const { return m_projectionMatrix; }
     QMatrix4x4 getViewProjectionMatrix() const;
+    
+    // GLM matrix getters for gizmo system
+    glm::mat4 getViewMatrixGLM() const;
+    glm::mat4 getProjectionMatrixGLM() const;
     
     // Ray casting for picking
     QVector3D screenToWorldRay(const QVector2D& screenPos, const QSize& viewportSize) const;
@@ -46,6 +51,18 @@ public:
     QVector3D getForward() const { return m_transform.getForward(); }
     QVector3D getRight() const { return m_transform.getRight(); }
     QVector3D getUp() const { return m_transform.getUp(); }
+    
+    // Viewport dimensions
+    float getViewportWidth() const { return m_viewportWidth; }
+    float getViewportHeight() const { return m_viewportHeight; }
+    void setViewportSize(float width, float height) { 
+        m_viewportWidth = width; 
+        m_viewportHeight = height; 
+        setAspectRatio(width / height);
+    }
+    
+    // Position for gizmo system
+    glm::vec3 getPosition() const;
 
 private:
     Transform m_transform;
@@ -61,6 +78,10 @@ private:
     
     // Orthographic parameters (when not perspective)
     float m_left, m_right, m_bottom, m_top;
+    
+    // Viewport dimensions
+    float m_viewportWidth = 800.0f;
+    float m_viewportHeight = 600.0f;
     
     void updateProjectionMatrix();
 };

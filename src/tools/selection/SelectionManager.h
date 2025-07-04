@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Common.h"
-#include "HalfEdgeMesh.h"
+#include "geometry/halfedge/HalfEdgeMesh.h"
 #include <QVector3D>
 #include <QRect>
 #include <unordered_set>
