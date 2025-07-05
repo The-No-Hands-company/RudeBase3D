@@ -128,6 +128,25 @@ const QVector3D WORLD_UP(0.0f, 1.0f, 0.0f);
 const QVector3D WORLD_FORWARD(0.0f, 0.0f, -1.0f);
 const QVector3D WORLD_RIGHT(1.0f, 0.0f, 0.0f);
 
+// Conversion functions between Qt and GLM types
+#include <glm/glm.hpp>
+
+inline glm::vec3 qtToGlm(const QVector3D& v) {
+    return glm::vec3(v.x(), v.y(), v.z());
+}
+
+inline glm::vec2 qtToGlm(const QVector2D& v) {
+    return glm::vec2(v.x(), v.y());
+}
+
+inline QVector3D glmToQt(const glm::vec3& v) {
+    return QVector3D(v.x, v.y, v.z);
+}
+
+inline QVector2D glmToQt(const glm::vec2& v) {
+    return QVector2D(v.x, v.y);
+}
+
 // C++23 Concepts for type safety
 template<typename T>
 concept Transformable = requires(T t) {

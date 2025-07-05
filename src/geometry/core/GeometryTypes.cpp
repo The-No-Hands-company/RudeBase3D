@@ -227,13 +227,17 @@ void SubdivisionMesh::computeFacePoints(std::shared_ptr<HalfEdgeMesh> mesh,
         int vertexCount = 0;
         
         // Walk around face to get all vertices
-        auto startEdge = face->getOuterEdge();
+        auto startEdge = face->halfEdge;
         auto currentEdge = startEdge;
         
         do {
-            centroid += currentEdge->getOriginVertex()->getPosition();
-            vertexCount++;
-            currentEdge = currentEdge->getNext();
+            if (currentEdge->vertex) {
+                // Convert glm::vec3 to QVector3D
+                auto pos = currentEdge->vertex->position;
+                centroid += QVector3D(pos.x, pos.y, pos.z);
+                vertexCount++;
+            }
+            currentEdge = currentEdge->next;
         } while (currentEdge && currentEdge != startEdge);
         
         if (vertexCount > 0) {

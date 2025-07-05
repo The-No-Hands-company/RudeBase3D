@@ -20,10 +20,10 @@ MeshPtr HybridGeometry::getFaceVertexMesh(bool forceUpdate) {
 
 HalfEdgeMeshPtr HybridGeometry::getHalfEdgeMesh(bool forceUpdate) {
     if (m_primaryType == GeometryRepresentation::HalfEdge && !forceUpdate) {
-        return getPrimaryAs<HalfEdgeMesh>();
+        return getPrimaryAs<rude::HalfEdgeMesh>();
     }
     
-    return getCachedAs<HalfEdgeMesh>(GeometryRepresentation::HalfEdge, forceUpdate);
+    return getCachedAs<rude::HalfEdgeMesh>(GeometryRepresentation::HalfEdge, forceUpdate);
 }
 
 NURBSSurfacePtr HybridGeometry::getNURBSSurface(bool forceUpdate) {
@@ -65,7 +65,7 @@ VoxelGridPtr HybridGeometry::getVoxelGrid(float voxelSize, bool forceUpdate) {
             break;
         }
         case GeometryRepresentation::HalfEdge: {
-            auto halfEdge = getPrimaryAs<HalfEdgeMesh>();
+            auto halfEdge = getPrimaryAs<rude::HalfEdgeMesh>();
             voxelGrid = GeometryConverter::toVoxels(halfEdge, voxelSize);
             break;
         }
@@ -257,7 +257,7 @@ std::shared_ptr<T> HybridGeometry::getCachedAs(GeometryRepresentation type, bool
             if constexpr (std::is_same_v<T, Mesh>) {
                 switch (m_primaryType) {
                     case GeometryRepresentation::HalfEdge:
-                        converted = GeometryConverter::toFaceVertex(getPrimaryAs<HalfEdgeMesh>());
+                        converted = GeometryConverter::toFaceVertex(getPrimaryAs<rude::HalfEdgeMesh>());
                         break;
                     // Add other conversions as they become available
                     default:

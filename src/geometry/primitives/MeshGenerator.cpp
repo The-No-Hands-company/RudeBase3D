@@ -487,7 +487,6 @@ MeshPtr MeshGenerator::generateIcosphere(float radius, int subdivisions)
     
     // Golden ratio
     const float phi = (1.0f + sqrt(5.0f)) * 0.5f;
-    const float invNorm = 1.0f / sqrt(phi * phi + 1.0f);
     
     // Create initial icosahedron vertices
     std::vector<QVector3D> icosahedronVertices = {

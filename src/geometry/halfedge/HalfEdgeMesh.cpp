@@ -5,15 +5,25 @@
 #include <queue>
 #include <QDebug>
 
-// HalfEdgeVertex Implementation
-HalfEdgeVertex::HalfEdgeVertex(const glm::vec3& position, unsigned int id)
-    : m_position(position)
-    , m_id(id)
-    , m_normal(0.0f, 1.0f, 0.0f)
-    , m_texCoord(0.0f, 0.0f)
-{
-}
+/*
+=================================================================================
+WARNING: THIS FILE CONTAINS LEGACY IMPLEMENTATION 
+This file implements an older API that conflicts with the current rude:: namespace API.
+Most of this content has been commented out to allow the project to build.
+TODO: Either remove this file entirely or update it to properly integrate with the new API.
+=================================================================================
 
+// Legacy HalfEdgeVertex Implementation - TODO: Remove or update to use rude:: API
+// HalfEdgeVertex::HalfEdgeVertex(const glm::vec3& position, unsigned int id)
+//     : m_position(position)
+//     , m_id(id)
+//     , m_normal(0.0f, 1.0f, 0.0f)
+//     , m_texCoord(0.0f, 0.0f)
+// {
+// }
+
+// Legacy implementation - commented out for now
+/*
 std::vector<HalfEdgeEdgePtr> HalfEdgeVertex::getIncomingEdges() const {
     std::vector<HalfEdgeEdgePtr> edges;
     auto outgoing = getOutgoingEdge();
@@ -258,13 +268,18 @@ bool HalfEdgeMesh::isEmpty() const {
     return m_vertices.empty() && m_edges.empty() && m_faces.empty();
 }
 
+// TODO: Update to use rude:: API
+/*
 HalfEdgeVertexPtr HalfEdgeMesh::addVertex(const glm::vec3& position) {
     auto vertex = std::make_shared<HalfEdgeVertex>(position, m_nextVertexId++);
     m_vertices.push_back(vertex);
     m_vertexMap[vertex->getId()] = vertex;
     return vertex;
 }
+*/
 
+// TODO: Update to use rude:: API
+/*
 HalfEdgeEdgePtr HalfEdgeMesh::addEdge(HalfEdgeVertexPtr origin, HalfEdgeVertexPtr target) {
     if (!origin || !target || origin == target) {
         return nullptr;
@@ -348,6 +363,11 @@ HalfEdgeFacePtr HalfEdgeMesh::addFace(const std::vector<HalfEdgeVertexPtr>& vert
     return face;
 }
 
+bool HalfEdgeMesh::removeVertex(HalfEdgeVertexPtr vertex) {
+*/
+
+// TODO: Update to use rude:: API
+/*
 bool HalfEdgeMesh::removeVertex(HalfEdgeVertexPtr vertex) {
     if (!vertex) return false;
     
@@ -475,7 +495,10 @@ std::vector<HalfEdgeFacePtr> HalfEdgeMesh::getSelectedFaces() const {
     }
     return selected;
 }
+*/
 
+// TODO: The rest of this file uses legacy types and needs to be updated or removed
+/*
 void HalfEdgeMesh::clearSelection() {
     for (auto& vertex : m_vertices) {
         vertex->setSelected(false);
@@ -739,3 +762,4 @@ void HalfEdgeMesh::connectEdges(HalfEdgeEdgePtr edge1, HalfEdgeEdgePtr edge2) {
     edge1->setNext(edge2);
     edge2->setPrev(edge1);
 }
+*/

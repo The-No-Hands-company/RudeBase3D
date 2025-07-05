@@ -68,17 +68,17 @@ void Mesh::uploadToGPU()
     
     // Set vertex attributes
     // Position attribute (location 0)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(rude::VertexPtr), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(rude::Vertex), (void*)0);
     glEnableVertexAttribArray(0);
     
     // Normal attribute (location 1)
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(rude::VertexPtr), 
-                            (void*)offsetof(rude::VertexPtr, normal));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(rude::Vertex), 
+                            (void*)offsetof(rude::Vertex, normal));
     glEnableVertexAttribArray(1);
     
     // Texture coordinate attribute (location 2)
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(rude::VertexPtr), 
-                            (void*)offsetof(rude::VertexPtr, texCoord));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(rude::Vertex), 
+                            (void*)offsetof(rude::Vertex, texCoord));
     glEnableVertexAttribArray(2);
     
     // Unbind VAO
@@ -153,18 +153,18 @@ void Mesh::calculateNormals()
     
     // Initialize all normals to zero
     for (auto& vertex : m_vertices) {
-        vertex->normal = QVector3D(0, 0, 0);
+        vertex->normal = glm::vec3(0.0f, 0.0f, 0.0f);
     }
     
     // Calculate face normals and accumulate vertex normals
     if (!m_indices.empty()) {
         for (size_t i = 0; i < m_indices.size(); i += 3) {
             if (i + 2 < m_indices.size()) {
-                const QVector3D& v0 = m_vertices[m_indices[i]]->position;
-                const QVector3D& v1 = m_vertices[m_indices[i + 1]]->position;
-                const QVector3D& v2 = m_vertices[m_indices[i + 2]]->position;
+                const glm::vec3& v0 = m_vertices[m_indices[i]]->position;
+                const glm::vec3& v1 = m_vertices[m_indices[i + 1]]->position;
+                const glm::vec3& v2 = m_vertices[m_indices[i + 2]]->position;
                 
-                QVector3D normal = QVector3D::crossProduct(v1 - v0, v2 - v0).normalized();
+                glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
                 
                 m_vertices[m_indices[i]]->normal += normal;
                 m_vertices[m_indices[i + 1]]->normal += normal;
@@ -174,11 +174,11 @@ void Mesh::calculateNormals()
     } else {
         for (size_t i = 0; i < m_vertices.size(); i += 3) {
             if (i + 2 < m_vertices.size()) {
-                const QVector3D& v0 = m_vertices[i]->position;
-                const QVector3D& v1 = m_vertices[i + 1]->position;
-                const QVector3D& v2 = m_vertices[i + 2]->position;
+                const glm::vec3& v0 = m_vertices[i]->position;
+                const glm::vec3& v1 = m_vertices[i + 1]->position;
+                const glm::vec3& v2 = m_vertices[i + 2]->position;
                 
-                QVector3D normal = QVector3D::crossProduct(v1 - v0, v2 - v0).normalized();
+                glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
                 
                 m_vertices[i]->normal += normal;
                 m_vertices[i + 1]->normal += normal;
@@ -189,7 +189,7 @@ void Mesh::calculateNormals()
     
     // Normalize all vertex normals
     for (auto& vertex : m_vertices) {
-        vertex->normal.normalize();
+        vertex->normal = glm::normalize(vertex->normal);
     }
     
     m_uploaded = false;

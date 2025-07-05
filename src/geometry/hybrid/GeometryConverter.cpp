@@ -1,9 +1,11 @@
 #include "GeometryConverter.h"
+#include "geometry/core/Vertex.h"
 #include "core/mesh_elements.hpp"
 #include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <unordered_map>
 #include <algorithm>
+#include <glm/glm.hpp>
 
 HalfEdgeMeshPtr GeometryConverter::toHalfEdge(MeshPtr faceVertexMesh) {
     if (!faceVertexMesh || faceVertexMesh->isEmpty()) {
@@ -24,9 +26,9 @@ HalfEdgeMeshPtr GeometryConverter::toHalfEdge(MeshPtr faceVertexMesh) {
     halfEdgeVertices.reserve(vertices.size());
     
     for (const auto& vertex : vertices) {
-        auto halfEdgeVertex = halfEdgeMesh->addVertex(qtToGlm(vertex.position));
-        halfEdgeVertex->normal = qtToGlm(vertex.normal);
-        halfEdgeVertex->texCoord = qtToGlm(vertex.texCoord);
+        auto halfEdgeVertex = halfEdgeMesh->addVertex(vertex->position);
+        halfEdgeVertex->normal = vertex->normal;
+        halfEdgeVertex->texCoord = vertex->texCoord;
         halfEdgeVertices.push_back(halfEdgeVertex);
     }
 
