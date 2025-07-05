@@ -1,4 +1,5 @@
 #include "Mesh.h"
+#include "Vertex.h"
 #include <QOpenGLFunctions>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
@@ -292,39 +293,64 @@ void Mesh::setData(const std::vector<rude::VertexPtr>& vertices, const std::vect
 {
     setVertices(vertices);
     setIndices(indices);
-    
-    // Update half-edge mesh representation
-    if (m_halfEdgeMesh) {
-        // Convert vertices and indices to half-edge representation
-        // This is a simplified implementation - you may need to expand this
-        m_halfEdgeMesh->clear();
-        // TODO: Implement proper conversion from vertex/index data to half-edge mesh
-    }
 }
 
 void Mesh::setData(const std::vector<glm::vec3>& positions, const std::vector<unsigned int>& indices, 
                    const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords)
 {
-    // Convert GLM data to Vertex structures
-    std::vector<rude::VertexPtr> vertices;
-    vertices.reserve(positions.size());
+    // Clear existing vertices
+    m_vertices.clear();
+    m_vertices.reserve(positions.size());
     
+    // Create rude::Vertex objects from GLM data
     for (size_t i = 0; i < positions.size(); ++i) {
-        rude::VertexPtr vertex = std::make_shared<rude::Vertex>();
-        vertex->position = QVector3D(positions[i].x, positions[i].y, positions[i].z);
+        auto vertex = std::make_shared<rude::Vertex>(positions[i]);
         
         if (i < normals.size()) {
-            vertex->normal = QVector3D(normals[i].x, normals[i].y, normals[i].z);
+            vertex->normal = normals[i];
+        } else {
+            vertex->normal = glm::vec3(0.0f, 1.0f, 0.0f); // Default up normal
         }
         
         if (i < texCoords.size()) {
-            vertex->texCoord = QVector2D(texCoords[i].x, texCoords[i].y);
+            vertex->texCoord = texCoords[i];
+        } else {
+            vertex->texCoord = glm::vec2(0.0f, 0.0f); // Default UV
         }
         
-        vertices.push_back(vertex);
+        m_vertices.push_back(vertex);
     }
     
-    setData(vertices, indices);
+    setIndices(indices);
+}
+
+// Convenience overloads for our global Vertex class
+void Mesh::setVertices(const std::vector<Vertex>& vertices)
+{
+    m_vertices.clear();
+    m_vertices.reserve(vertices.size());
+    
+    for (const auto& vertex : vertices) {
+        m_vertices.push_back(vertex.toRudeVertexPtr());
+    }
+    
+    m_uploaded = false;
+}
+
+void Mesh::setData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices)
+{
+    setVertices(vertices);
+    setIndices(indices);
+}
+
+void Mesh::updateNormals()
+{
+    calculateNormals();
+    
+    // Update GPU data if already uploaded
+    if (m_uploaded) {
+        uploadToGPU();
+    }
 }
 
 // Mesh operations
@@ -359,14 +385,4 @@ bool Mesh::subdivideFace(const rude::FacePtr& face, int subdivisions)
     // TODO: Implement face subdivision using half-edge mesh operations
     // This is a stub implementation
     return true;
-}
-
-void Mesh::updateNormals()
-{
-    calculateNormals();
-    
-    // Update GPU data if already uploaded
-    if (m_uploaded) {
-        uploadToGPU();
-    }
 }

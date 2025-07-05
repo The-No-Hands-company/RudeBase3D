@@ -1,5 +1,6 @@
 #include "MeshGenerator.h"
 #include "Mesh.h"
+#include "geometry/core/Vertex.h"
 #include <cmath>
 #include <map>
 #include <array>
@@ -9,39 +10,41 @@ MeshPtr MeshGenerator::generateCube(float size)
 {
     auto mesh = std::make_shared<Mesh>();
     
-    std::vector<Vertex> vertices;
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> texCoords;
     std::vector<unsigned int> indices;
     
     float halfSize = size * 0.5f;
     
     // Define cube vertices (8 corners)
-    QVector3D positions[8] = {
-        QVector3D(-halfSize, -halfSize, -halfSize), // 0: left-bottom-back
-        QVector3D( halfSize, -halfSize, -halfSize), // 1: right-bottom-back
-        QVector3D( halfSize,  halfSize, -halfSize), // 2: right-top-back
-        QVector3D(-halfSize,  halfSize, -halfSize), // 3: left-top-back
-        QVector3D(-halfSize, -halfSize,  halfSize), // 4: left-bottom-front
-        QVector3D( halfSize, -halfSize,  halfSize), // 5: right-bottom-front
-        QVector3D( halfSize,  halfSize,  halfSize), // 6: right-top-front
-        QVector3D(-halfSize,  halfSize,  halfSize)  // 7: left-top-front
+    glm::vec3 cubePositions[8] = {
+        glm::vec3(-halfSize, -halfSize, -halfSize), // 0: left-bottom-back
+        glm::vec3( halfSize, -halfSize, -halfSize), // 1: right-bottom-back
+        glm::vec3( halfSize,  halfSize, -halfSize), // 2: right-top-back
+        glm::vec3(-halfSize,  halfSize, -halfSize), // 3: left-top-back
+        glm::vec3(-halfSize, -halfSize,  halfSize), // 4: left-bottom-front
+        glm::vec3( halfSize, -halfSize,  halfSize), // 5: right-bottom-front
+        glm::vec3( halfSize,  halfSize,  halfSize), // 6: right-top-front
+        glm::vec3(-halfSize,  halfSize,  halfSize)  // 7: left-top-front
     };
     
     // Define face normals
-    QVector3D normals[6] = {
-        QVector3D( 0,  0, -1), // Back
-        QVector3D( 0,  0,  1), // Front
-        QVector3D(-1,  0,  0), // Left
-        QVector3D( 1,  0,  0), // Right
-        QVector3D( 0, -1,  0), // Bottom
-        QVector3D( 0,  1,  0)  // Top
+    glm::vec3 faceNormals[6] = {
+        glm::vec3( 0,  0, -1), // Back
+        glm::vec3( 0,  0,  1), // Front
+        glm::vec3(-1,  0,  0), // Left
+        glm::vec3( 1,  0,  0), // Right
+        glm::vec3( 0, -1,  0), // Bottom
+        glm::vec3( 0,  1,  0)  // Top
     };
     
     // Define UV coordinates
-    QVector2D uvs[4] = {
-        QVector2D(0, 0), // bottom-left
-        QVector2D(1, 0), // bottom-right
-        QVector2D(1, 1), // top-right
-        QVector2D(0, 1)  // top-left
+    glm::vec2 faceUVs[4] = {
+        glm::vec2(0, 0), // bottom-left
+        glm::vec2(1, 0), // bottom-right
+        glm::vec2(1, 1), // top-right
+        glm::vec2(0, 1)  // top-left
     };
     
     // Define faces (vertex indices for each face)
@@ -57,11 +60,9 @@ MeshPtr MeshGenerator::generateCube(float size)
     // Generate vertices for each face
     for (int face = 0; face < 6; ++face) {
         for (int vert = 0; vert < 4; ++vert) {
-            Vertex vertex;
-            vertex.position = positions[faceIndices[face][vert]];
-            vertex.normal = normals[face];
-            vertex.texCoord = uvs[vert];
-            vertices.push_back(vertex);
+            positions.push_back(cubePositions[faceIndices[face][vert]]);
+            normals.push_back(faceNormals[face]);
+            texCoords.push_back(faceUVs[vert]);
         }
         
         // Generate indices for the face (two triangles)
@@ -75,8 +76,7 @@ MeshPtr MeshGenerator::generateCube(float size)
         indices.push_back(baseIndex + 3);
     }
     
-    mesh->setVertices(vertices);
-    mesh->setIndices(indices);
+    mesh->setData(positions, indices, normals, texCoords);
     
     return mesh;
 }
@@ -85,7 +85,9 @@ MeshPtr MeshGenerator::generateSphere(float radius, int segments, int rings)
 {
     auto mesh = std::make_shared<Mesh>();
     
-    std::vector<Vertex> vertices;
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> texCoords;
     std::vector<unsigned int> indices;
     
     // Generate vertices
@@ -99,19 +101,18 @@ MeshPtr MeshGenerator::generateSphere(float radius, int segments, int rings)
             float sinPhi = sin(phi);
             float cosPhi = cos(phi);
             
-            Vertex vertex;
-            vertex.position = QVector3D(
+            glm::vec3 position = glm::vec3(
                 radius * sinTheta * cosPhi,
                 radius * cosTheta,
                 radius * sinTheta * sinPhi
             );
-            vertex.normal = vertex.position.normalized();
-            vertex.texCoord = QVector2D(
+            
+            positions.push_back(position);
+            normals.push_back(glm::normalize(position));
+            texCoords.push_back(glm::vec2(
                 static_cast<float>(segment) / static_cast<float>(segments),
                 static_cast<float>(ring) / static_cast<float>(rings)
-            );
-            
-            vertices.push_back(vertex);
+            ));
         }
     }
     
@@ -133,8 +134,7 @@ MeshPtr MeshGenerator::generateSphere(float radius, int segments, int rings)
         }
     }
     
-    mesh->setVertices(vertices);
-    mesh->setIndices(indices);
+    mesh->setData(positions, indices, normals, texCoords);
     
     return mesh;
 }
@@ -143,7 +143,9 @@ MeshPtr MeshGenerator::generateCylinder(float radius, float height, int segments
 {
     auto mesh = std::make_shared<Mesh>();
     
-    std::vector<Vertex> vertices;
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> texCoords;
     std::vector<unsigned int> indices;
     
     float halfHeight = height * 0.5f;
@@ -154,21 +156,17 @@ MeshPtr MeshGenerator::generateCylinder(float radius, float height, int segments
         float cosAngle = cos(angle);
         float sinAngle = sin(angle);
         
-        QVector3D normal(cosAngle, 0.0f, sinAngle);
+        glm::vec3 normal(cosAngle, 0.0f, sinAngle);
         
         // Bottom vertex
-        Vertex bottomVertex;
-        bottomVertex.position = QVector3D(radius * cosAngle, -halfHeight, radius * sinAngle);
-        bottomVertex.normal = normal;
-        bottomVertex.texCoord = QVector2D(static_cast<float>(segment) / static_cast<float>(segments), 0.0f);
-        vertices.push_back(bottomVertex);
+        positions.push_back(glm::vec3(radius * cosAngle, -halfHeight, radius * sinAngle));
+        normals.push_back(normal);
+        texCoords.push_back(glm::vec2(static_cast<float>(segment) / static_cast<float>(segments), 0.0f));
         
         // Top vertex
-        Vertex topVertex;
-        topVertex.position = QVector3D(radius * cosAngle, halfHeight, radius * sinAngle);
-        topVertex.normal = normal;
-        topVertex.texCoord = QVector2D(static_cast<float>(segment) / static_cast<float>(segments), 1.0f);
-        vertices.push_back(topVertex);
+        positions.push_back(glm::vec3(radius * cosAngle, halfHeight, radius * sinAngle));
+        normals.push_back(normal);
+        texCoords.push_back(glm::vec2(static_cast<float>(segment) / static_cast<float>(segments), 1.0f));
     }
     
     // Generate side indices
@@ -188,23 +186,19 @@ MeshPtr MeshGenerator::generateCylinder(float radius, float height, int segments
     }
     
     // Generate bottom cap
-    int bottomCenterIndex = static_cast<int>(vertices.size());
-    Vertex bottomCenter;
-    bottomCenter.position = QVector3D(0.0f, -halfHeight, 0.0f);
-    bottomCenter.normal = QVector3D(0.0f, -1.0f, 0.0f);
-    bottomCenter.texCoord = QVector2D(0.5f, 0.5f);
-    vertices.push_back(bottomCenter);
+    int bottomCenterIndex = static_cast<int>(positions.size());
+    positions.push_back(glm::vec3(0.0f, -halfHeight, 0.0f));
+    normals.push_back(glm::vec3(0.0f, -1.0f, 0.0f));
+    texCoords.push_back(glm::vec2(0.5f, 0.5f));
     
     for (int segment = 0; segment < segments; ++segment) {
         float angle = static_cast<float>(segment) * 2.0f * PI / static_cast<float>(segments);
         float cosAngle = cos(angle);
         float sinAngle = sin(angle);
         
-        Vertex vertex;
-        vertex.position = QVector3D(radius * cosAngle, -halfHeight, radius * sinAngle);
-        vertex.normal = QVector3D(0.0f, -1.0f, 0.0f);
-        vertex.texCoord = QVector2D(0.5f + 0.5f * cosAngle, 0.5f + 0.5f * sinAngle);
-        vertices.push_back(vertex);
+        positions.push_back(glm::vec3(radius * cosAngle, -halfHeight, radius * sinAngle));
+        normals.push_back(glm::vec3(0.0f, -1.0f, 0.0f));
+        texCoords.push_back(glm::vec2(0.5f + 0.5f * cosAngle, 0.5f + 0.5f * sinAngle));
     }
     
     for (int segment = 0; segment < segments; ++segment) {
@@ -217,23 +211,19 @@ MeshPtr MeshGenerator::generateCylinder(float radius, float height, int segments
     }
     
     // Generate top cap
-    int topCenterIndex = static_cast<int>(vertices.size());
-    Vertex topCenter;
-    topCenter.position = QVector3D(0.0f, halfHeight, 0.0f);
-    topCenter.normal = QVector3D(0.0f, 1.0f, 0.0f);
-    topCenter.texCoord = QVector2D(0.5f, 0.5f);
-    vertices.push_back(topCenter);
+    int topCenterIndex = static_cast<int>(positions.size());
+    positions.push_back(glm::vec3(0.0f, halfHeight, 0.0f));
+    normals.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
+    texCoords.push_back(glm::vec2(0.5f, 0.5f));
     
     for (int segment = 0; segment < segments; ++segment) {
         float angle = static_cast<float>(segment) * 2.0f * PI / static_cast<float>(segments);
         float cosAngle = cos(angle);
         float sinAngle = sin(angle);
         
-        Vertex vertex;
-        vertex.position = QVector3D(radius * cosAngle, halfHeight, radius * sinAngle);
-        vertex.normal = QVector3D(0.0f, 1.0f, 0.0f);
-        vertex.texCoord = QVector2D(0.5f + 0.5f * cosAngle, 0.5f - 0.5f * sinAngle);
-        vertices.push_back(vertex);
+        positions.push_back(glm::vec3(radius * cosAngle, halfHeight, radius * sinAngle));
+        normals.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
+        texCoords.push_back(glm::vec2(0.5f + 0.5f * cosAngle, 0.5f - 0.5f * sinAngle));
     }
     
     for (int segment = 0; segment < segments; ++segment) {
@@ -245,8 +235,7 @@ MeshPtr MeshGenerator::generateCylinder(float radius, float height, int segments
         indices.push_back(current);
     }
     
-    mesh->setVertices(vertices);
-    mesh->setIndices(indices);
+    mesh->setData(positions, indices, normals, texCoords);
     
     return mesh;
 }
@@ -255,7 +244,9 @@ MeshPtr MeshGenerator::generatePlane(float width, float height, int widthSegment
 {
     auto mesh = std::make_shared<Mesh>();
     
-    std::vector<Vertex> vertices;
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> texCoords;
     std::vector<unsigned int> indices;
     
     float halfWidth = width * 0.5f;
@@ -264,19 +255,20 @@ MeshPtr MeshGenerator::generatePlane(float width, float height, int widthSegment
     // Generate vertices
     for (int y = 0; y <= heightSegments; ++y) {
         for (int x = 0; x <= widthSegments; ++x) {
-            Vertex vertex;
-            vertex.position = QVector3D(
+            glm::vec3 position(
                 -halfWidth + (static_cast<float>(x) / static_cast<float>(widthSegments)) * width,
                 0.0f,
                 -halfHeight + (static_cast<float>(y) / static_cast<float>(heightSegments)) * height
             );
-            vertex.normal = QVector3D(0.0f, 1.0f, 0.0f);
-            vertex.texCoord = QVector2D(
+            glm::vec3 normal(0.0f, 1.0f, 0.0f);
+            glm::vec2 texCoord(
                 static_cast<float>(x) / static_cast<float>(widthSegments),
                 static_cast<float>(y) / static_cast<float>(heightSegments)
             );
             
-            vertices.push_back(vertex);
+            positions.push_back(position);
+            normals.push_back(normal);
+            texCoords.push_back(texCoord);
         }
     }
     
@@ -298,8 +290,7 @@ MeshPtr MeshGenerator::generatePlane(float width, float height, int widthSegment
         }
     }
     
-    mesh->setVertices(vertices);
-    mesh->setIndices(indices);
+    mesh->setData(positions, indices, normals, texCoords);
     
     return mesh;
 }
@@ -308,7 +299,7 @@ MeshPtr MeshGenerator::generateGrid(float size, int divisions)
 {
     auto mesh = std::make_shared<Mesh>();
     
-    std::vector<Vertex> vertices;
+    std::vector<rude::VertexPtr> vertices;
     
     float halfSize = size * 0.5f;
     float step = size / static_cast<float>(divisions);
@@ -317,16 +308,16 @@ MeshPtr MeshGenerator::generateGrid(float size, int divisions)
     for (int i = 0; i <= divisions; ++i) {
         float z = -halfSize + i * step;
         
-        vertices.push_back(Vertex(QVector3D(-halfSize, 0.0f, z)));
-        vertices.push_back(Vertex(QVector3D(halfSize, 0.0f, z)));
+        vertices.push_back(std::make_shared<rude::Vertex>(glm::vec3(-halfSize, 0.0f, z)));
+        vertices.push_back(std::make_shared<rude::Vertex>(glm::vec3(halfSize, 0.0f, z)));
     }
     
     // Generate grid lines parallel to Z-axis
     for (int i = 0; i <= divisions; ++i) {
         float x = -halfSize + i * step;
         
-        vertices.push_back(Vertex(QVector3D(x, 0.0f, -halfSize)));
-        vertices.push_back(Vertex(QVector3D(x, 0.0f, halfSize)));
+        vertices.push_back(std::make_shared<rude::Vertex>(glm::vec3(x, 0.0f, -halfSize)));
+        vertices.push_back(std::make_shared<rude::Vertex>(glm::vec3(x, 0.0f, halfSize)));
     }
     
     mesh->setVertices(vertices);
@@ -399,8 +390,17 @@ MeshPtr MeshGenerator::generateCone(float radius, float height, int segments)
         indices.push_back(current);  // Current vertex
     }
     
-    mesh->setVertices(vertices);
-    mesh->setIndices(indices);
+    // Convert to GLM types and use setData
+    std::vector<glm::vec3> positions, normals;
+    std::vector<glm::vec2> texCoords;
+    
+    for (const auto& vertex : vertices) {
+        positions.push_back(vertex.getPositionGLM());
+        normals.push_back(vertex.getNormalGLM());
+        texCoords.push_back(vertex.getTexCoordGLM());
+    }
+    
+    mesh->setData(positions, indices, normals, texCoords);
     
     return mesh;
 }
@@ -463,8 +463,17 @@ MeshPtr MeshGenerator::generateTorus(float majorRadius, float minorRadius, int m
         }
     }
     
-    mesh->setVertices(vertices);
-    mesh->setIndices(indices);
+    // Convert to GLM types and use setData
+    std::vector<glm::vec3> positions, normals;
+    std::vector<glm::vec2> texCoords;
+    
+    for (const auto& vertex : vertices) {
+        positions.push_back(vertex.getPositionGLM());
+        normals.push_back(vertex.getNormalGLM());
+        texCoords.push_back(vertex.getTexCoordGLM());
+    }
+    
+    mesh->setData(positions, indices, normals, texCoords);
     
     return mesh;
 }
@@ -552,8 +561,17 @@ MeshPtr MeshGenerator::generateIcosphere(float radius, int subdivisions)
         indices.push_back(face[2]);
     }
     
-    mesh->setVertices(vertices);
-    mesh->setIndices(indices);
+    // Convert to GLM types and use setData
+    std::vector<glm::vec3> positions, normals;
+    std::vector<glm::vec2> texCoords;
+    
+    for (const auto& vertex : vertices) {
+        positions.push_back(vertex.getPositionGLM());
+        normals.push_back(vertex.getNormalGLM());
+        texCoords.push_back(vertex.getTexCoordGLM());
+    }
+    
+    mesh->setData(positions, indices, normals, texCoords);
     
     return mesh;
 }
@@ -565,10 +583,10 @@ void MeshGenerator::addQuad(std::vector<Vertex>& vertices, std::vector<unsigned 
 {
     int baseIndex = static_cast<int>(vertices.size());
     
-    vertices.push_back(Vertex(v0, normal, QVector2D(0, 0)));
-    vertices.push_back(Vertex(v1, normal, QVector2D(1, 0)));
-    vertices.push_back(Vertex(v2, normal, QVector2D(1, 1)));
-    vertices.push_back(Vertex(v3, normal, QVector2D(0, 1)));
+    vertices.push_back(Vertex::fromQt(v0, normal, QVector2D(0, 0)));
+    vertices.push_back(Vertex::fromQt(v1, normal, QVector2D(1, 0)));
+    vertices.push_back(Vertex::fromQt(v2, normal, QVector2D(1, 1)));
+    vertices.push_back(Vertex::fromQt(v3, normal, QVector2D(0, 1)));
     
     // First triangle
     indices.push_back(baseIndex + 0);
@@ -587,9 +605,9 @@ void MeshGenerator::addTriangle(std::vector<Vertex>& vertices, std::vector<unsig
 {
     int baseIndex = static_cast<int>(vertices.size());
     
-    vertices.push_back(Vertex(v0, normal, QVector2D(0, 0)));
-    vertices.push_back(Vertex(v1, normal, QVector2D(1, 0)));
-    vertices.push_back(Vertex(v2, normal, QVector2D(0.5f, 1)));
+    vertices.push_back(Vertex::fromQt(v0, normal, QVector2D(0, 0)));
+    vertices.push_back(Vertex::fromQt(v1, normal, QVector2D(1, 0)));
+    vertices.push_back(Vertex::fromQt(v2, normal, QVector2D(0.5f, 1)));
     
     indices.push_back(baseIndex + 0);
     indices.push_back(baseIndex + 1);

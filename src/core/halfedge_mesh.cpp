@@ -35,7 +35,8 @@ void HalfEdgeMesh::updateNormals() {
         if (face && face->vertices.size() >= 3) {
             QVector3D v1 = rude::glmToQVector(face->vertices[1]->position - face->vertices[0]->position);
             QVector3D v2 = rude::glmToQVector(face->vertices[2]->position - face->vertices[0]->position);
-            face->normal = QVector3D::crossProduct(v1, v2).normalized();
+            QVector3D qtNormal = QVector3D::crossProduct(v1, v2).normalized();
+            face->normal = rude::qVectorToGlm(qtNormal);
         }
     }
     

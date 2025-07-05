@@ -10,6 +10,9 @@
 #include <glm/vec3.hpp>
 #include <vector>
 
+// Forward declaration
+class Vertex;
+
 class Mesh : protected QOpenGLFunctions_3_3_Core {
 public:
     Mesh();
@@ -45,6 +48,10 @@ public:
     void setData(const std::vector<rude::VertexPtr>& vertices, const std::vector<unsigned int>& indices);
     void setData(const std::vector<glm::vec3>& positions, const std::vector<unsigned int>& indices, 
                  const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords);
+    
+    // Convenience overloads for our global Vertex class
+    void setVertices(const std::vector<Vertex>& vertices);
+    void setData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
     
     // Mesh operations
     bool extrudeFace(const rude::FacePtr& face, float distance = 1.0f);

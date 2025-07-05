@@ -1,4 +1,6 @@
 #include "GeometryConverter.h"
+#include "core/mesh_elements.hpp"
+#include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <unordered_map>
 #include <algorithm>
@@ -8,7 +10,7 @@ HalfEdgeMeshPtr GeometryConverter::toHalfEdge(MeshPtr faceVertexMesh) {
         return nullptr;
     }
 
-    auto halfEdgeMesh = std::make_shared<HalfEdgeMesh>();
+    auto halfEdgeMesh = std::make_shared<rude::HalfEdgeMesh>();
     const auto& vertices = faceVertexMesh->getVertices();
     const auto& indices = faceVertexMesh->getIndices();
 
@@ -22,9 +24,9 @@ HalfEdgeMeshPtr GeometryConverter::toHalfEdge(MeshPtr faceVertexMesh) {
     halfEdgeVertices.reserve(vertices.size());
     
     for (const auto& vertex : vertices) {
-        auto halfEdgeVertex = halfEdgeMesh->addVertex(vertex.position);
-        halfEdgeVertex->setNormal(vertex.normal);
-        halfEdgeVertex->setTexCoord(vertex.texCoord);
+        auto halfEdgeVertex = halfEdgeMesh->addVertex(qtToGlm(vertex.position));
+        halfEdgeVertex->normal = qtToGlm(vertex.normal);
+        halfEdgeVertex->texCoord = qtToGlm(vertex.texCoord);
         halfEdgeVertices.push_back(halfEdgeVertex);
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.h"
+#include "geometry/core/Vertex.h"
 #include <vector>
 #include <memory>
 

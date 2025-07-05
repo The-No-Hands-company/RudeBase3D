@@ -17,6 +17,24 @@
 #include <ranges>
 #include <expected>
 #include <span>
+#include <glm/glm.hpp>
+
+// Conversion utilities between Qt and GLM types
+inline glm::vec3 toGlm(const QVector3D& qvec) {
+    return glm::vec3(qvec.x(), qvec.y(), qvec.z());
+}
+
+inline glm::vec2 toGlm(const QVector2D& qvec) {
+    return glm::vec2(qvec.x(), qvec.y());
+}
+
+inline QVector3D toQt(const glm::vec3& gvec) {
+    return QVector3D(gvec.x, gvec.y, gvec.z);
+}
+
+inline QVector2D toQt(const glm::vec2& gvec) {
+    return QVector2D(gvec.x, gvec.y);
+}
 
 // Forward declarations
 class Scene;
