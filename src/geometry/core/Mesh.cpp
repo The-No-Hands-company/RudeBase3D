@@ -5,13 +5,14 @@
 #include <glm/vec3.hpp>
 #include <algorithm>
 #include "../halfedge/HalfEdgeMesh.h"
+#include "core/mesh_elements.hpp"
 
 Mesh::Mesh()
     : m_VAO(0)
     , m_VBO(0)
     , m_EBO(0)
     , m_uploaded(false)
-    , m_halfEdgeMesh(std::make_unique<HalfEdgeMesh>())
+    , m_halfEdgeMesh(std::make_unique<rude::HalfEdgeMesh>())
 {
 }
 
@@ -20,7 +21,7 @@ Mesh::~Mesh()
     cleanupGL();
 }
 
-void Mesh::setVertices(const std::vector<Vertex>& vertices)
+void Mesh::setVertices(const std::vector<rude::VertexPtr>& vertices)
 {
     m_vertices = vertices;
     m_uploaded = false;
@@ -54,7 +55,7 @@ void Mesh::uploadToGPU()
     
     // Upload vertex data
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-    glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(Vertex), 
+    glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(rude::VertexPtr), 
                     m_vertices.data(), GL_STATIC_DRAW);
     
     // Upload index data
@@ -66,17 +67,17 @@ void Mesh::uploadToGPU()
     
     // Set vertex attributes
     // Position attribute (location 0)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(rude::VertexPtr), (void*)0);
     glEnableVertexAttribArray(0);
     
     // Normal attribute (location 1)
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 
-                            (void*)offsetof(Vertex, normal));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(rude::VertexPtr), 
+                            (void*)offsetof(rude::VertexPtr, normal));
     glEnableVertexAttribArray(1);
     
     // Texture coordinate attribute (location 2)
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), 
-                            (void*)offsetof(Vertex, texCoord));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(rude::VertexPtr), 
+                            (void*)offsetof(rude::VertexPtr, texCoord));
     glEnableVertexAttribArray(2);
     
     // Unbind VAO
@@ -151,43 +152,43 @@ void Mesh::calculateNormals()
     
     // Initialize all normals to zero
     for (auto& vertex : m_vertices) {
-        vertex.normal = QVector3D(0, 0, 0);
+        vertex->normal = QVector3D(0, 0, 0);
     }
     
     // Calculate face normals and accumulate vertex normals
     if (!m_indices.empty()) {
         for (size_t i = 0; i < m_indices.size(); i += 3) {
             if (i + 2 < m_indices.size()) {
-                const QVector3D& v0 = m_vertices[m_indices[i]].position;
-                const QVector3D& v1 = m_vertices[m_indices[i + 1]].position;
-                const QVector3D& v2 = m_vertices[m_indices[i + 2]].position;
+                const QVector3D& v0 = m_vertices[m_indices[i]]->position;
+                const QVector3D& v1 = m_vertices[m_indices[i + 1]]->position;
+                const QVector3D& v2 = m_vertices[m_indices[i + 2]]->position;
                 
                 QVector3D normal = QVector3D::crossProduct(v1 - v0, v2 - v0).normalized();
                 
-                m_vertices[m_indices[i]].normal += normal;
-                m_vertices[m_indices[i + 1]].normal += normal;
-                m_vertices[m_indices[i + 2]].normal += normal;
+                m_vertices[m_indices[i]]->normal += normal;
+                m_vertices[m_indices[i + 1]]->normal += normal;
+                m_vertices[m_indices[i + 2]]->normal += normal;
             }
         }
     } else {
         for (size_t i = 0; i < m_vertices.size(); i += 3) {
             if (i + 2 < m_vertices.size()) {
-                const QVector3D& v0 = m_vertices[i].position;
-                const QVector3D& v1 = m_vertices[i + 1].position;
-                const QVector3D& v2 = m_vertices[i + 2].position;
+                const QVector3D& v0 = m_vertices[i]->position;
+                const QVector3D& v1 = m_vertices[i + 1]->position;
+                const QVector3D& v2 = m_vertices[i + 2]->position;
                 
                 QVector3D normal = QVector3D::crossProduct(v1 - v0, v2 - v0).normalized();
                 
-                m_vertices[i].normal += normal;
-                m_vertices[i + 1].normal += normal;
-                m_vertices[i + 2].normal += normal;
+                m_vertices[i]->normal += normal;
+                m_vertices[i + 1]->normal += normal;
+                m_vertices[i + 2]->normal += normal;
             }
         }
     }
     
     // Normalize all vertex normals
     for (auto& vertex : m_vertices) {
-        vertex.normal.normalize();
+        vertex->normal.normalize();
     }
     
     m_uploaded = false;
@@ -199,11 +200,11 @@ QVector3D Mesh::getBoundingBoxMin() const
         return QVector3D(0, 0, 0);
     }
     
-    QVector3D min = m_vertices[0].position;
+    QVector3D min = m_vertices[0]->position;
     for (const auto& vertex : m_vertices) {
-        min.setX(std::min(min.x(), vertex.position.x()));
-        min.setY(std::min(min.y(), vertex.position.y()));
-        min.setZ(std::min(min.z(), vertex.position.z()));
+        min.setX(std::min(min.x(), vertex->position.x()));
+        min.setY(std::min(min.y(), vertex->position.y()));
+        min.setZ(std::min(min.z(), vertex->position.z()));
     }
     return min;
 }
@@ -214,11 +215,11 @@ QVector3D Mesh::getBoundingBoxMax() const
         return QVector3D(0, 0, 0);
     }
     
-    QVector3D max = m_vertices[0].position;
+    QVector3D max = m_vertices[0]->position;
     for (const auto& vertex : m_vertices) {
-        max.setX(std::max(max.x(), vertex.position.x()));
-        max.setY(std::max(max.y(), vertex.position.y()));
-        max.setZ(std::max(max.z(), vertex.position.z()));
+        max.setX(std::max(max.x(), vertex->position.x()));
+        max.setY(std::max(max.y(), vertex->position.y()));
+        max.setZ(std::max(max.z(), vertex->position.z()));
     }
     return max;
 }
@@ -234,7 +235,7 @@ float Mesh::getBoundingRadius() const
     float maxDistSq = 0.0f;
     
     for (const auto& vertex : m_vertices) {
-        float distSq = (vertex.position - center).lengthSquared();
+        float distSq = (vertex->position - center).lengthSquared();
         maxDistSq = std::max(maxDistSq, distSq);
     }
     
@@ -276,18 +277,18 @@ void Mesh::cleanupGL()
 }
 
 // Half-edge mesh interface
-HalfEdgeMesh& Mesh::getHalfEdgeMesh()
+rude::HalfEdgeMesh& Mesh::getHalfEdgeMesh()
 {
     return *m_halfEdgeMesh;
 }
 
-const HalfEdgeMesh& Mesh::getHalfEdgeMesh() const
+const rude::HalfEdgeMesh& Mesh::getHalfEdgeMesh() const
 {
     return *m_halfEdgeMesh;
 }
 
 // Data management
-void Mesh::setData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices)
+void Mesh::setData(const std::vector<rude::VertexPtr>& vertices, const std::vector<unsigned int>& indices)
 {
     setVertices(vertices);
     setIndices(indices);
@@ -305,19 +306,19 @@ void Mesh::setData(const std::vector<glm::vec3>& positions, const std::vector<un
                    const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords)
 {
     // Convert GLM data to Vertex structures
-    std::vector<Vertex> vertices;
+    std::vector<rude::VertexPtr> vertices;
     vertices.reserve(positions.size());
     
     for (size_t i = 0; i < positions.size(); ++i) {
-        Vertex vertex;
-        vertex.position = QVector3D(positions[i].x, positions[i].y, positions[i].z);
+        rude::VertexPtr vertex = std::make_shared<rude::Vertex>();
+        vertex->position = QVector3D(positions[i].x, positions[i].y, positions[i].z);
         
         if (i < normals.size()) {
-            vertex.normal = QVector3D(normals[i].x, normals[i].y, normals[i].z);
+            vertex->normal = QVector3D(normals[i].x, normals[i].y, normals[i].z);
         }
         
         if (i < texCoords.size()) {
-            vertex.texCoord = QVector2D(texCoords[i].x, texCoords[i].y);
+            vertex->texCoord = QVector2D(texCoords[i].x, texCoords[i].y);
         }
         
         vertices.push_back(vertex);

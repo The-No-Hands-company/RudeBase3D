@@ -1,4 +1,6 @@
-#include "core/halfedge_mesh.hpp"
+#include "core/half_edge_mesh.hpp"
+#include "core/qt_glm_utils.hpp"
+#include <QVector3D>
 
 namespace rude {
 
@@ -31,8 +33,8 @@ void HalfEdgeMesh::updateNormals() {
     // Update face normals
     for (auto& face : m_faces) {
         if (face && face->vertices.size() >= 3) {
-            QVector3D v1 = face->vertices[1]->position - face->vertices[0]->position;
-            QVector3D v2 = face->vertices[2]->position - face->vertices[0]->position;
+            QVector3D v1 = rude::glmToQVector(face->vertices[1]->position - face->vertices[0]->position);
+            QVector3D v2 = rude::glmToQVector(face->vertices[2]->position - face->vertices[0]->position);
             face->normal = QVector3D::crossProduct(v1, v2).normalized();
         }
     }
@@ -40,18 +42,18 @@ void HalfEdgeMesh::updateNormals() {
     // Update vertex normals
     for (auto& vertex : m_vertices) {
         if (vertex) {
-            vertex->normal = QVector3D(0, 0, 0);
+            vertex->normal = Vec3(0, 0, 0);
             // TODO: Calculate vertex normal from adjacent faces
         }
     }
 }
 
-QVector3D HalfEdgeMesh::computeCentroid() const {
+Vec3 HalfEdgeMesh::computeCentroid() const {
     if (m_vertices.empty()) {
-        return QVector3D(0, 0, 0);
+        return Vec3(0, 0, 0);
     }
     
-    QVector3D centroid(0, 0, 0);
+    Vec3 centroid(0, 0, 0);
     for (const auto& vertex : m_vertices) {
         if (vertex) {
             centroid += vertex->position;

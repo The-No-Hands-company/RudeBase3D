@@ -1,12 +1,23 @@
 #pragma once
 
 #include "Common.h"
-#include "HalfEdgeMesh.h"
-#include <QVector3D>
-#include <memory>
+#include <glm/glm.hpp>
 #include <vector>
+#include <memory>
 #include <unordered_set>
 #include <unordered_map>
+#include "core/mesh_forward.hpp"
+
+namespace rude {
+class Face;
+class Vertex;
+class Edge;
+class HalfEdgeMesh;
+using FacePtr = std::shared_ptr<Face>;
+using VertexPtr = std::shared_ptr<Vertex>;
+using EdgePtr = std::shared_ptr<Edge>;
+using HalfEdgeMeshPtr = std::shared_ptr<HalfEdgeMesh>;
+}
 
 /**
  * @brief Tool for creating edge loops in half-edge meshes
@@ -40,13 +51,13 @@ public:
     void setLoopDirection(LoopDirection direction) { m_loopDirection = direction; }
     LoopDirection getLoopDirection() const { return m_loopDirection; }
     
-    void setCustomDirection(const QVector3D& direction) { m_customDirection = direction.normalized(); }
-    QVector3D getCustomDirection() const { return m_customDirection; }
+    void setCustomDirection(const glm::vec3& direction) { m_customDirection = glm::normalize(direction); }
+    glm::vec3 getCustomDirection() const { return m_customDirection; }
     
     void setEvenSpacing(bool enabled) { m_evenSpacing = enabled; }
     bool getEvenSpacing() const { return m_evenSpacing; }
     
-    void setCutPosition(float position) { m_cutPosition = qBound(0.0f, position, 1.0f); }
+    void setCutPosition(float position) { m_cutPosition = glm::clamp(position, 0.0f, 1.0f); }
     float getCutPosition() const { return m_cutPosition; }
 
     // Validation
@@ -63,7 +74,7 @@ private:
     
     // Tool settings
     LoopDirection m_loopDirection = LoopDirection::Automatic;
-    QVector3D m_customDirection = QVector3D(1, 0, 0);
+    glm::vec3 m_customDirection = glm::vec3(1, 0, 0);
     bool m_evenSpacing = true;
     float m_cutPosition = 0.5f;
     
@@ -82,7 +93,7 @@ private:
     // Loop detection helpers
     HalfEdgeEdgePtr findNextLoopEdge(HalfEdgeEdgePtr currentEdge, HalfEdgeFacePtr throughFace) const;
     bool isValidLoopContinuation(HalfEdgeEdgePtr currentEdge, HalfEdgeEdgePtr nextEdge) const;
-    QVector3D calculateLoopDirection(HalfEdgeEdgePtr startEdge) const;
+    glm::vec3 calculateLoopDirection(HalfEdgeEdgePtr startEdge) const;
     
     // Edge operations
     std::pair<HalfEdgeVertexPtr, HalfEdgeEdgePtr> splitEdge(HalfEdgeEdgePtr edge, float position);

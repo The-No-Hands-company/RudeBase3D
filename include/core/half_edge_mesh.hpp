@@ -32,7 +32,18 @@ public:
 
     // Mesh operations
     void clear();  // Clear all mesh data
+    bool isEmpty() const; // Check if mesh is empty
     bool isValid() const;  // Check if the mesh structure is valid
+    
+    // Element access
+    std::vector<VertexPtr> getVertices() const;
+    std::vector<EdgePtr> getEdges() const;
+    std::vector<FacePtr> getFaces() const;
+    
+    // Geometry operations
+    void updateNormals();
+    Vec3 computeCentroid() const;
+    bool isManifold() const;
     VertexPtr createVertex(const Vec3& position = Vec3(0.0f));
     VertexPtr addVertex(const Vec3& position = Vec3(0.0f));
     EdgePtr createEdge(VertexPtr v1, VertexPtr v2);
@@ -64,10 +75,10 @@ public:
     void updateVertexNormals();
 
 private:
-    std::vector<VertexPtr> vertices;
-    std::vector<EdgePtr> edges;
-    std::vector<FacePtr> faces;
-    std::vector<HalfEdgePtr> halfEdges;
+    std::vector<VertexPtr> m_vertices;
+    std::vector<EdgePtr> m_edges;
+    std::vector<FacePtr> m_faces;
+    std::vector<HalfEdgePtr> m_halfEdges;
 };
 
 } // namespace rude

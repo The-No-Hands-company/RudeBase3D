@@ -135,7 +135,7 @@ void SelectionRenderer::renderSingleSelection(const SelectionData& selection,
     if (!mesh) return;
     
     Transform& transform = selection.entity->getTransform();
-    glm::mat4 model = transform.getModelMatrix();
+    glm::mat4 model = rude::qMatrixToGlm(transform.getModelMatrix());
     glm::mat4 mvp = projection * view * model;
     
     // Set uniforms

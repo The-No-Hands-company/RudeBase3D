@@ -18,7 +18,10 @@
 			"algorithm": "cpp",
 			"utility": "cpp",
 			"memory": "cpp",
-			"regex": "cpp"
+			"regex": "cpp",
+			"expected": "cpp",
+			"locale": "cpp",
+			"optional": "cpp"
 		}
 	}
 }

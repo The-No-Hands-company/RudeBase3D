@@ -2,11 +2,11 @@
 #include "core/qt_glm_utils.hpp"
 #include "geometry/halfedge/HalfEdgeMesh.h"
 #include "Common.h"
-#include <QVector3D>
 #include <QDebug>
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <cmath>
+#include "core/mesh_elements.hpp"
 
 namespace rude {
 
@@ -39,16 +39,16 @@ void Mesh::extrudeFace(int faceIndex, float distance)
     unsigned int i1 = m_indices[faceIndex * 3 + 1];
     unsigned int i2 = m_indices[faceIndex * 3 + 2];
     
-    QVector3D v0 = m_vertices[i0].position;
-    QVector3D v1 = m_vertices[i1].position;
-    QVector3D v2 = m_vertices[i2].position;
+    glm::vec3 v0 = m_vertices[i0]->position;
+    glm::vec3 v1 = m_vertices[i1]->position;
+    glm::vec3 v2 = m_vertices[i2]->position;
     
-    QVector3D normal = QVector3D::crossProduct(v1 - v0, v2 - v0).normalized();
+    glm::vec3 normal = glm::cross(v1 - v0, v2 - v0);
     
     // For now, just move the vertices along the normal
-    m_vertices[i0].position += normal * distance;
-    m_vertices[i1].position += normal * distance;
-    m_vertices[i2].position += normal * distance;
+    m_vertices[i0]->position += normal * distance;
+    m_vertices[i1]->position += normal * distance;
+    m_vertices[i2]->position += normal * distance;
     
     updateNormals();
     m_uploaded = false;
@@ -100,7 +100,7 @@ void Mesh::updateNormals()
 {
     // Reset all normals to zero
     for (auto& vertex : m_vertices) {
-        vertex.normal = QVector3D(0.0f, 0.0f, 0.0f);
+        vertex.normal = glm::vec3(0.0f, 0.0f, 0.0f);
     }
     
     // Calculate face normals and accumulate on vertices
@@ -115,11 +115,11 @@ void Mesh::updateNormals()
             continue;
         }
         
-        QVector3D v0 = m_vertices[i0].position;
-        QVector3D v1 = m_vertices[i1].position;
-        QVector3D v2 = m_vertices[i2].position;
+        glm::vec3 v0 = m_vertices[i0].position;
+        glm::vec3 v1 = m_vertices[i1].position;
+        glm::vec3 v2 = m_vertices[i2].position;
         
-        QVector3D normal = QVector3D::crossProduct(v1 - v0, v2 - v0);
+        glm::vec3 normal = glm::cross(v1 - v0, v2 - v0);
         
         // Add to each vertex normal (will be normalized later)
         m_vertices[i0].normal += normal;
@@ -129,12 +129,12 @@ void Mesh::updateNormals()
     
     // Normalize all vertex normals
     for (auto& vertex : m_vertices) {
-        float lengthSq = vertex.normal.lengthSquared();
+        float lengthSq = glm::dot(vertex.normal, vertex.normal);
         if (lengthSq > 0.0001f) {
-            vertex.normal.normalize();
+            vertex.normal = glm::normalize(vertex.normal);
         } else {
             // If normal is too small, set to default up vector
-            vertex.normal = QVector3D(0.0f, 1.0f, 0.0f);
+            vertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
         }
     }
     
@@ -157,7 +157,7 @@ void Mesh::setData(const std::vector<::Vertex>& vertices, const std::vector<unsi
     // Calculate normals if they're not provided
     bool hasNormals = false;
     for (const auto& vertex : vertices) {
-        float lengthSq = vertex.normal.lengthSquared();
+        float lengthSq = glm::dot(vertex.normal, vertex.normal);
         if (lengthSq > 0.0001f) {
             hasNormals = true;
             break;
@@ -199,50 +199,50 @@ void Mesh::render()
     // Render the mesh
 }
 
-QVector3D Mesh::getBoundingBoxMin() const
+glm::vec3 Mesh::getBoundingBoxMin() const
 {
     if (m_vertices.empty()) {
-        return QVector3D(0, 0, 0);
+        return glm::vec3(0, 0, 0);
     }
     
-    QVector3D min = m_vertices[0].position;
+    glm::vec3 min = m_vertices[0].position;
     for (const auto& vertex : m_vertices) {
-        min.setX(std::min(min.x(), vertex.position.x()));
-        min.setY(std::min(min.y(), vertex.position.y()));
-        min.setZ(std::min(min.z(), vertex.position.z()));
+        min.x = std::min(min.x, vertex.position.x);
+        min.y = std::min(min.y, vertex.position.y);
+        min.z = std::min(min.z, vertex.position.z);
     }
     
     return min;
 }
 
-QVector3D Mesh::getBoundingBoxMax() const
+glm::vec3 Mesh::getBoundingBoxMax() const
 {
     if (m_vertices.empty()) {
-        return QVector3D(0, 0, 0);
+        return glm::vec3(0, 0, 0);
     }
     
-    QVector3D max = m_vertices[0].position;
+    glm::vec3 max = m_vertices[0].position;
     for (const auto& vertex : m_vertices) {
-        max.setX(std::max(max.x(), vertex.position.x()));
-        max.setY(std::max(max.y(), vertex.position.y()));
-        max.setZ(std::max(max.z(), vertex.position.z()));
+        max.x = std::max(max.x, vertex.position.x);
+        max.y = std::max(max.y, vertex.position.y);
+        max.z = std::max(max.z, vertex.position.z);
     }
     
     return max;
 }
 
-QVector3D Mesh::getBoundingBoxCenter() const
+glm::vec3 Mesh::getBoundingBoxCenter() const
 {
     return (getBoundingBoxMin() + getBoundingBoxMax()) * 0.5f;
 }
 
 float Mesh::getBoundingRadius() const
 {
-    QVector3D center = getBoundingBoxCenter();
+    glm::vec3 center = getBoundingBoxCenter();
     float maxDistSq = 0.0f;
     
     for (const auto& vertex : m_vertices) {
-        float distSq = (vertex.position - center).lengthSquared();
+        float distSq = glm::dot(vertex.position - center, vertex.position - center);
         maxDistSq = std::max(maxDistSq, distSq);
     }
     

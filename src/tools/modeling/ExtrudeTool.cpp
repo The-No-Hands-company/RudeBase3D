@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
+#include <glm/glm.hpp>
 
 ExtrudeTool::ExtrudeTool()
     : m_extrudeMode(ExtrudeMode::Normal)
@@ -63,7 +64,7 @@ void ExtrudeTool::updateExtrude(float distance)
             for (auto face : selectedFaces) {
                 if (!face) continue;
                 
-                QVector3D normal = (m_extrudeMode == ExtrudeMode::Normal) 
+                glm::vec3 normal = (m_extrudeMode == ExtrudeMode::Normal) 
                     ? calculateFaceNormal(face) 
                     : m_extrudeDirection;
                 
@@ -72,7 +73,7 @@ void ExtrudeTool::updateExtrude(float distance)
                 for (auto vertex : vertices) {
                     if (vertex) {
                         // Find corresponding new vertex and update position
-                        QVector3D newPos = vertex->getPosition() + normal * distance;
+                        glm::vec3 newPos = vertex->getPosition() + normal * distance;
                         vertex->setPosition(newPos);
                     }
                 }
@@ -85,17 +86,17 @@ void ExtrudeTool::updateExtrude(float distance)
             for (auto edge : selectedEdges) {
                 if (!edge) continue;
                 
-                QVector3D normal = (m_extrudeMode == ExtrudeMode::Normal) 
+                glm::vec3 normal = (m_extrudeMode == ExtrudeMode::Normal) 
                     ? calculateEdgeNormal(edge) 
                     : m_extrudeDirection;
                 
                 // Update positions of edge vertices
                 if (edge->getOriginVertex()) {
-                    QVector3D newPos = edge->getOriginVertex()->getPosition() + normal * distance;
+                    glm::vec3 newPos = edge->getOriginVertex()->getPosition() + normal * distance;
                     edge->getOriginVertex()->setPosition(newPos);
                 }
                 if (edge->getTargetVertex()) {
-                    QVector3D newPos = edge->getTargetVertex()->getPosition() + normal * distance;
+                    glm::vec3 newPos = edge->getTargetVertex()->getPosition() + normal * distance;
                     edge->getTargetVertex()->setPosition(newPos);
                 }
             }
@@ -107,11 +108,11 @@ void ExtrudeTool::updateExtrude(float distance)
             for (auto vertex : selectedVertices) {
                 if (!vertex) continue;
                 
-                QVector3D normal = (m_extrudeMode == ExtrudeMode::Normal) 
+                glm::vec3 normal = (m_extrudeMode == ExtrudeMode::Normal) 
                     ? calculateVertexNormal(vertex) 
                     : m_extrudeDirection;
                 
-                QVector3D newPos = vertex->getPosition() + normal * distance;
+                glm::vec3 newPos = vertex->getPosition() + normal * distance;
                 vertex->setPosition(newPos);
             }
             break;
@@ -124,9 +125,9 @@ void ExtrudeTool::updateExtrude(float distance)
     updatePreview();
 }
 
-void ExtrudeTool::updateExtrude(const QVector3D& direction, float distance)
+void ExtrudeTool::updateExtrude(const glm::vec3& direction, float distance)
 {
-    m_extrudeDirection = direction.normalized();
+    m_extrudeDirection = direction;
     updateExtrude(distance);
 }
 
@@ -301,51 +302,51 @@ bool ExtrudeTool::extrudeVertices(const std::vector<HalfEdgeVertexPtr>& vertices
     return true;
 }
 
-QVector3D ExtrudeTool::calculateFaceNormal(HalfEdgeFacePtr face) const
+glm::vec3 ExtrudeTool::calculateFaceNormal(HalfEdgeFacePtr face) const
 {
-    if (!face) return QVector3D(0, 1, 0);
+    if (!face) return glm::vec3(0, 1, 0);
     
     auto vertices = face->getVertices();
-    if (vertices.size() < 3) return QVector3D(0, 1, 0);
+    if (vertices.size() < 3) return glm::vec3(0, 1, 0);
     
     // Calculate normal using cross product of two edges
-    QVector3D v1 = vertices[1]->getPosition() - vertices[0]->getPosition();
-    QVector3D v2 = vertices[2]->getPosition() - vertices[0]->getPosition();
+    glm::vec3 v1 = vertices[1]->getPosition() - vertices[0]->getPosition();
+    glm::vec3 v2 = vertices[2]->getPosition() - vertices[0]->getPosition();
     
-    QVector3D normal = QVector3D::crossProduct(v1, v2).normalized();
-    return normal.isNull() ? QVector3D(0, 1, 0) : normal;
+    glm::vec3 normal = glm::cross(v1, v2);
+    return glm::normalize(normal);
 }
 
-QVector3D ExtrudeTool::calculateEdgeNormal(HalfEdgeEdgePtr edge) const
+glm::vec3 ExtrudeTool::calculateEdgeNormal(HalfEdgeEdgePtr edge) const
 {
     if (!edge || !edge->getOriginVertex() || !edge->getTargetVertex()) {
-        return QVector3D(0, 1, 0);
+        return glm::vec3(0, 1, 0);
     }
     
     // For edge normal, we need to find adjacent faces and average their normals
     // Simplified approach: use perpendicular to edge direction
-    QVector3D edgeDir = edge->getTargetVertex()->getPosition() - edge->getOriginVertex()->getPosition();
-    QVector3D up = QVector3D(0, 1, 0);
+    glm::vec3 edgeDir = edge->getTargetVertex()->getPosition() - edge->getOriginVertex()->getPosition();
+    glm::vec3 up = glm::vec3(0, 1, 0);
     
-    QVector3D normal = QVector3D::crossProduct(edgeDir, up).normalized();
-    return normal.isNull() ? QVector3D(0, 1, 0) : normal;
+    glm::vec3 normal = glm::cross(edgeDir, up);
+    return glm::normalize(normal);
 }
 
-QVector3D ExtrudeTool::calculateVertexNormal(HalfEdgeVertexPtr vertex) const
+glm::vec3 ExtrudeTool::calculateVertexNormal(HalfEdgeVertexPtr vertex) const
 {
-    if (!vertex) return QVector3D(0, 1, 0);
+    if (!vertex) return glm::vec3(0, 1, 0);
     
     // Calculate vertex normal by averaging adjacent face normals
     auto adjacentFaces = vertex->getAdjacentFaces();
-    if (adjacentFaces.empty()) return QVector3D(0, 1, 0);
+    if (adjacentFaces.empty()) return glm::vec3(0, 1, 0);
     
-    QVector3D normalSum(0, 0, 0);
+    glm::vec3 normalSum(0, 0, 0);
     for (auto face : adjacentFaces) {
         normalSum += calculateFaceNormal(face);
     }
     
-    QVector3D normal = normalSum.normalized();
-    return normal.isNull() ? QVector3D(0, 1, 0) : normal;
+    glm::vec3 normal = glm::normalize(normalSum);
+    return glm::normalize(normal);
 }
 
 void ExtrudeTool::updatePreview()

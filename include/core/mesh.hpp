@@ -1,10 +1,11 @@
 #pragma once
 
 #include "Common.h"
-#include "core/halfedge_mesh.hpp"
+#include "core/half_edge_mesh.hpp"
 #include <QOpenGLFunctions_3_3_Core>
 #include <vector>
 #include <memory>
+#include <glm/glm.hpp>
 
 namespace rude {
 
@@ -45,9 +46,9 @@ public:
     void render();
     
     // Utility
-    QVector3D getBoundingBoxMin() const;
-    QVector3D getBoundingBoxMax() const;
-    QVector3D getBoundingBoxCenter() const;
+    glm::vec3 getBoundingBoxMin() const;
+    glm::vec3 getBoundingBoxMax() const;
+    glm::vec3 getBoundingBoxCenter() const;
     float getBoundingRadius() const;
     
     // Conversion

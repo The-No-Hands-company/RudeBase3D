@@ -1,12 +1,14 @@
 #include "HalfEdgeMesh.h"
+#include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <unordered_set>
 #include <unordered_map>
 #include <queue>
+#include <glm/glm.hpp>
 
 namespace HalfEdgeUtils {
 
-std::pair<HalfEdgeEdgePtr, HalfEdgeEdgePtr> splitEdge(HalfEdgeMeshPtr mesh, HalfEdgeEdgePtr edge, const QVector3D& position) {
+std::pair<HalfEdgeEdgePtr, HalfEdgeEdgePtr> splitEdge(HalfEdgeMeshPtr mesh, HalfEdgeEdgePtr edge, const glm::vec3& position) {
     if (!edge || !mesh) {
         return {nullptr, nullptr};
     }
@@ -60,7 +62,7 @@ std::vector<HalfEdgeFacePtr> extrudeFaces(HalfEdgeMeshPtr mesh, const std::vecto
     // Step 2: Create new vertices for extruded positions
     for (const auto& vertex : verticesToExtrude) {
         // Calculate average normal from all adjacent faces of this vertex
-        QVector3D averageNormal(0, 0, 0);
+        glm::vec3 averageNormal(0, 0, 0);
         int normalCount = 0;
         
         // Get all faces adjacent to this vertex that are being extruded
@@ -73,8 +75,8 @@ std::vector<HalfEdgeFacePtr> extrudeFaces(HalfEdgeMeshPtr mesh, const std::vecto
         }
         
         if (normalCount > 0) {
-            averageNormal = averageNormal.normalized();
-            QVector3D newPosition = vertex->getPosition() + averageNormal * distance;
+            averageNormal = glm::normalize(averageNormal);
+            glm::vec3 newPosition = vertex->getPosition() + averageNormal * distance;
             auto newVertex = mesh->addVertex(newPosition);
             vertexMapping[vertex] = newVertex;
         }
@@ -175,8 +177,8 @@ std::vector<HalfEdgeFacePtr> insetFaces(HalfEdgeMeshPtr mesh, const std::vector<
         // Create inset vertices by moving towards centroid
         std::vector<HalfEdgeVertexPtr> insetVertices;
         for (const auto& vertex : vertices) {
-            QVector3D toCenter = (centroid - vertex->getPosition()).normalized();
-            QVector3D newPosition = vertex->getPosition() + toCenter * inset;
+            glm::vec3 toCenter = glm::normalize(centroid - vertex->getPosition());
+            glm::vec3 newPosition = vertex->getPosition() + toCenter * inset;
             auto newVertex = mesh->addVertex(newPosition);
             insetVertices.push_back(newVertex);
         }
@@ -237,10 +239,10 @@ std::vector<HalfEdgeEdgePtr> bevelEdges(HalfEdgeMeshPtr mesh, const std::vector<
         
         if (face) {
             auto faceNormal = face->computeNormal();
-            auto bevelDirection = QVector3D::crossProduct(edgeVector, faceNormal).normalized();
+            auto bevelDirection = glm::cross(edgeVector, faceNormal);
             
             // Create new vertices offset from original edge vertices
-            QVector3D offset = bevelDirection * amount;
+            glm::vec3 offset = glm::normalize(bevelDirection) * amount;
             auto newOrigin = mesh->addVertex(origin->getPosition() + offset);
             auto newTarget = mesh->addVertex(target->getPosition() + offset);
             
@@ -344,7 +346,7 @@ HalfEdgeMeshPtr catmullClarkSubdivide(HalfEdgeMeshPtr mesh) {
         
         if (!origin || !target) continue;
         
-        QVector3D edgePoint = (origin->getPosition() + target->getPosition()) * 0.5f;
+        glm::vec3 edgePoint = (origin->getPosition() + target->getPosition()) * 0.5f;
         
         // Add face points if they exist
         if (auto face = edge->getFace()) {

@@ -12,35 +12,35 @@ HalfEdgeMesh::HalfEdgeMesh() {}
 
 // Iterator method implementations
 VertexIterator HalfEdgeMesh::vertices_begin() const {
-    return VertexIterator(vertices, 0);
+    return VertexIterator(m_vertices, 0);
 }
 
 VertexIterator HalfEdgeMesh::vertices_end() const {
-    return VertexIterator(vertices, vertices.size());
+    return VertexIterator(m_vertices, m_vertices.size());
 }
 
 EdgeIterator HalfEdgeMesh::edges_begin() const {
-    return EdgeIterator(edges, 0);
+    return EdgeIterator(m_edges, 0);
 }
 
 EdgeIterator HalfEdgeMesh::edges_end() const {
-    return EdgeIterator(edges, edges.size());
+    return EdgeIterator(m_edges, m_edges.size());
 }
 
 FaceIterator HalfEdgeMesh::faces_begin() const {
-    return FaceIterator(faces, 0);
+    return FaceIterator(m_faces, 0);
 }
 
 FaceIterator HalfEdgeMesh::faces_end() const {
-    return FaceIterator(faces, faces.size());
+    return FaceIterator(m_faces, m_faces.size());
 }
 
 HalfEdgeIterator HalfEdgeMesh::half_edges_begin() const {
-    return HalfEdgeIterator(halfEdges, 0);
+    return HalfEdgeIterator(m_halfEdges, 0);
 }
 
 HalfEdgeIterator HalfEdgeMesh::half_edges_end() const {
-    return HalfEdgeIterator(halfEdges, halfEdges.size());
+    return HalfEdgeIterator(m_halfEdges, m_halfEdges.size());
 }
 
 // Vertex implementation
@@ -59,30 +59,30 @@ HalfEdge::HalfEdge()
 
 // Mesh operations
 void HalfEdgeMesh::clear() {
-    vertices.clear();
-    edges.clear();
-    faces.clear();
-    halfEdges.clear();
+    m_vertices.clear();
+    m_edges.clear();
+    m_faces.clear();
+    m_halfEdges.clear();
 }
 
 bool HalfEdgeMesh::isValid() const {
-    // Check if all vertices have valid half-edges
-    for (const auto& vertex : vertices) {
+    // Check if all m_vertices have valid half-m_edges
+    for (const auto& vertex : m_vertices) {
         if (!vertex->halfEdge) return false;
     }
 
-    // Check if all edges have valid half-edges
-    for (const auto& edge : edges) {
+    // Check if all m_edges have valid half-m_edges
+    for (const auto& edge : m_edges) {
         if (!edge->halfEdge) return false;
     }
 
-    // Check if all faces have valid half-edges
-    for (const auto& face : faces) {
+    // Check if all m_faces have valid half-m_edges
+    for (const auto& face : m_faces) {
         if (!face->halfEdge) return false;
     }
 
-    // Check if all half-edges have valid connections
-    for (const auto& he : halfEdges) {
+    // Check if all half-m_edges have valid connections
+    for (const auto& he : m_halfEdges) {
         if (!he->vertex || !he->edge) return false;
         if (!he->next || !he->prev) return false;
         if (!he->twin) return false;
@@ -93,21 +93,21 @@ bool HalfEdgeMesh::isValid() const {
 
 VertexPtr HalfEdgeMesh::addVertex(const glm::vec3& position) {
     auto vertex = std::make_shared<Vertex>(position);
-    vertices.push_back(vertex);
+    m_vertices.push_back(vertex);
     return vertex;
 }
 
 void HalfEdgeMesh::removeVertex(VertexPtr vertex) {
     if (!vertex) return;
     
-    // Remove all edges connected to this vertex
+    // Remove all m_edges connected to this vertex
     auto adjacentEdges = getAdjacentEdges(vertex);
     for (const auto& edge : adjacentEdges) {
         removeEdge(edge);
     }
     
     // Remove the vertex
-    vertices.erase(std::remove(vertices.begin(), vertices.end(), vertex), vertices.end());
+    m_vertices.erase(std::remove(m_vertices.begin(), m_vertices.end(), vertex), m_vertices.end());
 }
 
 EdgePtr HalfEdgeMesh::addEdge(VertexPtr v1, VertexPtr v2) {
@@ -117,7 +117,7 @@ EdgePtr HalfEdgeMesh::addEdge(VertexPtr v1, VertexPtr v2) {
     auto he1 = std::make_shared<HalfEdge>();
     auto he2 = std::make_shared<HalfEdge>();
     
-    // Set up half-edges
+    // Set up half-m_edges
     he1->setVertex(v2);
     he1->setTwin(he2);
     he1->setEdge(edge);
@@ -139,9 +139,9 @@ EdgePtr HalfEdgeMesh::addEdge(VertexPtr v1, VertexPtr v2) {
     }
     
     // Add to mesh
-    edges.push_back(edge);
-    halfEdges.push_back(he1);
-    halfEdges.push_back(he2);
+    m_edges.push_back(edge);
+    m_halfEdges.push_back(he1);
+    m_halfEdges.push_back(he2);
     
     return edge;
 }
@@ -149,37 +149,37 @@ EdgePtr HalfEdgeMesh::addEdge(VertexPtr v1, VertexPtr v2) {
 void HalfEdgeMesh::removeEdge(EdgePtr edge) {
     if (!edge) return;
     
-    // Remove associated half-edges
+    // Remove associated half-m_edges
     auto he1 = edge->getHalfEdge(0);
     auto he2 = edge->getHalfEdge(1);
     
     if (he1) {
-        halfEdges.erase(std::remove(halfEdges.begin(), halfEdges.end(), he1), halfEdges.end());
+        m_halfEdges.erase(std::remove(m_halfEdges.begin(), m_halfEdges.end(), he1), m_halfEdges.end());
     }
     if (he2) {
-        halfEdges.erase(std::remove(halfEdges.begin(), halfEdges.end(), he2), halfEdges.end());
+        m_halfEdges.erase(std::remove(m_halfEdges.begin(), m_halfEdges.end(), he2), m_halfEdges.end());
     }
     
     // Remove the edge
-    edges.erase(std::remove(edges.begin(), edges.end(), edge), edges.end());
+    m_edges.erase(std::remove(m_edges.begin(), m_edges.end(), edge), m_edges.end());
 }
 
-FacePtr HalfEdgeMesh::addFace(const std::vector<VertexPtr>& vertices) {
-    if (vertices.size() < 3) return nullptr;
+FacePtr HalfEdgeMesh::addFace(const std::vector<VertexPtr>& m_vertices) {
+    if (m_vertices.size() < 3) return nullptr;
     
     auto face = std::make_shared<Face>();
     std::vector<HalfEdgePtr> faceHalfEdges;
     
-    // Create half-edges for the face
-    for (size_t i = 0; i < vertices.size(); ++i) {
+    // Create half-m_edges for the face
+    for (size_t i = 0; i < m_vertices.size(); ++i) {
         auto he = std::make_shared<HalfEdge>();
-        he->setVertex(vertices[i]);
+        he->setVertex(m_vertices[i]);
         he->setFace(face);
         faceHalfEdges.push_back(he);
-        halfEdges.push_back(he);
+        m_halfEdges.push_back(he);
     }
     
-    // Link half-edges
+    // Link half-m_edges
     for (size_t i = 0; i < faceHalfEdges.size(); ++i) {
         auto he = faceHalfEdges[i];
         he->setNext(faceHalfEdges[(i + 1) % faceHalfEdges.size()]);
@@ -190,7 +190,7 @@ FacePtr HalfEdgeMesh::addFace(const std::vector<VertexPtr>& vertices) {
     face->setHalfEdge(faceHalfEdges[0]);
     
     // Add face to mesh
-    faces.push_back(face);
+    m_faces.push_back(face);
     
     return face;
 }
@@ -198,19 +198,19 @@ FacePtr HalfEdgeMesh::addFace(const std::vector<VertexPtr>& vertices) {
 void HalfEdgeMesh::removeFace(FacePtr face) {
     if (!face) return;
     
-    // Remove associated half-edges
+    // Remove associated half-m_edges
     auto he = face->getHalfEdge();
     if (he) {
         auto current = he;
         do {
             auto next = current->getNext();
-            halfEdges.erase(std::remove(halfEdges.begin(), halfEdges.end(), current), halfEdges.end());
+            m_halfEdges.erase(std::remove(m_halfEdges.begin(), m_halfEdges.end(), current), m_halfEdges.end());
             current = next;
         } while (current != he);
     }
     
     // Remove the face
-    faces.erase(std::remove(faces.begin(), faces.end(), face), faces.end());
+    m_faces.erase(std::remove(m_faces.begin(), m_faces.end(), face), m_faces.end());
 }
 
 std::vector<FacePtr> HalfEdgeMesh::getAdjacentFaces(VertexPtr vertex) const {
@@ -266,40 +266,40 @@ std::vector<VertexPtr> HalfEdgeMesh::getAdjacentVertices(VertexPtr vertex) const
 // Mesh operations
 VertexPtr HalfEdgeMesh::createVertex(const Vec3& position) {
     auto vertex = std::make_shared<Vertex>(position);
-    vertices.push_back(vertex);
+    m_vertices.push_back(vertex);
     return vertex;
 }
 
 EdgePtr HalfEdgeMesh::createEdge(VertexPtr v1, VertexPtr v2) {
     auto edge = std::make_shared<Edge>();
-    edges.push_back(edge);
+    m_edges.push_back(edge);
     return edge;
 }
 
-FacePtr HalfEdgeMesh::createFace(const std::vector<VertexPtr>& vertices) {
+FacePtr HalfEdgeMesh::createFace(const std::vector<VertexPtr>& m_vertices) {
     auto face = std::make_shared<Face>();
-    faces.push_back(face);
+    m_faces.push_back(face);
     return face;
 }
 
 void HalfEdgeMesh::deleteVertex(VertexPtr vertex) {
-    auto it = std::find(vertices.begin(), vertices.end(), vertex);
-    if (it != vertices.end()) {
-        vertices.erase(it);
+    auto it = std::find(m_vertices.begin(), m_vertices.end(), vertex);
+    if (it != m_vertices.end()) {
+        m_vertices.erase(it);
     }
 }
 
 void HalfEdgeMesh::deleteEdge(EdgePtr edge) {
-    auto it = std::find(edges.begin(), edges.end(), edge);
-    if (it != edges.end()) {
-        edges.erase(it);
+    auto it = std::find(m_edges.begin(), m_edges.end(), edge);
+    if (it != m_edges.end()) {
+        m_edges.erase(it);
     }
 }
 
 void HalfEdgeMesh::deleteFace(FacePtr face) {
-    auto it = std::find(faces.begin(), faces.end(), face);
-    if (it != faces.end()) {
-        faces.erase(it);
+    auto it = std::find(m_faces.begin(), m_faces.end(), face);
+    if (it != m_faces.end()) {
+        m_faces.erase(it);
     }
 }
 
@@ -331,17 +331,17 @@ void HalfEdgeMesh::splitEdge(EdgePtr edge, const Vec3& position) {
     // Create new vertex at split position
     VertexPtr newVertex = createVertex(position);
 
-    // Create new edges
+    // Create new m_edges
     EdgePtr newEdge1 = std::make_shared<Edge>();
     EdgePtr newEdge2 = std::make_shared<Edge>();
     
-    // Create new half-edges
+    // Create new half-m_edges
     HalfEdgePtr newHE1 = std::make_shared<HalfEdge>();
     HalfEdgePtr newHE2 = std::make_shared<HalfEdge>();
     HalfEdgePtr newHE3 = std::make_shared<HalfEdge>();
     HalfEdgePtr newHE4 = std::make_shared<HalfEdge>();
 
-    // Set up new half-edges for first new edge (v1 -> newVertex)
+    // Set up new half-m_edges for first new edge (v1 -> newVertex)
     newHE1->setVertex(newVertex);
     newHE1->setEdge(newEdge1);
     newHE1->setTwin(newHE2);
@@ -356,7 +356,7 @@ void HalfEdgeMesh::splitEdge(EdgePtr edge, const Vec3& position) {
     newHE2->setNext(he2->next);
     newHE2->setPrev(he2->prev);
 
-    // Set up new half-edges for second new edge (newVertex -> v2)
+    // Set up new half-m_edges for second new edge (newVertex -> v2)
     newHE3->setVertex(v2);
     newHE3->setEdge(newEdge2);
     newHE3->setTwin(newHE4);
@@ -383,7 +383,7 @@ void HalfEdgeMesh::splitEdge(EdgePtr edge, const Vec3& position) {
     // Set vertex outgoing half-edge
     newVertex->setOutgoingHalfEdge(newHE3);
 
-    // Update face half-edges if needed
+    // Update face half-m_edges if needed
     if (he1->face && he1->face->halfEdge == he1) {
         he1->face->setHalfEdge(newHE1);
     }
@@ -391,36 +391,36 @@ void HalfEdgeMesh::splitEdge(EdgePtr edge, const Vec3& position) {
         he2->face->setHalfEdge(newHE2);
     }
 
-    // Set up edges
+    // Set up m_edges
     newEdge1->halfEdge = newHE1;
     newEdge2->halfEdge = newHE3;
 
     // Add new elements to mesh
-    edges.push_back(newEdge1);
-    edges.push_back(newEdge2);
-    halfEdges.push_back(newHE1);
-    halfEdges.push_back(newHE2);
-    halfEdges.push_back(newHE3);
-    halfEdges.push_back(newHE4);
+    m_edges.push_back(newEdge1);
+    m_edges.push_back(newEdge2);
+    m_halfEdges.push_back(newHE1);
+    m_halfEdges.push_back(newHE2);
+    m_halfEdges.push_back(newHE3);
+    m_halfEdges.push_back(newHE4);
 
-    // Remove old edge and half-edges
-    halfEdges.erase(std::remove(halfEdges.begin(), halfEdges.end(), he1), halfEdges.end());
-    halfEdges.erase(std::remove(halfEdges.begin(), halfEdges.end(), he2), halfEdges.end());
-    edges.erase(std::remove(edges.begin(), edges.end(), edge), edges.end());
+    // Remove old edge and half-m_edges
+    m_halfEdges.erase(std::remove(m_halfEdges.begin(), m_halfEdges.end(), he1), m_halfEdges.end());
+    m_halfEdges.erase(std::remove(m_halfEdges.begin(), m_halfEdges.end(), he2), m_halfEdges.end());
+    m_edges.erase(std::remove(m_edges.begin(), m_edges.end(), edge), m_edges.end());
 }
 
 void HalfEdgeMesh::mergeVertices(VertexPtr v1, VertexPtr v2) {
     if (!v1 || !v2 || v1 == v2) return;
 
-    // Get all half-edges connected to v2
+    // Get all half-m_edges connected to v2
     std::vector<HalfEdgePtr> v2HalfEdges = getAdjacentHalfEdges(v2);
 
-    // Redirect all half-edges pointing to v2 to point to v1
+    // Redirect all half-m_edges pointing to v2 to point to v1
     for (auto he : v2HalfEdges) {
         if (he->vertex == v2) {
             he->setVertex(v1);
         }
-        // Update twin half-edges that point to v2
+        // Update twin half-m_edges that point to v2
         if (he->twin && he->twin->vertex == v2) {
             he->twin->setVertex(v1);
         }
@@ -431,8 +431,8 @@ void HalfEdgeMesh::mergeVertices(VertexPtr v1, VertexPtr v2) {
         v1->setOutgoingHalfEdge(v2HalfEdges[0]);
     }
 
-    // Remove v2 from vertices
-    vertices.erase(std::remove(vertices.begin(), vertices.end(), v2), vertices.end());
+    // Remove v2 from m_vertices
+    m_vertices.erase(std::remove(m_vertices.begin(), m_vertices.end(), v2), m_vertices.end());
 }
 
 void HalfEdgeMesh::flipEdge(EdgePtr edge) {
@@ -441,16 +441,16 @@ void HalfEdgeMesh::flipEdge(EdgePtr edge) {
     HalfEdgePtr he1 = edge->halfEdge;
     HalfEdgePtr he2 = he1->twin;
 
-    // Check if edge can be flipped (must be between two triangular faces)
+    // Check if edge can be flipped (must be between two triangular m_faces)
     if (!he1->face || !he2->face) return;
 
-    // Get the four vertices of the quadrilateral
+    // Get the four m_vertices of the quadrilateral
     VertexPtr v1 = he1->prev->vertex;  // Bottom left
     VertexPtr v2 = he1->vertex;        // Bottom right
     VertexPtr v3 = he1->next->vertex;  // Top right
     VertexPtr v4 = he2->next->vertex;  // Top left
 
-    // Store the neighboring half-edges
+    // Store the neighboring half-m_edges
     HalfEdgePtr he1_prev = he1->prev;
     HalfEdgePtr he1_next = he1->next;
     HalfEdgePtr he2_prev = he2->prev;
@@ -466,7 +466,7 @@ void HalfEdgeMesh::flipEdge(EdgePtr edge) {
     he2->setNext(he1_next);
     he2->setPrev(he1_prev);
 
-    // Update neighboring half-edges
+    // Update neighboring half-m_edges
     he1_prev->setNext(he2);
     he1_next->setPrev(he2);
     he2_prev->setNext(he1);
@@ -480,23 +480,23 @@ void HalfEdgeMesh::flipEdge(EdgePtr edge) {
 }
 
 bool HalfEdgeMesh::isValidMesh() const {
-    // Check if all vertices have valid half-edges
-    for (const auto& vertex : vertices) {
+    // Check if all m_vertices have valid half-m_edges
+    for (const auto& vertex : m_vertices) {
         if (!vertex->halfEdge) return false;
         
         // Check if the outgoing half-edge actually points away from this vertex
         if (vertex->halfEdge->twin->vertex != vertex) return false;
     }
 
-    // Check if all edges have valid half-edges
-    for (const auto& edge : edges) {
+    // Check if all m_edges have valid half-m_edges
+    for (const auto& edge : m_edges) {
         if (!edge->halfEdge) return false;
         if (!edge->halfEdge->twin) return false;
         if (edge->halfEdge->twin->twin != edge->halfEdge) return false;
     }
 
-    // Check if all faces have valid half-edges
-    for (const auto& face : faces) {
+    // Check if all m_faces have valid half-m_edges
+    for (const auto& face : m_faces) {
         if (!face->halfEdge) return false;
         
         // Check if face half-edge loop is valid
@@ -511,11 +511,11 @@ bool HalfEdgeMesh::isValidMesh() const {
             if (count > 100) return false; // Prevent infinite loop
         } while (current != he);
         
-        if (count < 3) return false; // Face must have at least 3 vertices
+        if (count < 3) return false; // Face must have at least 3 m_vertices
     }
 
-    // Check if all half-edges have valid connections
-    for (const auto& he : halfEdges) {
+    // Check if all half-m_edges have valid connections
+    for (const auto& he : m_halfEdges) {
         if (!he->vertex || !he->edge) return false;
         if (!he->next || !he->prev) return false;
         if (!he->twin) return false;
@@ -553,16 +553,16 @@ bool HalfEdgeMesh::areVerticesConnected(VertexPtr v1, VertexPtr v2) const {
 
 void HalfEdgeMesh::updateVertexNormals() {
     // Reset all vertex normals
-    for (auto vertex : vertices) {
+    for (auto vertex : m_vertices) {
         vertex->normal = Vec3(0.0f);
     }
 
-    // Accumulate face normals at vertices
-    for (auto face : faces) {
+    // Accumulate face normals at m_vertices
+    for (auto face : m_faces) {
         auto he = face->halfEdge;
         if (!he) continue;
 
-        // Get face vertices
+        // Get face m_vertices
         std::vector<Vec3> faceVertices;
         auto current = he;
         do {
@@ -577,7 +577,7 @@ void HalfEdgeMesh::updateVertexNormals() {
                 faceVertices[2] - faceVertices[0]
             ));
 
-            // Accumulate at vertices
+            // Accumulate at m_vertices
             current = he;
             do {
                 current->vertex->normal += faceNormal;
@@ -587,7 +587,7 @@ void HalfEdgeMesh::updateVertexNormals() {
     }
 
     // Normalize accumulated normals
-    for (auto vertex : vertices) {
+    for (auto vertex : m_vertices) {
         if (glm::length(vertex->normal) > 0.0f) {
             vertex->normal = glm::normalize(vertex->normal);
         } else {

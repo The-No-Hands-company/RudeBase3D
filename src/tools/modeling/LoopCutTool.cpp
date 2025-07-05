@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include <queue>
+#include <glm/glm.hpp>
 
 LoopCutTool::LoopCutTool() {
     clearResults();
@@ -227,7 +228,7 @@ std::pair<HalfEdgeVertexPtr, HalfEdgeEdgePtr> LoopCutTool::splitEdge(HalfEdgeEdg
     }
     
     // Create new vertex at the split position
-    QVector3D newPosition = originVertex->getPosition() + 
+    glm::vec3 newPosition = originVertex->getPosition() + 
                            (targetVertex->getPosition() - originVertex->getPosition()) * position;
     
     auto newVertex = m_mesh->addVertex(newPosition);
@@ -236,11 +237,11 @@ std::pair<HalfEdgeVertexPtr, HalfEdgeEdgePtr> LoopCutTool::splitEdge(HalfEdgeEdg
     }
     
     // Interpolate vertex properties
-    QVector3D newNormal = originVertex->getNormal() + 
+    glm::vec3 newNormal = originVertex->getNormal() + 
                          (targetVertex->getNormal() - originVertex->getNormal()) * position;
-    newVertex->setNormal(newNormal.normalized());
+    newVertex->setNormal(newNormal);
     
-    QVector2D newTexCoord = originVertex->getTexCoord() + 
+    glm::vec2 newTexCoord = originVertex->getTexCoord() + 
                            (targetVertex->getTexCoord() - originVertex->getTexCoord()) * position;
     newVertex->setTexCoord(newTexCoord);
     
@@ -314,15 +315,15 @@ bool LoopCutTool::isValidLoopContinuation(HalfEdgeEdgePtr currentEdge, HalfEdgeE
     if (!currentEdge || !nextEdge) return false;
     
     // Check if edges are roughly parallel (simplified check)
-    QVector3D dir1 = currentEdge->getVector().normalized();
-    QVector3D dir2 = nextEdge->getVector().normalized();
+    glm::vec3 dir1 = currentEdge->getVector();
+    glm::vec3 dir2 = nextEdge->getVector();
     
-    float dot = QVector3D::dotProduct(dir1, dir2);
+    float dot = glm::dot(dir1, dir2);
     return std::abs(dot) > 0.5f; // Roughly parallel
 }
 
-QVector3D LoopCutTool::calculateLoopDirection(HalfEdgeEdgePtr startEdge) const {
-    if (!startEdge) return QVector3D(1, 0, 0);
+glm::vec3 LoopCutTool::calculateLoopDirection(HalfEdgeEdgePtr startEdge) const {
+    if (!startEdge) return glm::vec3(1, 0, 0);
     
     switch (m_loopDirection) {
         case LoopDirection::Custom:
@@ -330,7 +331,7 @@ QVector3D LoopCutTool::calculateLoopDirection(HalfEdgeEdgePtr startEdge) const {
             
         case LoopDirection::Automatic:
         default:
-            return startEdge->getVector().normalized();
+            return startEdge->getVector();
     }
 }
 

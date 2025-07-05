@@ -1,3 +1,4 @@
+#include <glm/glm.hpp>
 #include "HalfEdgeMesh.h"
 #include <algorithm>
 #include <unordered_set>
@@ -5,7 +6,7 @@
 #include <QDebug>
 
 // HalfEdgeVertex Implementation
-HalfEdgeVertex::HalfEdgeVertex(const QVector3D& position, unsigned int id)
+HalfEdgeVertex::HalfEdgeVertex(const glm::vec3& position, unsigned int id)
     : m_position(position)
     , m_id(id)
     , m_normal(0.0f, 1.0f, 0.0f)
@@ -99,26 +100,26 @@ bool HalfEdgeEdge::isBoundary() const {
     return !getFace() || !getTwin() || !getTwin()->getFace();
 }
 
-QVector3D HalfEdgeEdge::getVector() const {
+glm::vec3 HalfEdgeEdge::getVector() const {
     auto origin = getOriginVertex();
     auto target = getTargetVertex();
     if (origin && target) {
         return target->getPosition() - origin->getPosition();
     }
-    return QVector3D();
+    return glm::vec3();
 }
 
 float HalfEdgeEdge::getLength() const {
-    return getVector().length();
+    return glm::length(getVector());
 }
 
-QVector3D HalfEdgeEdge::getMidpoint() const {
+glm::vec3 HalfEdgeEdge::getMidpoint() const {
     auto origin = getOriginVertex();
     auto target = getTargetVertex();
     if (origin && target) {
         return (origin->getPosition() + target->getPosition()) * 0.5f;
     }
-    return QVector3D();
+    return glm::vec3();
 }
 
 // HalfEdgeFace Implementation
@@ -174,29 +175,29 @@ int HalfEdgeFace::getVertexCount() const {
     return static_cast<int>(getEdges().size());
 }
 
-QVector3D HalfEdgeFace::computeNormal() const {
+glm::vec3 HalfEdgeFace::computeNormal() const {
     auto vertices = getVertices();
-    if (vertices.size() < 3) return QVector3D(0, 1, 0);
+    if (vertices.size() < 3) return glm::vec3(0, 1, 0);
     
     // Use Newell's method for robust normal calculation
-    QVector3D normal(0, 0, 0);
+    glm::vec3 normal(0, 0, 0);
     for (size_t i = 0; i < vertices.size(); ++i) {
         auto v1 = vertices[i]->getPosition();
         auto v2 = vertices[(i + 1) % vertices.size()]->getPosition();
         
-        normal.setX(normal.x() + (v1.y() - v2.y()) * (v1.z() + v2.z()));
-        normal.setY(normal.y() + (v1.z() - v2.z()) * (v1.x() + v2.x()));
-        normal.setZ(normal.z() + (v1.x() - v2.x()) * (v1.y() + v2.y()));
+        normal.x += (v1.y - v2.y) * (v1.z + v2.z);
+        normal.y += (v1.z - v2.z) * (v1.x + v2.x);
+        normal.z += (v1.x - v2.x) * (v1.y + v2.y);
     }
     
-    return normal.normalized();
+    return glm::normalize(normal);
 }
 
-QVector3D HalfEdgeFace::getCentroid() const {
+glm::vec3 HalfEdgeFace::getCentroid() const {
     auto vertices = getVertices();
-    if (vertices.empty()) return QVector3D();
+    if (vertices.empty()) return glm::vec3();
     
-    QVector3D centroid(0, 0, 0);
+    glm::vec3 centroid(0, 0, 0);
     for (const auto& vertex : vertices) {
         centroid += vertex->getPosition();
     }
@@ -217,7 +218,7 @@ float HalfEdgeFace::getArea() const {
         auto edge1 = v1 - v0;
         auto edge2 = v2 - v0;
         
-        return QVector3D::crossProduct(edge1, edge2).length() * 0.5f;
+        return glm::length(glm::cross(edge1, edge2)) * 0.5f;
     }
     
     // For polygons, triangulate and sum areas
@@ -231,7 +232,7 @@ float HalfEdgeFace::getArea() const {
         auto edge1 = v1 - centroid;
         auto edge2 = v2 - centroid;
         
-        totalArea += QVector3D::crossProduct(edge1, edge2).length() * 0.5f;
+        totalArea += glm::length(glm::cross(edge1, edge2)) * 0.5f;
     }
     
     return totalArea;
@@ -257,7 +258,7 @@ bool HalfEdgeMesh::isEmpty() const {
     return m_vertices.empty() && m_edges.empty() && m_faces.empty();
 }
 
-HalfEdgeVertexPtr HalfEdgeMesh::addVertex(const QVector3D& position) {
+HalfEdgeVertexPtr HalfEdgeMesh::addVertex(const glm::vec3& position) {
     auto vertex = std::make_shared<HalfEdgeVertex>(position, m_nextVertexId++);
     m_vertices.push_back(vertex);
     m_vertexMap[vertex->getId()] = vertex;
@@ -564,36 +565,36 @@ bool HalfEdgeMesh::repair() {
     return validate();
 }
 
-QVector3D HalfEdgeMesh::getBoundingBoxMin() const {
-    if (m_vertices.empty()) return QVector3D();
+glm::vec3 HalfEdgeMesh::getBoundingBoxMin() const {
+    if (m_vertices.empty()) return glm::vec3();
     
-    QVector3D min = m_vertices[0]->getPosition();
+    glm::vec3 min = m_vertices[0]->getPosition();
     for (const auto& vertex : m_vertices) {
         const auto& pos = vertex->getPosition();
-        min.setX(std::min(min.x(), pos.x()));
-        min.setY(std::min(min.y(), pos.y()));
-        min.setZ(std::min(min.z(), pos.z()));
+        min.x = std::min(min.x, pos.x);
+        min.y = std::min(min.y, pos.y);
+        min.z = std::min(min.z, pos.z);
     }
     return min;
 }
 
-QVector3D HalfEdgeMesh::getBoundingBoxMax() const {
-    if (m_vertices.empty()) return QVector3D();
+glm::vec3 HalfEdgeMesh::getBoundingBoxMax() const {
+    if (m_vertices.empty()) return glm::vec3();
     
-    QVector3D max = m_vertices[0]->getPosition();
+    glm::vec3 max = m_vertices[0]->getPosition();
     for (const auto& vertex : m_vertices) {
         const auto& pos = vertex->getPosition();
-        max.setX(std::max(max.x(), pos.x()));
-        max.setY(std::max(max.y(), pos.y()));
-        max.setZ(std::max(max.z(), pos.z()));
+        max.x = std::max(max.x, pos.x);
+        max.y = std::max(max.y, pos.y);
+        max.z = std::max(max.z, pos.z);
     }
     return max;
 }
 
-QVector3D HalfEdgeMesh::getCentroid() const {
-    if (m_vertices.empty()) return QVector3D();
+glm::vec3 HalfEdgeMesh::getCentroid() const {
+    if (m_vertices.empty()) return glm::vec3();
     
-    QVector3D centroid(0, 0, 0);
+    glm::vec3 centroid(0, 0, 0);
     for (const auto& vertex : m_vertices) {
         centroid += vertex->getPosition();
     }
@@ -611,12 +612,12 @@ void HalfEdgeMesh::updateNormals() {
         auto adjacentFaces = vertex->getAdjacentFaces();
         if (adjacentFaces.empty()) continue;
         
-        QVector3D normal(0, 0, 0);
+        glm::vec3 normal(0, 0, 0);
         for (const auto& face : adjacentFaces) {
             normal += face->getNormal() * face->getArea();
         }
         
-        vertex->setNormal(normal.normalized());
+        vertex->setNormal(glm::normalize(normal));
     }
 }
 
@@ -628,9 +629,9 @@ void HalfEdgeMesh::updateTextureCoordinates() {
     
     for (auto& vertex : m_vertices) {
         auto pos = vertex->getPosition();
-        float u = (pos.x() - min.x()) / size.x();
-        float v = (pos.z() - min.z()) / size.z();
-        vertex->setTexCoord(QVector2D(u, v));
+        float u = (pos.x - min.x) / size.x;
+        float v = (pos.z - min.z) / size.z;
+        vertex->setTexCoord(glm::vec2(u, v));
     }
 }
 

@@ -22,10 +22,13 @@
 class Scene;
 class SceneObject;
 class Camera;
+namespace rude {
+    class HalfEdgeMesh;
+}
+
 class Mesh;
 class Material;
 class Transform;
-class HalfEdgeMesh;
 class HalfEdgeVertex;
 class HalfEdgeEdge;
 class HalfEdgeFace;
@@ -84,7 +87,7 @@ enum class SelectionType {
 using SceneObjectPtr = std::shared_ptr<SceneObject>;
 using MeshPtr = std::shared_ptr<Mesh>;
 using MaterialPtr = std::shared_ptr<Material>;
-using HalfEdgeMeshPtr = std::shared_ptr<HalfEdgeMesh>;
+using HalfEdgeMeshPtr = std::shared_ptr<rude::HalfEdgeMesh>;
 using HalfEdgeVertexPtr = std::shared_ptr<HalfEdgeVertex>;
 using HalfEdgeEdgePtr = std::shared_ptr<HalfEdgeEdge>;
 using HalfEdgeFacePtr = std::shared_ptr<HalfEdgeFace>;
@@ -95,20 +98,6 @@ using PointCloudPtr = std::shared_ptr<PointCloud>;
 using ImplicitSurfacePtr = std::shared_ptr<ImplicitSurface>;
 using BVHTreePtr = std::shared_ptr<BVHTree>;
 using HybridGeometryPtr = std::shared_ptr<HybridGeometry>;
-
-// Vertex structure for face-vertex meshes
-struct Vertex {
-    QVector3D position;
-    QVector3D normal;
-    QVector2D texCoord;
-    QVector4D color = QVector4D(1.0f, 1.0f, 1.0f, 1.0f);
-    
-    Vertex() = default;
-    Vertex(const QVector3D& pos) : position(pos), normal(0, 1, 0), texCoord(0, 0) {}
-    Vertex(const QVector3D& pos, const QVector3D& norm) : position(pos), normal(norm), texCoord(0, 0) {}
-    Vertex(const QVector3D& pos, const QVector3D& norm, const QVector2D& tex) 
-        : position(pos), normal(norm), texCoord(tex) {}
-};
 
 // Geometry processing constants
 constexpr float PI = 3.14159265359f;

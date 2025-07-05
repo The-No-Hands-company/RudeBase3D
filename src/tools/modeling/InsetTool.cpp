@@ -3,12 +3,13 @@
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
+#include <glm/glm.hpp>
 
 InsetTool::InsetTool() {
     clearResults();
 }
 
-bool InsetTool::insetFaces(const std::vector<HalfEdgeFacePtr>& faces, float insetAmount) {
+bool InsetTool::insetFaces(const std::vector<rude::HalfEdgeFacePtr>& faces, float insetAmount) {
     if (!m_mesh || faces.empty() || insetAmount <= 0.0f) {
         qWarning() << "InsetTool: Invalid input parameters";
         return false;
@@ -37,8 +38,8 @@ bool InsetTool::insetFaces(const std::vector<HalfEdgeFacePtr>& faces, float inse
     return !m_createdFaces.empty();
 }
 
-bool InsetTool::insetFace(HalfEdgeFacePtr face, float insetAmount) {
-    std::vector<HalfEdgeFacePtr> faces = {face};
+bool InsetTool::insetFace(rude::HalfEdgeFacePtr face, float insetAmount) {
+    std::vector<rude::HalfEdgeFacePtr> faces = {face};
     return insetFaces(faces, insetAmount);
 }
 
@@ -46,7 +47,7 @@ bool InsetTool::canInset() const {
     return m_mesh != nullptr;
 }
 
-HalfEdgeFacePtr InsetTool::insetFaceIndividual(HalfEdgeFacePtr face, float insetAmount) {
+rude::HalfEdgeFacePtr InsetTool::insetFaceIndividual(rude::HalfEdgeFacePtr face, float insetAmount) {
     if (!face || !m_mesh) {
         return nullptr;
     }
@@ -59,15 +60,15 @@ HalfEdgeFacePtr InsetTool::insetFaceIndividual(HalfEdgeFacePtr face, float inset
     }
     
     // Calculate face center and normal
-    QVector3D faceCenter = calculateFaceCenter(face);
-    QVector3D faceNormal = face->computeNormal();
+    glm::vec3 faceCenter = calculateFaceCenter(face);
+    glm::vec3 faceNormal = face->computeNormal();
     
     // Create inset vertices
-    std::vector<HalfEdgeVertexPtr> insetVertices;
+    std::vector<rude::HalfEdgeVertexPtr> insetVertices;
     insetVertices.reserve(originalVertices.size());
     
     for (auto originalVertex : originalVertices) {
-        QVector3D insetPosition = calculateInsetPosition(originalVertex, face, insetAmount);
+        glm::vec3 insetPosition = calculateInsetPosition(originalVertex, face, insetAmount);
         
         // Apply depth if specified
         if (m_insetDepth != 0.0f) {
@@ -102,8 +103,8 @@ HalfEdgeFacePtr InsetTool::insetFaceIndividual(HalfEdgeFacePtr face, float inset
     return insetFace;
 }
 
-std::vector<HalfEdgeFacePtr> InsetTool::insetRegion(const std::vector<HalfEdgeFacePtr>& faces, float insetAmount) {
-    std::vector<HalfEdgeFacePtr> resultFaces;
+std::vector<rude::HalfEdgeFacePtr> InsetTool::insetRegion(const std::vector<rude::HalfEdgeFacePtr>& faces, float insetAmount) {
+    std::vector<rude::HalfEdgeFacePtr> resultFaces;
     
     // For region inset, we need to find boundary edges and inset as a group
     // This is more complex and would require boundary detection
@@ -120,13 +121,13 @@ std::vector<HalfEdgeFacePtr> InsetTool::insetRegion(const std::vector<HalfEdgeFa
     return resultFaces;
 }
 
-QVector3D InsetTool::calculateFaceCenter(HalfEdgeFacePtr face) const {
-    if (!face) return QVector3D();
+glm::vec3 InsetTool::calculateFaceCenter(rude::HalfEdgeFacePtr face) const {
+    if (!face) return glm::vec3();
     
     auto vertices = face->getVertices();
-    if (vertices.empty()) return QVector3D();
+    if (vertices.empty()) return glm::vec3();
     
-    QVector3D center(0, 0, 0);
+    glm::vec3 center(0, 0, 0);
     for (auto vertex : vertices) {
         center += vertex->getPosition();
     }
@@ -134,52 +135,50 @@ QVector3D InsetTool::calculateFaceCenter(HalfEdgeFacePtr face) const {
     return center / static_cast<float>(vertices.size());
 }
 
-QVector3D InsetTool::calculateInsetPosition(HalfEdgeVertexPtr vertex, HalfEdgeFacePtr face, float insetAmount) const {
-    if (!vertex || !face) return QVector3D();
+glm::vec3 InsetTool::calculateInsetPosition(rude::HalfEdgeVertexPtr vertex, rude::HalfEdgeFacePtr face, float insetAmount) const {
+    if (!vertex || !face) return glm::vec3();
     
-    QVector3D originalPos = vertex->getPosition();
-    QVector3D faceCenter = calculateFaceCenter(face);
+    glm::vec3 originalPos = vertex->getPosition();
+    glm::vec3 faceCenter = calculateFaceCenter(face);
     
     if (m_scaleEvenThickness) {
         // Calculate inset direction based on vertex normal within the face
         auto adjacentFaces = vertex->getAdjacentFaces();
-        QVector3D vertexNormal(0, 0, 0);
+        glm::vec3 vertexNormal(0, 0, 0);
         
         for (auto adjFace : adjacentFaces) {
             vertexNormal += adjFace->computeNormal();
         }
         
         if (adjacentFaces.size() > 0) {
-            vertexNormal /= static_cast<float>(adjacentFaces.size());
-            vertexNormal = vertexNormal.normalized();
+            vertexNormal = glm::normalize(vertexNormal);
         }
         
         // Calculate inset direction perpendicular to vertex normal in face plane
-        QVector3D faceNormal = face->computeNormal();
-        QVector3D toCenter = (faceCenter - originalPos).normalized();
-        QVector3D insetDirection = QVector3D::crossProduct(
-            QVector3D::crossProduct(faceNormal, toCenter), faceNormal).normalized();
+        glm::vec3 faceNormal = face->computeNormal();
+        glm::vec3 toCenter = glm::normalize(faceCenter - originalPos);
+        glm::vec3 insetDirection = glm::normalize(glm::cross(glm::cross(faceNormal, toCenter), faceNormal));
         
         return originalPos + insetDirection * insetAmount;
     } else {
         // Simple linear interpolation toward face center
-        QVector3D toCenter = faceCenter - originalPos;
-        float centerDistance = toCenter.length();
+        glm::vec3 toCenter = faceCenter - originalPos;
+        float centerDistance = glm::length(toCenter);
         
         if (centerDistance > insetAmount) {
-            return originalPos + toCenter.normalized() * insetAmount;
+            return originalPos + glm::normalize(toCenter) * insetAmount;
         } else {
             return faceCenter;
         }
     }
 }
 
-std::vector<HalfEdgeVertexPtr> InsetTool::createInsetVertices(HalfEdgeFacePtr face, float insetAmount) {
-    std::vector<HalfEdgeVertexPtr> insetVertices;
+std::vector<rude::HalfEdgeVertexPtr> InsetTool::createInsetVertices(rude::HalfEdgeFacePtr face, float insetAmount) {
+    std::vector<rude::HalfEdgeVertexPtr> insetVertices;
     
     auto originalVertices = face->getVertices();
     for (auto vertex : originalVertices) {
-        QVector3D insetPos = calculateInsetPosition(vertex, face, insetAmount);
+        glm::vec3 insetPos = calculateInsetPosition(vertex, face, insetAmount);
         auto insetVertex = duplicateVertex(vertex, insetPos);
         if (insetVertex) {
             insetVertices.push_back(insetVertex);
@@ -190,8 +189,8 @@ std::vector<HalfEdgeVertexPtr> InsetTool::createInsetVertices(HalfEdgeFacePtr fa
     return insetVertices;
 }
 
-void InsetTool::createBridgeFaces(const std::vector<HalfEdgeVertexPtr>& originalVertices, 
-                                  const std::vector<HalfEdgeVertexPtr>& insetVertices) {
+void InsetTool::createBridgeFaces(const std::vector<rude::HalfEdgeVertexPtr>& originalVertices, 
+                                  const std::vector<rude::HalfEdgeVertexPtr>& insetVertices) {
     if (originalVertices.size() != insetVertices.size() || originalVertices.size() < 3) {
         return;
     }
@@ -216,7 +215,7 @@ void InsetTool::createBridgeFaces(const std::vector<HalfEdgeVertexPtr>& original
     }
 }
 
-HalfEdgeVertexPtr InsetTool::duplicateVertex(HalfEdgeVertexPtr vertex, const QVector3D& newPosition) {
+rude::HalfEdgeVertexPtr InsetTool::duplicateVertex(rude::HalfEdgeVertexPtr vertex, const glm::vec3& newPosition) {
     if (!vertex || !m_mesh) return nullptr;
     
     auto newVertex = m_mesh->addVertex(newPosition);
@@ -229,11 +228,11 @@ HalfEdgeVertexPtr InsetTool::duplicateVertex(HalfEdgeVertexPtr vertex, const QVe
     return newVertex;
 }
 
-HalfEdgeFacePtr InsetTool::createQuadFace(HalfEdgeVertexPtr v1, HalfEdgeVertexPtr v2,
-                                          HalfEdgeVertexPtr v3, HalfEdgeVertexPtr v4) {
+rude::HalfEdgeFacePtr InsetTool::createQuadFace(rude::HalfEdgeVertexPtr v1, rude::HalfEdgeVertexPtr v2,
+                                          rude::HalfEdgeVertexPtr v3, rude::HalfEdgeVertexPtr v4) {
     if (!v1 || !v2 || !v3 || !v4 || !m_mesh) return nullptr;
     
-    std::vector<HalfEdgeVertexPtr> vertices = {v1, v2, v3, v4};
+    std::vector<rude::HalfEdgeVertexPtr> vertices = {v1, v2, v3, v4};
     return m_mesh->addFace(vertices);
 }
 

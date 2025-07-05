@@ -4,11 +4,12 @@
 #include <algorithm>
 #include <cmath>
 #include <unordered_set>
+#include <glm/glm.hpp>
 
 SubdivisionTool::SubdivisionTool() {
 }
 
-HalfEdgeMeshPtr SubdivisionTool::subdivide(int levels) {
+rude::MeshPtr SubdivisionTool::subdivide(int levels) {
     if (!canSubdivide() || levels <= 0) {
         qWarning() << "SubdivisionTool: Cannot subdivide - invalid parameters";
         return nullptr;
@@ -17,7 +18,7 @@ HalfEdgeMeshPtr SubdivisionTool::subdivide(int levels) {
     auto currentMesh = m_mesh;
     
     for (int level = 0; level < levels; ++level) {
-        HalfEdgeMeshPtr subdividedMesh = nullptr;
+        rude::MeshPtr subdividedMesh = nullptr;
         
         switch (m_subdivisionType) {
             case SubdivisionType::CatmullClark:
@@ -48,7 +49,7 @@ HalfEdgeMeshPtr SubdivisionTool::subdivide(int levels) {
     return currentMesh;
 }
 
-HalfEdgeMeshPtr SubdivisionTool::subdivideAdaptive(float errorThreshold) {
+rude::MeshPtr SubdivisionTool::subdivideAdaptive(float errorThreshold) {
     if (!canSubdivide()) {
         return nullptr;
     }
@@ -85,7 +86,7 @@ HalfEdgeMeshPtr SubdivisionTool::subdivideAdaptive(float errorThreshold) {
     return currentMesh;
 }
 
-HalfEdgeMeshPtr SubdivisionTool::subdivideRegion(const std::vector<HalfEdgeFacePtr>& faces, int levels) {
+rude::MeshPtr SubdivisionTool::subdivideRegion(const std::vector<rude::FacePtr>& faces, int levels) {
     // Regional subdivision is complex and would require boundary handling
     qDebug() << "SubdivisionTool: Regional subdivision not yet fully implemented";
     return subdivide(levels);
@@ -161,12 +162,12 @@ float SubdivisionTool::calculateMeshComplexity() const {
     return static_cast<float>(vertexCount + faceCount);
 }
 
-HalfEdgeMeshPtr SubdivisionTool::applyCatmullClark(HalfEdgeMeshPtr mesh) const {
+rude::MeshPtr SubdivisionTool::applyCatmullClark(rude::MeshPtr mesh) const {
     if (!mesh) return nullptr;
     
-    std::unordered_map<HalfEdgeFacePtr, QVector3D> facePoints;
-    std::unordered_map<HalfEdgeEdgePtr, QVector3D> edgePoints;
-    std::unordered_map<HalfEdgeVertexPtr, QVector3D> vertexPoints;
+    std::unordered_map<rude::FacePtr, glm::vec3> facePoints;
+    std::unordered_map<rude::EdgePtr, glm::vec3> edgePoints;
+    std::unordered_map<rude::VertexPtr, glm::vec3> vertexPoints;
     
     // Step 1: Compute face points (centroid of each face)
     computeFacePoints(mesh, facePoints);
@@ -181,15 +182,15 @@ HalfEdgeMeshPtr SubdivisionTool::applyCatmullClark(HalfEdgeMeshPtr mesh) const {
     return buildSubdividedMesh(facePoints, edgePoints, vertexPoints);
 }
 
-void SubdivisionTool::computeFacePoints(HalfEdgeMeshPtr mesh, 
-                                       std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints) const {
+void SubdivisionTool::computeFacePoints(rude::MeshPtr mesh, 
+                                       std::unordered_map<rude::FacePtr, glm::vec3>& facePoints) const {
     auto faces = mesh->getFaces();
     
     for (auto face : faces) {
         auto vertices = face->getVertices();
         if (vertices.empty()) continue;
         
-        QVector3D centroid(0, 0, 0);
+        glm::vec3 centroid(0, 0, 0);
         for (auto vertex : vertices) {
             centroid += vertex->getPosition();
         }
@@ -199,11 +200,11 @@ void SubdivisionTool::computeFacePoints(HalfEdgeMeshPtr mesh,
     }
 }
 
-void SubdivisionTool::computeEdgePoints(HalfEdgeMeshPtr mesh,
-                                       const std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints,
-                                       std::unordered_map<HalfEdgeEdgePtr, QVector3D>& edgePoints) const {
+void SubdivisionTool::computeEdgePoints(rude::MeshPtr mesh,
+                                       const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
+                                       std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints) const {
     auto edges = mesh->getEdges();
-    std::unordered_set<HalfEdgeEdgePtr> processedEdges;
+    std::unordered_set<rude::EdgePtr> processedEdges;
     
     for (auto edge : edges) {
         // Skip if we've already processed this edge or its twin
@@ -216,7 +217,7 @@ void SubdivisionTool::computeEdgePoints(HalfEdgeMeshPtr mesh,
             continue;
         }
         
-        QVector3D edgePoint;
+        glm::vec3 edgePoint;
         auto originVertex = edge->getOriginVertex();
         auto targetVertex = edge->getTargetVertex();
         
@@ -253,20 +254,20 @@ void SubdivisionTool::computeEdgePoints(HalfEdgeMeshPtr mesh,
     }
 }
 
-void SubdivisionTool::computeVertexPoints(HalfEdgeMeshPtr mesh,
-                                         const std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints,
-                                         const std::unordered_map<HalfEdgeEdgePtr, QVector3D>& edgePoints,
-                                         std::unordered_map<HalfEdgeVertexPtr, QVector3D>& vertexPoints) const {
+void SubdivisionTool::computeVertexPoints(rude::MeshPtr mesh,
+                                         const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
+                                         const std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints,
+                                         std::unordered_map<rude::VertexPtr, glm::vec3>& vertexPoints) const {
     auto vertices = mesh->getVertices();
     
     for (auto vertex : vertices) {
         if (isBoundaryVertex(vertex)) {
             // For boundary vertices, use different rule
             auto adjacentEdges = vertex->getOutgoingEdges();
-            QVector3D newPos = vertex->getPosition();
+            glm::vec3 newPos = vertex->getPosition();
             
             // Find boundary edges
-            std::vector<HalfEdgeEdgePtr> boundaryEdges;
+            std::vector<rude::EdgePtr> boundaryEdges;
             for (auto edge : adjacentEdges) {
                 if (isBoundaryEdge(edge)) {
                     boundaryEdges.push_back(edge);
@@ -275,7 +276,7 @@ void SubdivisionTool::computeVertexPoints(HalfEdgeMeshPtr mesh,
             
             if (boundaryEdges.size() == 2) {
                 // Standard boundary vertex
-                QVector3D edgeSum(0, 0, 0);
+                glm::vec3 edgeSum(0, 0, 0);
                 for (auto edge : boundaryEdges) {
                     auto it = edgePoints.find(edge);
                     if (it != edgePoints.end()) {
@@ -303,7 +304,7 @@ void SubdivisionTool::computeVertexPoints(HalfEdgeMeshPtr mesh,
             }
             
             // Average of adjacent face points
-            QVector3D faceAvg(0, 0, 0);
+            glm::vec3 faceAvg(0, 0, 0);
             for (auto face : adjacentFaces) {
                 auto it = facePoints.find(face);
                 if (it != facePoints.end()) {
@@ -313,7 +314,7 @@ void SubdivisionTool::computeVertexPoints(HalfEdgeMeshPtr mesh,
             faceAvg /= static_cast<float>(n);
             
             // Average of adjacent edge midpoints
-            QVector3D edgeAvg(0, 0, 0);
+            glm::vec3 edgeAvg(0, 0, 0);
             for (auto edge : adjacentEdges) {
                 auto targetVertex = edge->getTargetVertex();
                 if (targetVertex) {
@@ -323,25 +324,25 @@ void SubdivisionTool::computeVertexPoints(HalfEdgeMeshPtr mesh,
             edgeAvg /= static_cast<float>(adjacentEdges.size());
             
             // Catmull-Clark vertex rule
-            QVector3D originalPos = vertex->getPosition();
-            QVector3D newPos = (faceAvg + edgeAvg * 2.0f + originalPos * static_cast<float>(n - 3)) / static_cast<float>(n);
+            glm::vec3 originalPos = vertex->getPosition();
+            glm::vec3 newPos = (faceAvg + edgeAvg * 2.0f + originalPos * static_cast<float>(n - 3)) / static_cast<float>(n);
             
             vertexPoints[vertex] = newPos;
         }
     }
 }
 
-HalfEdgeMeshPtr SubdivisionTool::buildSubdividedMesh(
-    const std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints,
-    const std::unordered_map<HalfEdgeEdgePtr, QVector3D>& edgePoints,
-    const std::unordered_map<HalfEdgeVertexPtr, QVector3D>& vertexPoints) const {
+rude::MeshPtr SubdivisionTool::buildSubdividedMesh(
+    const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
+    const std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints,
+    const std::unordered_map<rude::VertexPtr, glm::vec3>& vertexPoints) const {
     
-    auto newMesh = std::make_shared<HalfEdgeMesh>();
+    auto newMesh = std::make_shared<rude::Mesh>();
     
     // Create vertex mapping for the new mesh
-    std::unordered_map<HalfEdgeVertexPtr, HalfEdgeVertexPtr> oldToNewVertices;
-    std::unordered_map<HalfEdgeFacePtr, HalfEdgeVertexPtr> faceToNewVertex;
-    std::unordered_map<HalfEdgeEdgePtr, HalfEdgeVertexPtr> edgeToNewVertex;
+    std::unordered_map<rude::VertexPtr, rude::VertexPtr> oldToNewVertices;
+    std::unordered_map<rude::FacePtr, rude::VertexPtr> faceToNewVertex;
+    std::unordered_map<rude::EdgePtr, rude::VertexPtr> edgeToNewVertex;
     
     // Add original vertices with new positions
     for (const auto& pair : vertexPoints) {
@@ -362,7 +363,7 @@ HalfEdgeMeshPtr SubdivisionTool::buildSubdividedMesh(
     }
     
     // Add edge points as vertices
-    std::unordered_set<HalfEdgeEdgePtr> processedEdges;
+    std::unordered_set<rude::EdgePtr> processedEdges;
     for (const auto& pair : edgePoints) {
         if (processedEdges.find(pair.first) != processedEdges.end()) {
             continue;
@@ -389,26 +390,26 @@ HalfEdgeMeshPtr SubdivisionTool::buildSubdividedMesh(
     return newMesh;
 }
 
-void SubdivisionTool::createSubdividedFaces(HalfEdgeMeshPtr newMesh,
-                                           const std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints,
-                                           const std::unordered_map<HalfEdgeEdgePtr, QVector3D>& edgePoints,
-                                           const std::unordered_map<HalfEdgeVertexPtr, QVector3D>& vertexPoints) const {
+void SubdivisionTool::createSubdividedFaces(rude::MeshPtr newMesh,
+                                           const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
+                                           const std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints,
+                                           const std::unordered_map<rude::VertexPtr, glm::vec3>& vertexPoints) const {
     // This is a simplified implementation
     // A complete implementation would properly construct all the subdivision faces
     qDebug() << "SubdivisionTool: Face creation in subdivision needs full implementation";
 }
 
-HalfEdgeMeshPtr SubdivisionTool::applyLoop(HalfEdgeMeshPtr mesh) const {
+rude::MeshPtr SubdivisionTool::applyLoop(rude::MeshPtr mesh) const {
     qDebug() << "SubdivisionTool: Loop subdivision not yet fully implemented";
     return nullptr;
 }
 
-HalfEdgeMeshPtr SubdivisionTool::applyDooSabin(HalfEdgeMeshPtr mesh) const {
+rude::MeshPtr SubdivisionTool::applyDooSabin(rude::MeshPtr mesh) const {
     qDebug() << "SubdivisionTool: Doo-Sabin subdivision not yet implemented";
     return nullptr;
 }
 
-bool SubdivisionTool::isCreaseEdge(HalfEdgeEdgePtr edge) const {
+bool SubdivisionTool::isCreaseEdge(rude::EdgePtr edge) const {
     if (!edge || m_boundaryRule != BoundaryRule::CreaseAngle) {
         return false;
     }
@@ -417,17 +418,17 @@ bool SubdivisionTool::isCreaseEdge(HalfEdgeEdgePtr edge) const {
     return angle > m_creaseAngle;
 }
 
-bool SubdivisionTool::isBoundaryVertex(HalfEdgeVertexPtr vertex) const {
+bool SubdivisionTool::isBoundaryVertex(rude::VertexPtr vertex) const {
     if (!vertex) return false;
     return vertex->isBoundary();
 }
 
-bool SubdivisionTool::isBoundaryEdge(HalfEdgeEdgePtr edge) const {
+bool SubdivisionTool::isBoundaryEdge(rude::EdgePtr edge) const {
     if (!edge) return false;
     return edge->isBoundary();
 }
 
-float SubdivisionTool::calculateDihedralAngle(HalfEdgeEdgePtr edge) const {
+float SubdivisionTool::calculateDihedralAngle(rude::EdgePtr edge) const {
     if (!edge || !edge->getTwin()) return 0.0f;
     
     auto face1 = edge->getFace();
@@ -435,30 +436,30 @@ float SubdivisionTool::calculateDihedralAngle(HalfEdgeEdgePtr edge) const {
     
     if (!face1 || !face2) return 0.0f;
     
-    QVector3D normal1 = face1->computeNormal();
-    QVector3D normal2 = face2->computeNormal();
+    glm::vec3 normal1 = face1->computeNormal();
+    glm::vec3 normal2 = face2->computeNormal();
     
-    float dot = QVector3D::dotProduct(normal1, normal2);
+    float dot = glm::dot(normal1, normal2);
     dot = qBound(-1.0f, dot, 1.0f);
     
     return std::acos(dot) * 180.0f / static_cast<float>(M_PI);
 }
 
-bool SubdivisionTool::needsSubdivision(HalfEdgeFacePtr face, float threshold) const {
+bool SubdivisionTool::needsSubdivision(rude::FacePtr face, float threshold) const {
     if (!face) return false;
     
     float error = calculateSubdivisionError(face);
     return error > threshold;
 }
 
-float SubdivisionTool::calculateSubdivisionError(HalfEdgeFacePtr face) const {
+float SubdivisionTool::calculateSubdivisionError(rude::FacePtr face) const {
     if (!face) return 0.0f;
     
     // Use face area as a simple error metric
     return face->getArea();
 }
 
-float SubdivisionTool::calculateAspectRatio(HalfEdgeFacePtr face) const {
+float SubdivisionTool::calculateAspectRatio(rude::FacePtr face) const {
     if (!face) return 1.0f;
     
     auto edges = face->getEdges();
@@ -476,7 +477,7 @@ float SubdivisionTool::calculateAspectRatio(HalfEdgeFacePtr face) const {
     return (minLength > 0.0f) ? (maxLength / minLength) : 1.0f;
 }
 
-float SubdivisionTool::calculateTriangleQuality(HalfEdgeFacePtr face) const {
+float SubdivisionTool::calculateTriangleQuality(rude::FacePtr face) const {
     if (!face) return 0.0f;
     
     auto vertices = face->getVertices();
@@ -484,17 +485,17 @@ float SubdivisionTool::calculateTriangleQuality(HalfEdgeFacePtr face) const {
     
     // Calculate triangle quality based on angles
     // Higher values indicate better quality
-    QVector3D v0 = vertices[0]->getPosition();
-    QVector3D v1 = vertices[1]->getPosition();
-    QVector3D v2 = vertices[2]->getPosition();
+    glm::vec3 v0 = vertices[0]->getPosition();
+    glm::vec3 v1 = vertices[1]->getPosition();
+    glm::vec3 v2 = vertices[2]->getPosition();
     
-    QVector3D e0 = (v1 - v0).normalized();
-    QVector3D e1 = (v2 - v1).normalized();
-    QVector3D e2 = (v0 - v2).normalized();
+    glm::vec3 e0 = glm::normalize(v1 - v0);
+    glm::vec3 e1 = glm::normalize(v2 - v1);
+    glm::vec3 e2 = glm::normalize(v0 - v2);
     
-    float angle0 = std::acos(qBound(-1.0f, QVector3D::dotProduct(-e2, e0), 1.0f));
-    float angle1 = std::acos(qBound(-1.0f, QVector3D::dotProduct(-e0, e1), 1.0f));
-    float angle2 = std::acos(qBound(-1.0f, QVector3D::dotProduct(-e1, e2), 1.0f));
+    float angle0 = std::acos(qBound(-1.0f, glm::dot(-e2, e0), 1.0f));
+    float angle1 = std::acos(qBound(-1.0f, glm::dot(-e0, e1), 1.0f));
+    float angle2 = std::acos(qBound(-1.0f, glm::dot(-e1, e2), 1.0f));
     
     // Quality based on how close angles are to 60 degrees (optimal triangle)
     float optimalAngle = static_cast<float>(M_PI) / 3.0f;

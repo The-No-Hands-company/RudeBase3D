@@ -2,6 +2,8 @@
 
 #include "Common.h"
 #include "core/mesh_forward.hpp"
+#include "core/half_edge_mesh.hpp"
+#include "core/mesh_elements.hpp"
 #include <QtOpenGL/QOpenGLFunctions_3_3_Core>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
@@ -14,10 +16,10 @@ public:
     ~Mesh();
 
     // Mesh data
-    void setVertices(const std::vector<Vertex>& vertices);
+    void setVertices(const std::vector<rude::VertexPtr>& vertices);
     void setIndices(const std::vector<unsigned int>& indices);
     
-    const std::vector<Vertex>& getVertices() const { return m_vertices; }
+    const std::vector<rude::VertexPtr>& getVertices() const { return m_vertices; }
     const std::vector<unsigned int>& getIndices() const { return m_indices; }
     
     // OpenGL buffer management
@@ -36,11 +38,11 @@ public:
     float getBoundingRadius() const;
     
     // Half-edge mesh interface
-    HalfEdgeMesh& getHalfEdgeMesh();
-    const HalfEdgeMesh& getHalfEdgeMesh() const;
+    rude::HalfEdgeMesh& getHalfEdgeMesh();
+    const rude::HalfEdgeMesh& getHalfEdgeMesh() const;
     
     // Data management
-    void setData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
+    void setData(const std::vector<rude::VertexPtr>& vertices, const std::vector<unsigned int>& indices);
     void setData(const std::vector<glm::vec3>& positions, const std::vector<unsigned int>& indices, 
                  const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords);
     
@@ -61,7 +63,7 @@ public:
     size_t getTriangleCount() const { return m_indices.size() / 3; }
 
 private:
-    std::vector<Vertex> m_vertices;
+    std::vector<rude::VertexPtr> m_vertices;
     std::vector<unsigned int> m_indices;
     
     // OpenGL objects
@@ -72,5 +74,5 @@ private:
     bool m_uploaded;
     
     // Half-edge mesh representation
-    std::unique_ptr<HalfEdgeMesh> m_halfEdgeMesh;
+    std::unique_ptr<rude::HalfEdgeMesh> m_halfEdgeMesh;
 };
