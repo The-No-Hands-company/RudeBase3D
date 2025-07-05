@@ -436,7 +436,8 @@ void InputController::handleMeshElementSelection(const QPoint& pos)
             case SelectionType::Vertex:
                 if (rayHit.vertex) {
                     m_selectionManager->selectVertex(rayHit.vertex, true);
-                    qDebug() << "Selected vertex at" << rayHit.vertex->getPosition();
+                    auto pos = rayHit.vertex->getPosition();
+                    qDebug() << "Selected vertex at (" << pos.x << "," << pos.y << "," << pos.z << ")";
                 }
                 break;
             case SelectionType::Edge:

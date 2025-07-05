@@ -39,16 +39,16 @@ void Mesh::extrudeFace(int faceIndex, float distance)
     unsigned int i1 = m_indices[faceIndex * 3 + 1];
     unsigned int i2 = m_indices[faceIndex * 3 + 2];
     
-    glm::vec3 v0 = m_vertices[i0]->position;
-    glm::vec3 v1 = m_vertices[i1]->position;
-    glm::vec3 v2 = m_vertices[i2]->position;
+    glm::vec3 v0 = m_vertices[i0].position;
+    glm::vec3 v1 = m_vertices[i1].position;
+    glm::vec3 v2 = m_vertices[i2].position;
     
     glm::vec3 normal = glm::cross(v1 - v0, v2 - v0);
     
     // For now, just move the vertices along the normal
-    m_vertices[i0]->position += normal * distance;
-    m_vertices[i1]->position += normal * distance;
-    m_vertices[i2]->position += normal * distance;
+    m_vertices[i0].position += normal * distance;
+    m_vertices[i1].position += normal * distance;
+    m_vertices[i2].position += normal * distance;
     
     updateNormals();
     m_uploaded = false;
@@ -141,7 +141,7 @@ void Mesh::updateNormals()
     m_uploaded = false;
 }
 
-void Mesh::setData(const std::vector<::Vertex>& vertices, const std::vector<unsigned int>& indices)
+void Mesh::setData(const std::vector<rude::Vertex>& vertices, const std::vector<unsigned int>& indices)
 {
     m_vertices = vertices;
     m_indices = indices;

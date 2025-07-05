@@ -9,6 +9,8 @@
 #include <QSplitter>
 #include <QActionGroup>
 #include <QLabel>
+#include <QTimer>
+#include <QElapsedTimer>
 #include <memory>
 
 // Forward declarations
@@ -96,6 +98,9 @@ private slots:
     void onObjectSelected(SceneObjectPtr object);
     void onTransformModeChanged(TransformMode mode);
     void onViewportChanged(ViewportWidget* viewport);
+
+    // System updates
+    void updateSystems();
 
 private:
     // Core components
@@ -198,6 +203,11 @@ private:
     // Current file
     QString m_currentFile;
     bool m_sceneModified;
+    
+    // Update system
+    QTimer* m_updateTimer;
+    QElapsedTimer m_frameTimer;
+    float m_deltaTime = 0.0f;
     
     // Helper methods
     void createPrimitiveHelper(const QString& primitiveType);

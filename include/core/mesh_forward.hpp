@@ -17,6 +17,7 @@ using VertexPtr = std::shared_ptr<Vertex>;
 using EdgePtr = std::shared_ptr<Edge>;
 using FacePtr = std::shared_ptr<Face>;
 using HalfEdgePtr = std::shared_ptr<HalfEdge>;
+using HalfEdgeMeshPtr = std::shared_ptr<HalfEdgeMesh>;
 
 // Common types
 using Vec3 = glm::vec3;

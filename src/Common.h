@@ -24,14 +24,14 @@ class SceneObject;
 class Camera;
 namespace rude {
     class HalfEdgeMesh;
+    class Vertex;
+    class Edge;
+    class Face;
 }
 
 class Mesh;
 class Material;
 class Transform;
-class HalfEdgeVertex;
-class HalfEdgeEdge;
-class HalfEdgeFace;
 class GeometryConverter;
 class NURBSSurface;
 class SubdivisionMesh;
@@ -88,9 +88,9 @@ using SceneObjectPtr = std::shared_ptr<SceneObject>;
 using MeshPtr = std::shared_ptr<Mesh>;
 using MaterialPtr = std::shared_ptr<Material>;
 using HalfEdgeMeshPtr = std::shared_ptr<rude::HalfEdgeMesh>;
-using HalfEdgeVertexPtr = std::shared_ptr<HalfEdgeVertex>;
-using HalfEdgeEdgePtr = std::shared_ptr<HalfEdgeEdge>;
-using HalfEdgeFacePtr = std::shared_ptr<HalfEdgeFace>;
+using HalfEdgeVertexPtr = std::shared_ptr<rude::Vertex>;
+using HalfEdgeEdgePtr = std::shared_ptr<rude::Edge>;
+using HalfEdgeFacePtr = std::shared_ptr<rude::Face>;
 using NURBSSurfacePtr = std::shared_ptr<NURBSSurface>;
 using SubdivisionMeshPtr = std::shared_ptr<SubdivisionMesh>;
 using VoxelGridPtr = std::shared_ptr<VoxelGrid>;

@@ -2,6 +2,7 @@
 
 #include "core/scene_manager.hpp"
 #include "core/selection_manager.hpp"
+#include "ecs/ECSManager.h"
 #include <memory>
 
 /**
@@ -27,12 +28,16 @@ public:
     // Manager accessors
     SceneManager* getSceneManager() const { return m_sceneManager.get(); }
     rude::SelectionManager* getSelectionManager() const { return m_selectionManager.get(); }
+    rude::ecs::ECSManager* getECSManager() const { return m_ecsManager.get(); }
 
     // Initialize all core systems
     void initialize();
     
     // Shutdown all core systems
     void shutdown();
+    
+    // Update all core systems (called each frame)
+    void update(float deltaTime);
 
 private:
     // Private constructor for singleton
@@ -42,6 +47,7 @@ private:
     // Core system managers
     std::unique_ptr<SceneManager> m_sceneManager;
     std::unique_ptr<rude::SelectionManager> m_selectionManager;
+    std::unique_ptr<rude::ecs::ECSManager> m_ecsManager;
     
     // Other managers will be added as needed:
     // - PrimitiveManager

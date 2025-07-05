@@ -80,6 +80,12 @@ MainWindow::MainWindow(QWidget* parent)
     m_gridSystem->setGridDivisions(20);
     m_gridSystem->setVisible(true);
     
+    // Setup update timer for ECS system
+    m_updateTimer = new QTimer(this);
+    connect(m_updateTimer, &QTimer::timeout, this, &MainWindow::updateSystems);
+    m_updateTimer->start(16); // ~60 FPS (16ms)
+    m_frameTimer.start();
+    
     qDebug() << "Setting up UI...";
     setupUI();
     
@@ -1109,4 +1115,22 @@ void MainWindow::createPrimitiveHelper(const QString& primitiveType)
         
         qDebug() << "Created" << primitiveType << "primitive";
     }
+}
+
+void MainWindow::updateSystems() {
+    // Calculate delta time
+    qint64 elapsed = m_frameTimer.restart();
+    m_deltaTime = elapsed / 1000.0f; // Convert to seconds
+    
+    // Clamp delta time to prevent huge jumps during debugging or when window is inactive
+    if (m_deltaTime > 0.033f) { // Max 30 FPS to prevent huge steps
+        m_deltaTime = 0.033f;
+    }
+    
+    // Update core systems through CoreSystem
+    auto& coreSystem = CoreSystem::getInstance();
+    coreSystem.update(m_deltaTime);
+    
+    // You could also update other systems here if needed
+    // For example, viewport updates, UI animations, etc.
 }

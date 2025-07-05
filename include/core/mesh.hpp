@@ -2,6 +2,7 @@
 
 #include "Common.h"
 #include "core/half_edge_mesh.hpp"
+#include "core/mesh_elements.hpp"
 #include <QOpenGLFunctions_3_3_Core>
 #include <vector>
 #include <memory>
@@ -24,8 +25,8 @@ public:
     ~Mesh();
 
     // Mesh data access
-    std::vector<::Vertex>& getVertices() { return m_vertices; }
-    const std::vector<::Vertex>& getVertices() const { return m_vertices; }
+    std::vector<rude::Vertex>& getVertices() { return m_vertices; }
+    const std::vector<rude::Vertex>& getVertices() const { return m_vertices; }
     
     std::vector<unsigned int>& getIndices() { return m_indices; }
     const std::vector<unsigned int>& getIndices() const { return m_indices; }
@@ -37,7 +38,7 @@ public:
     void updateNormals();
     
     // Data setting
-    void setData(const std::vector<::Vertex>& vertices, const std::vector<unsigned int>& indices);
+    void setData(const std::vector<rude::Vertex>& vertices, const std::vector<unsigned int>& indices);
     
     // OpenGL operations
     void uploadToGPU();
@@ -61,7 +62,7 @@ public:
     size_t getTriangleCount() const { return m_indices.size() / 3; }
 
 private:
-    std::vector<::Vertex> m_vertices;
+    std::vector<rude::Vertex> m_vertices;
     std::vector<unsigned int> m_indices;
     
     // OpenGL objects

@@ -75,6 +75,7 @@ list(FILTER HEADERS EXCLUDE REGEX ".*_old\\.(cpp|h)$")
 
 # Add subdirectories for libraries
 add_subdirectory(src/core)
+add_subdirectory(src/ecs)
 add_subdirectory(src/gizmo)
 add_subdirectory(src/panels)
 add_subdirectory(src/toolbars)
@@ -88,6 +89,7 @@ add_executable(RudeBase3D ${SOURCES} ${HEADERS})
 target_include_directories(RudeBase3D PRIVATE 
     include
     include/core
+    include/ecs
     include/gizmo
     include/toolbars
     include/panels
@@ -95,6 +97,7 @@ target_include_directories(RudeBase3D PRIVATE
     include/input
     src
     src/core
+    src/ecs
     src/gizmo
     src/toolbars
     src/panels
@@ -155,6 +158,7 @@ target_link_libraries(RudeBase3D
     Qt6::OpenGLWidgets
     OpenGL::GL
     core
+    ecs
     gizmo
     panels
     toolbars
