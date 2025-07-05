@@ -220,11 +220,15 @@ QVector3D Mesh::getBoundingBoxMax() const
         return QVector3D(0, 0, 0);
     }
     
-    QVector3D max = m_vertices[0]->position;
+    // Convert from glm::vec3 to QVector3D
+    glm::vec3 firstPos = m_vertices[0]->position;
+    QVector3D max(firstPos.x, firstPos.y, firstPos.z);
+    
     for (const auto& vertex : m_vertices) {
-        max.setX(std::max(max.x(), vertex->position.x()));
-        max.setY(std::max(max.y(), vertex->position.y()));
-        max.setZ(std::max(max.z(), vertex->position.z()));
+        glm::vec3 pos = vertex->position;
+        max.setX(std::max(max.x(), pos.x));
+        max.setY(std::max(max.y(), pos.y));
+        max.setZ(std::max(max.z(), pos.z));
     }
     return max;
 }
@@ -240,7 +244,10 @@ float Mesh::getBoundingRadius() const
     float maxDistSq = 0.0f;
     
     for (const auto& vertex : m_vertices) {
-        float distSq = (vertex->position - center).lengthSquared();
+        // Convert glm::vec3 to QVector3D for calculation
+        glm::vec3 pos = vertex->position;
+        QVector3D qPos(pos.x, pos.y, pos.z);
+        float distSq = (qPos - center).lengthSquared();
         maxDistSq = std::max(maxDistSq, distSq);
     }
     

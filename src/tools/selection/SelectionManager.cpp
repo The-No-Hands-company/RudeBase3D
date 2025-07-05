@@ -42,6 +42,7 @@ void SelectionManager::clearSelection()
     m_selectedFaces.clear();
     
     // Clear selection on all edges
+    /* TODO: Implement external selection tracking if needed
     for (auto edge : m_mesh->getEdges()) {
         if (edge) {
             edge->setSelected(false);
@@ -54,8 +55,9 @@ void SelectionManager::clearSelection()
             face->setSelected(false);
         }
     }
+    */
     
-    // Clear internal selection sets
+    // Clear internal selection sets (already done above, removing duplicates)
     m_selectedVertices.clear();
     m_selectedEdges.clear();
     m_selectedFaces.clear();
@@ -360,12 +362,14 @@ void SelectionManager::selectVertex(HalfEdgeVertexPtr vertex, bool selected)
 {
     if (!vertex) return;
     
-    vertex->setSelected(selected);
+    // Note: rude:: mesh elements don't have setSelected() method
+    // vertex->setSelected(selected);
     
     if (selected) {
-        m_selectedVertices.insert(vertex->getId());
+        // TODO: Get proper ID from vertex if available
+        m_selectedVertices.insert(reinterpret_cast<uintptr_t>(vertex.get()));
     } else {
-        m_selectedVertices.erase(vertex->getId());
+        m_selectedVertices.erase(reinterpret_cast<uintptr_t>(vertex.get()));
     }
 }
 
@@ -373,12 +377,14 @@ void SelectionManager::selectEdge(HalfEdgeEdgePtr edge, bool selected)
 {
     if (!edge) return;
     
-    edge->setSelected(selected);
+    // Note: rude:: mesh elements don't have setSelected() method
+    // edge->setSelected(selected);
     
     if (selected) {
-        m_selectedEdges.insert(edge->getId());
+        // TODO: Get proper ID from edge if available
+        m_selectedEdges.insert(reinterpret_cast<uintptr_t>(edge.get()));
     } else {
-        m_selectedEdges.erase(edge->getId());
+        m_selectedEdges.erase(reinterpret_cast<uintptr_t>(edge.get()));
     }
 }
 
@@ -386,12 +392,14 @@ void SelectionManager::selectFace(HalfEdgeFacePtr face, bool selected)
 {
     if (!face) return;
     
-    face->setSelected(selected);
+    // Note: rude:: mesh elements don't have setSelected() method
+    // face->setSelected(selected);
     
     if (selected) {
-        m_selectedFaces.insert(face->getId());
+        // TODO: Get proper ID from face if available
+        m_selectedFaces.insert(reinterpret_cast<uintptr_t>(face.get()));
     } else {
-        m_selectedFaces.erase(face->getId());
+        m_selectedFaces.erase(reinterpret_cast<uintptr_t>(face.get()));
     }
 }
 

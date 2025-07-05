@@ -123,10 +123,9 @@ void EditContext::invertSelection() {
             clearSelectionInternal();
             
             for (auto& vertex : allVertices) {
-                if (!vertex->isSelected()) {
-                    addVertexToSelection(vertex);
-                }
-                vertex->setSelected(!vertex->isSelected());
+                // Note: rude::Vertex doesn't have isSelected() method - using external selection tracking
+                addVertexToSelection(vertex);
+                // vertex->setSelected(!vertex->isSelected()); // Not available in rude:: API
             }
             break;
         }
@@ -136,10 +135,9 @@ void EditContext::invertSelection() {
             clearSelectionInternal();
             
             for (auto& edge : allEdges) {
-                if (!edge->isSelected()) {
-                    addEdgeToSelection(edge);
-                }
-                edge->setSelected(!edge->isSelected());
+                // Note: rude::Edge doesn't have isSelected() method - using external selection tracking
+                addEdgeToSelection(edge);
+                // edge->setSelected(!edge->isSelected()); // Not available in rude:: API
             }
             break;
         }

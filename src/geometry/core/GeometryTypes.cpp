@@ -283,7 +283,9 @@ void SubdivisionMesh::computeVertexPoints(std::shared_ptr<HalfEdgeMesh> mesh,
                                          std::unordered_map<HalfEdgeVertexPtr, QVector3D>& vertexPoints) {
     // Catmull-Clark vertex update formula
     for (auto vertex : mesh->getVertices()) {
-        QVector3D originalPos = vertex->getPosition();
+        // Convert from glm::vec3 to QVector3D
+        glm::vec3 pos = vertex->position;
+        QVector3D originalPos(pos.x, pos.y, pos.z);
         QVector3D avgFacePoint(0, 0, 0);
         QVector3D avgEdgePoint(0, 0, 0);
         
@@ -294,8 +296,9 @@ void SubdivisionMesh::computeVertexPoints(std::shared_ptr<HalfEdgeMesh> mesh,
         auto outgoingEdges = vertex->getOutgoingEdges();
         
         for (auto edge : outgoingEdges) {
-            if (edge->getFace()) {
-                auto it = facePoints.find(edge->getFace());
+            auto face = edge->halfEdge ? edge->halfEdge->face : nullptr;
+            if (face) {
+                auto it = facePoints.find(face);
                 if (it != facePoints.end()) {
                     avgFacePoint += it->second;
                     faceCount++;

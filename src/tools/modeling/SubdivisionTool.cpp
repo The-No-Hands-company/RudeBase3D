@@ -9,7 +9,7 @@
 SubdivisionTool::SubdivisionTool() {
 }
 
-rude::MeshPtr SubdivisionTool::subdivide(int levels) {
+MeshPtr SubdivisionTool::subdivide(int levels) {
     if (!canSubdivide() || levels <= 0) {
         qWarning() << "SubdivisionTool: Cannot subdivide - invalid parameters";
         return nullptr;
@@ -18,7 +18,7 @@ rude::MeshPtr SubdivisionTool::subdivide(int levels) {
     auto currentMesh = m_mesh;
     
     for (int level = 0; level < levels; ++level) {
-        rude::MeshPtr subdividedMesh = nullptr;
+        MeshPtr subdividedMesh = nullptr;
         
         switch (m_subdivisionType) {
             case SubdivisionType::CatmullClark:

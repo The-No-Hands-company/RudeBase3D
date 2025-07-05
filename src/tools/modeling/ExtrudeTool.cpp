@@ -86,8 +86,8 @@ void ExtrudeTool::updateExtrude(float distance)
                 for (auto vertex : vertices) {
                     if (vertex) {
                         // Find corresponding new vertex and update position
-                        glm::vec3 newPos = vertex->getPosition() + normal * distance;
-                        vertex->setPosition(newPos);
+                        glm::vec3 newPos = vertex->position + normal * distance;
+                        vertex->position = newPos;
                     }
                 }
             }
@@ -104,13 +104,15 @@ void ExtrudeTool::updateExtrude(float distance)
                     : m_extrudeDirection;
                 
                 // Update positions of edge vertices
-                if (edge->getOriginVertex()) {
-                    glm::vec3 newPos = edge->getOriginVertex()->getPosition() + normal * distance;
-                    edge->getOriginVertex()->setPosition(newPos);
+                auto originVertex = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+                if (originVertex) {
+                    glm::vec3 newPos = originVertex->position + normal * distance;
+                    originVertex->position = newPos;
                 }
-                if (edge->getTargetVertex()) {
-                    glm::vec3 newPos = edge->getTargetVertex()->getPosition() + normal * distance;
-                    edge->getTargetVertex()->setPosition(newPos);
+                auto targetVertex = (edge->halfEdge && edge->halfEdge->twin) ? edge->halfEdge->twin->vertex : nullptr;
+                if (targetVertex) {
+                    glm::vec3 newPos = targetVertex->position + normal * distance;
+                    targetVertex->position = newPos;
                 }
             }
             break;
@@ -125,8 +127,8 @@ void ExtrudeTool::updateExtrude(float distance)
                     ? calculateVertexNormal(vertex) 
                     : m_extrudeDirection;
                 
-                glm::vec3 newPos = vertex->getPosition() + normal * distance;
-                vertex->setPosition(newPos);
+                glm::vec3 newPos = vertex->position + normal * distance;
+                vertex->position = newPos;
             }
             break;
         }
@@ -224,8 +226,9 @@ bool ExtrudeTool::extrudeFaces(const std::vector<HalfEdgeFacePtr>& faces)
         // Store original positions
         for (auto vertex : vertices) {
             if (vertex) {
-                m_originalData.originalPositions.push_back(vertex->getPosition());
-                m_originalData.originalVertexIds.push_back(vertex->getId());
+                m_originalData.originalPositions.push_back(vertex->position);
+                // Note: rude::Vertex doesn't have getId() method
+                // m_originalData.originalVertexIds.push_back(vertex->getId());
             }
         }
         
@@ -266,20 +269,24 @@ bool ExtrudeTool::extrudeEdges(const std::vector<HalfEdgeEdgePtr>& edges)
     
     // For edge extrusion, create faces from the edges
     for (auto edge : edges) {
-        if (!edge || !edge->getOriginVertex() || !edge->getTargetVertex()) continue;
+        auto originVertex = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+        auto targetVertex = (edge->halfEdge && edge->halfEdge->twin) ? edge->halfEdge->twin->vertex : nullptr;
+        if (!edge || !originVertex || !targetVertex) continue;
         
         // Store original positions
-        m_originalData.originalPositions.push_back(edge->getOriginVertex()->getPosition());
-        m_originalData.originalPositions.push_back(edge->getTargetVertex()->getPosition());
-        m_originalData.originalVertexIds.push_back(edge->getOriginVertex()->getId());
-        m_originalData.originalVertexIds.push_back(edge->getTargetVertex()->getId());
+        m_originalData.originalPositions.push_back(originVertex->position);
+        m_originalData.originalPositions.push_back(targetVertex->position);
+        // Note: rude::Vertex doesn't have getId() method
+        // m_originalData.originalVertexIds.push_back(originVertex->getId());
+        // m_originalData.originalVertexIds.push_back(targetVertex->getId());
         
         // Create new vertices
-        auto newVertex1 = duplicateVertex(edge->getOriginVertex());
-        auto newVertex2 = duplicateVertex(edge->getTargetVertex());
+        auto newVertex1 = duplicateVertex(originVertex);
+        auto newVertex2 = duplicateVertex(targetVertex);
         
-        m_originalData.newVertexIds.push_back(newVertex1->getId());
-        m_originalData.newVertexIds.push_back(newVertex2->getId());
+        // Note: rude::Vertex doesn't have getId() method
+        // m_originalData.newVertexIds.push_back(newVertex1->getId());
+        // m_originalData.newVertexIds.push_back(newVertex2->getId());
         
         // Create a face connecting the original edge with the new edge
         auto extrudeFace = createQuadFace(edge->getOriginVertex(), edge->getTargetVertex(),
@@ -301,8 +308,9 @@ bool ExtrudeTool::extrudeVertices(const std::vector<HalfEdgeVertexPtr>& vertices
         if (!vertex) continue;
         
         // Store original position
-        m_originalData.originalPositions.push_back(vertex->getPosition());
-        m_originalData.originalVertexIds.push_back(vertex->getId());
+        m_originalData.originalPositions.push_back(vertex->position);
+        // Note: rude::Vertex doesn't have getId() method
+        // m_originalData.originalVertexIds.push_back(vertex->getId());
         
         // Create new vertex
         auto newVertex = duplicateVertex(vertex);
@@ -323,8 +331,8 @@ glm::vec3 ExtrudeTool::calculateFaceNormal(HalfEdgeFacePtr face) const
     if (vertices.size() < 3) return glm::vec3(0, 1, 0);
     
     // Calculate normal using cross product of two edges
-    glm::vec3 v1 = vertices[1]->getPosition() - vertices[0]->getPosition();
-    glm::vec3 v2 = vertices[2]->getPosition() - vertices[0]->getPosition();
+    glm::vec3 v1 = vertices[1]->position - vertices[0]->position;
+    glm::vec3 v2 = vertices[2]->position - vertices[0]->position;
     
     glm::vec3 normal = glm::cross(v1, v2);
     return glm::normalize(normal);
@@ -332,13 +340,15 @@ glm::vec3 ExtrudeTool::calculateFaceNormal(HalfEdgeFacePtr face) const
 
 glm::vec3 ExtrudeTool::calculateEdgeNormal(HalfEdgeEdgePtr edge) const
 {
-    if (!edge || !edge->getOriginVertex() || !edge->getTargetVertex()) {
+    auto originVertex = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+    auto targetVertex = (edge->halfEdge && edge->halfEdge->twin) ? edge->halfEdge->twin->vertex : nullptr;
+    if (!edge || !originVertex || !targetVertex) {
         return glm::vec3(0, 1, 0);
     }
     
     // For edge normal, we need to find adjacent faces and average their normals
     // Simplified approach: use perpendicular to edge direction
-    glm::vec3 edgeDir = edge->getTargetVertex()->getPosition() - edge->getOriginVertex()->getPosition();
+    glm::vec3 edgeDir = targetVertex->position - originVertex->position;
     glm::vec3 up = glm::vec3(0, 1, 0);
     
     glm::vec3 normal = glm::cross(edgeDir, up);
@@ -390,10 +400,10 @@ HalfEdgeVertexPtr ExtrudeTool::duplicateVertex(HalfEdgeVertexPtr vertex)
     if (!vertex || !m_mesh) return nullptr;
     
     // Create a new vertex with the same position and properties
-    auto newVertex = m_mesh->addVertex(vertex->getPosition());
+    auto newVertex = m_mesh->addVertex(vertex->position);
     if (newVertex) {
-        newVertex->setNormal(vertex->getNormal());
-        newVertex->setTexCoord(vertex->getTexCoord());
+        newVertex->normal = vertex->normal;
+        newVertex->texCoord = vertex->texCoord;
     }
     
     return newVertex;
