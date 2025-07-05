@@ -1,6 +1,8 @@
 #include "ExtrudeTool.h"
 #include "HalfEdgeMesh.h"
 #include "SelectionManager.h"
+#include "core/mesh_elements.hpp"
+#include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
@@ -69,7 +71,18 @@ void ExtrudeTool::updateExtrude(float distance)
                     : m_extrudeDirection;
                 
                 // Update positions of vertices in the extruded face
-                auto vertices = face->getVertices();
+                // Get vertices by traversing half-edges of the face
+                std::vector<rude::VertexPtr> vertices;
+                if (face->halfEdge) {
+                    auto currentHE = face->halfEdge;
+                    do {
+                        if (currentHE->vertex) {
+                            vertices.push_back(currentHE->vertex);
+                        }
+                        currentHE = currentHE->next;
+                    } while (currentHE && currentHE != face->halfEdge);
+                }
+                
                 for (auto vertex : vertices) {
                     if (vertex) {
                         // Find corresponding new vertex and update position

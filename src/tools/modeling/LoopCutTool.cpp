@@ -1,5 +1,7 @@
 #include "LoopCutTool.h"
 #include "HalfEdgeMesh.h"
+#include "core/mesh_elements.hpp"
+#include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <algorithm>
 #include <unordered_set>
@@ -125,15 +127,27 @@ HalfEdgeEdgePtr LoopCutTool::findNextLoopEdge(HalfEdgeEdgePtr currentEdge, HalfE
     if (!currentEdge) return nullptr;
     
     // Get the face on one side of the current edge
-    auto face = currentEdge->getFace();
-    if (!face && currentEdge->getTwin()) {
-        face = currentEdge->getTwin()->getFace();
+    auto face = currentEdge->halfEdge ? currentEdge->halfEdge->face : nullptr;
+    if (!face && currentEdge->halfEdge && currentEdge->halfEdge->twin) {
+        face = currentEdge->halfEdge->twin->face;
     }
     
     if (!face) return nullptr;
     
     // Find the edge opposite to the current edge in the face
-    auto faceEdges = face->getEdges();
+    // Since rude::Face doesn't have getEdges(), we need to traverse the half-edge loop
+    std::vector<rude::EdgePtr> faceEdges;
+    if (face->halfEdge) {
+        auto startHE = face->halfEdge;
+        auto currentHE = startHE;
+        do {
+            if (currentHE->edge) {
+                faceEdges.push_back(currentHE->edge);
+            }
+            currentHE = currentHE->next;
+        } while (currentHE && currentHE != startHE);
+    }
+    
     if (faceEdges.size() != 4) {
         // For now, only handle quad faces properly
         // TODO: Handle n-gons and triangles
@@ -144,8 +158,8 @@ HalfEdgeEdgePtr LoopCutTool::findNextLoopEdge(HalfEdgeEdgePtr currentEdge, HalfE
     auto it = std::find(faceEdges.begin(), faceEdges.end(), currentEdge);
     if (it == faceEdges.end()) {
         // Try with twin edge
-        auto twin = currentEdge->getTwin();
-        if (twin) {
+        if (currentEdge->halfEdge && currentEdge->halfEdge->twin && currentEdge->halfEdge->twin->edge) {
+            auto twin = currentEdge->halfEdge->twin->edge;
             it = std::find(faceEdges.begin(), faceEdges.end(), twin);
         }
     }
@@ -163,11 +177,11 @@ std::vector<HalfEdgeFacePtr> LoopCutTool::findAffectedFaces(const std::vector<Ha
     std::unordered_set<HalfEdgeFacePtr> affectedFaces;
     
     for (auto edge : edgeLoop) {
-        if (edge->getFace()) {
-            affectedFaces.insert(edge->getFace());
+        if (edge->halfEdge && edge->halfEdge->face) {
+            affectedFaces.insert(edge->halfEdge->face);
         }
-        if (edge->getTwin() && edge->getTwin()->getFace()) {
-            affectedFaces.insert(edge->getTwin()->getFace());
+        if (edge->halfEdge && edge->halfEdge->twin && edge->halfEdge->twin->face) {
+            affectedFaces.insert(edge->halfEdge->twin->face);
         }
     }
     
@@ -220,16 +234,16 @@ std::pair<HalfEdgeVertexPtr, HalfEdgeEdgePtr> LoopCutTool::splitEdge(HalfEdgeEdg
         return std::make_pair(nullptr, nullptr);
     }
     
-    auto originVertex = edge->getOriginVertex();
-    auto targetVertex = edge->getTargetVertex();
+    auto originVertex = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+    auto targetVertex = (edge->halfEdge && edge->halfEdge->twin) ? edge->halfEdge->twin->vertex : nullptr;
     
     if (!originVertex || !targetVertex) {
         return std::make_pair(nullptr, nullptr);
     }
     
     // Create new vertex at the split position
-    glm::vec3 newPosition = originVertex->getPosition() + 
-                           (targetVertex->getPosition() - originVertex->getPosition()) * position;
+    glm::vec3 newPosition = originVertex->position + 
+                           (targetVertex->position - originVertex->position) * position;
     
     auto newVertex = m_mesh->addVertex(newPosition);
     if (!newVertex) {
@@ -296,8 +310,8 @@ bool LoopCutTool::isManifoldEdge(HalfEdgeEdgePtr edge) const {
     if (!edge) return false;
     
     int faceCount = 0;
-    if (edge->getFace()) faceCount++;
-    if (edge->getTwin() && edge->getTwin()->getFace()) faceCount++;
+    if (edge->halfEdge && edge->halfEdge->face) faceCount++;
+    if (edge->halfEdge && edge->halfEdge->twin && edge->halfEdge->twin->face) faceCount++;
     
     return faceCount > 0 && faceCount <= 2;
 }

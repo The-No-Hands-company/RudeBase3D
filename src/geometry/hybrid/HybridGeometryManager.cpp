@@ -495,11 +495,13 @@ GeometryProcessingPipeline::GeometryAnalysis GeometryProcessingPipeline::analyze
     
     // Compute bounding box and centroid
     if (!vertices.empty()) {
-        analysis.boundingBoxMin = analysis.boundingBoxMax = vertices[0].position;
+        auto firstPos = vertices[0]->position;
+        analysis.boundingBoxMin = analysis.boundingBoxMax = QVector3D(firstPos.x, firstPos.y, firstPos.z);
         analysis.centroid = QVector3D(0, 0, 0);
         
         for (const auto& vertex : vertices) {
-            const QVector3D& pos = vertex.position;
+            auto glmPos = vertex->position;
+            QVector3D pos(glmPos.x, glmPos.y, glmPos.z);
             
             analysis.boundingBoxMin.setX(std::min(analysis.boundingBoxMin.x(), pos.x()));
             analysis.boundingBoxMin.setY(std::min(analysis.boundingBoxMin.y(), pos.y()));
@@ -517,9 +519,13 @@ GeometryProcessingPipeline::GeometryAnalysis GeometryProcessingPipeline::analyze
     
     // Compute surface area
     for (size_t i = 0; i < indices.size(); i += 3) {
-        const QVector3D& v0 = vertices[indices[i]].position;
-        const QVector3D& v1 = vertices[indices[i + 1]].position;
-        const QVector3D& v2 = vertices[indices[i + 2]].position;
+        auto pos0 = vertices[indices[i]]->position;
+        auto pos1 = vertices[indices[i + 1]]->position;
+        auto pos2 = vertices[indices[i + 2]]->position;
+        
+        QVector3D v0(pos0.x, pos0.y, pos0.z);
+        QVector3D v1(pos1.x, pos1.y, pos1.z);
+        QVector3D v2(pos2.x, pos2.y, pos2.z);
         
         QVector3D edge1 = v1 - v0;
         QVector3D edge2 = v2 - v0;

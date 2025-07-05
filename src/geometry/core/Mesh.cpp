@@ -201,11 +201,15 @@ QVector3D Mesh::getBoundingBoxMin() const
         return QVector3D(0, 0, 0);
     }
     
-    QVector3D min = m_vertices[0]->position;
+    // Convert from glm::vec3 to QVector3D
+    glm::vec3 firstPos = m_vertices[0]->position;
+    QVector3D min(firstPos.x, firstPos.y, firstPos.z);
+    
     for (const auto& vertex : m_vertices) {
-        min.setX(std::min(min.x(), vertex->position.x()));
-        min.setY(std::min(min.y(), vertex->position.y()));
-        min.setZ(std::min(min.z(), vertex->position.z()));
+        glm::vec3 pos = vertex->position;
+        min.setX(std::min(min.x(), pos.x));
+        min.setY(std::min(min.y(), pos.y));
+        min.setZ(std::min(min.z(), pos.z));
     }
     return min;
 }

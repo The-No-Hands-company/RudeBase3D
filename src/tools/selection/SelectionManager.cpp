@@ -1,5 +1,7 @@
 #include "SelectionManager.h"
 #include "HalfEdgeMesh.h"
+#include "core/mesh_elements.hpp"
+#include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
@@ -25,11 +27,19 @@ void SelectionManager::clearSelection()
     if (!m_mesh) return;
     
     // Clear selection on all vertices
+    // Note: rude:: mesh elements don't have setSelected() method, selection is managed externally
+    /* TODO: Implement external selection tracking if needed
     for (auto vertex : m_mesh->getVertices()) {
         if (vertex) {
             vertex->setSelected(false);
         }
     }
+    */
+    
+    // Clear our internal selection tracking
+    m_selectedVertices.clear();
+    m_selectedEdges.clear();
+    m_selectedFaces.clear();
     
     // Clear selection on all edges
     for (auto edge : m_mesh->getEdges()) {

@@ -255,15 +255,18 @@ void SubdivisionMesh::computeEdgePoints(std::shared_ptr<HalfEdgeMesh> mesh,
     for (auto edge : mesh->getEdges()) {
         QVector3D edgePoint(0, 0, 0);
         
-        QVector3D v1 = edge->getOriginVertex()->getPosition();
-        QVector3D v2 = edge->getTwin() ? edge->getTwin()->getOriginVertex()->getPosition() : v1;
+        auto halfEdge = edge->halfEdge;
+        if (!halfEdge) continue;
+        
+        QVector3D v1 = halfEdge->vertex ? QVector3D(halfEdge->vertex->position.x, halfEdge->vertex->position.y, halfEdge->vertex->position.z) : QVector3D(0, 0, 0);
+        QVector3D v2 = (halfEdge->twin && halfEdge->twin->vertex) ? QVector3D(halfEdge->twin->vertex->position.x, halfEdge->twin->vertex->position.y, halfEdge->twin->vertex->position.z) : v1;
         
         edgePoint = (v1 + v2) * 0.5f;
         
         // If edge has adjacent faces, include their face points
-        if (edge->getFace() && edge->getTwin() && edge->getTwin()->getFace()) {
-            auto it1 = facePoints.find(edge->getFace());
-            auto it2 = facePoints.find(edge->getTwin()->getFace());
+        if (halfEdge->face && halfEdge->twin && halfEdge->twin->face) {
+            auto it1 = facePoints.find(halfEdge->face);
+            auto it2 = facePoints.find(halfEdge->twin->face);
             
             if (it1 != facePoints.end() && it2 != facePoints.end()) {
                 edgePoint = (v1 + v2 + it1->second + it2->second) * 0.25f;

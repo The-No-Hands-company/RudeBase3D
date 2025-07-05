@@ -86,21 +86,24 @@ void EditContext::selectAll() {
         case SelectionType::Vertex:
             m_selectedVertices = m_workingHalfEdgeMesh->getVertices();
             for (auto& vertex : m_selectedVertices) {
-                vertex->setSelected(true);
+                // TODO: Selection state is managed externally, not as vertex property
+                // vertex->setSelected(true);
             }
             break;
             
         case SelectionType::Edge:
             m_selectedEdges = m_workingHalfEdgeMesh->getEdges();
             for (auto& edge : m_selectedEdges) {
-                edge->setSelected(true);
+                // TODO: Selection state is managed externally, not as edge property
+                // edge->setSelected(true);
             }
             break;
             
         case SelectionType::Face:
             m_selectedFaces = m_workingHalfEdgeMesh->getFaces();
             for (auto& face : m_selectedFaces) {
-                face->setSelected(true);
+                // TODO: Selection state is managed externally, not as face property
+                // face->setSelected(true);
             }
             break;
             

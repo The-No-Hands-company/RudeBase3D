@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include "core/mesh_forward.hpp"
+#include "tools/selection/SelectionManager.h"
 
 namespace rude {
 class Face;

@@ -93,7 +93,8 @@ HalfEdgeMeshPtr GeometryConverter::fromVerticesAndFaces(
     vertices.reserve(positions.size());
     
     for (const auto& position : positions) {
-        vertices.push_back(halfEdgeMesh->addVertex(position));
+        glm::vec3 glmPos(position.x(), position.y(), position.z());
+        vertices.push_back(halfEdgeMesh->addVertex(glmPos));
     }
     
     // Create faces
