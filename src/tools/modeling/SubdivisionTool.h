@@ -1,11 +1,22 @@
 #pragma once
 
 #include "Common.h"
-#include "HalfEdgeMesh.h"
-#include <QVector3D>
-#include <memory>
+#include <glm/glm.hpp>
 #include <vector>
+#include <memory>
 #include <unordered_map>
+#include "core/mesh_forward.hpp"
+
+namespace rude {
+class Face;
+class Vertex;
+class Edge;
+class HalfEdgeMesh;
+using FacePtr = std::shared_ptr<Face>;
+using VertexPtr = std::shared_ptr<Vertex>;
+using EdgePtr = std::shared_ptr<Edge>;
+using HalfEdgeMeshPtr = std::shared_ptr<HalfEdgeMesh>;
+}
 
 /**
  * @brief Tool for applying subdivision operations to half-edge meshes
@@ -33,13 +44,13 @@ public:
     ~SubdivisionTool() = default;
 
     // Tool state
-    void setMesh(HalfEdgeMeshPtr mesh) { m_mesh = mesh; }
-    HalfEdgeMeshPtr getMesh() const { return m_mesh; }
+    void setMesh(rude::HalfEdgeMeshPtr mesh) { m_mesh = mesh; }
+    rude::HalfEdgeMeshPtr getMesh() const { return m_mesh; }
 
     // Subdivision operations
-    HalfEdgeMeshPtr subdivide(int levels = 1);
-    HalfEdgeMeshPtr subdivideAdaptive(float errorThreshold = 0.1f);
-    HalfEdgeMeshPtr subdivideRegion(const std::vector<HalfEdgeFacePtr>& faces, int levels = 1);
+    rude::HalfEdgeMeshPtr subdivide(int levels = 1);
+    rude::HalfEdgeMeshPtr subdivideAdaptive(float errorThreshold = 0.1f);
+    rude::HalfEdgeMeshPtr subdivideRegion(const std::vector<rude::FacePtr>& faces, int levels = 1);
     
     // Tool settings
     void setSubdivisionType(SubdivisionType type) { m_subdivisionType = type; }
@@ -68,7 +79,7 @@ public:
 
 private:
     // Core mesh
-    HalfEdgeMeshPtr m_mesh;
+    rude::HalfEdgeMeshPtr m_mesh;
     
     // Tool settings
     SubdivisionType m_subdivisionType = SubdivisionType::CatmullClark;
@@ -78,47 +89,47 @@ private:
     bool m_useQEM = false;
     
     // Catmull-Clark subdivision
-    HalfEdgeMeshPtr applyCatmullClark(HalfEdgeMeshPtr mesh) const;
-    void computeFacePoints(HalfEdgeMeshPtr mesh, 
-                          std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints) const;
-    void computeEdgePoints(HalfEdgeMeshPtr mesh,
-                          const std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints,
-                          std::unordered_map<HalfEdgeEdgePtr, QVector3D>& edgePoints) const;
-    void computeVertexPoints(HalfEdgeMeshPtr mesh,
-                            const std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints,
-                            const std::unordered_map<HalfEdgeEdgePtr, QVector3D>& edgePoints,
-                            std::unordered_map<HalfEdgeVertexPtr, QVector3D>& vertexPoints) const;
+    rude::HalfEdgeMeshPtr applyCatmullClark(rude::HalfEdgeMeshPtr mesh) const;
+    void computeFacePoints(rude::HalfEdgeMeshPtr mesh, 
+                          std::unordered_map<rude::FacePtr, glm::vec3>& facePoints) const;
+    void computeEdgePoints(rude::HalfEdgeMeshPtr mesh,
+                          const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
+                          std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints) const;
+    void computeVertexPoints(rude::HalfEdgeMeshPtr mesh,
+                            const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
+                            const std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints,
+                            std::unordered_map<rude::VertexPtr, glm::vec3>& vertexPoints) const;
     
     // Loop subdivision  
-    HalfEdgeMeshPtr applyLoop(HalfEdgeMeshPtr mesh) const;
-    QVector3D computeLoopVertexPoint(HalfEdgeVertexPtr vertex) const;
-    QVector3D computeLoopEdgePoint(HalfEdgeEdgePtr edge) const;
+    rude::HalfEdgeMeshPtr applyLoop(rude::HalfEdgeMeshPtr mesh) const;
+    glm::vec3 computeLoopVertexPoint(rude::VertexPtr vertex) const;
+    glm::vec3 computeLoopEdgePoint(rude::EdgePtr edge) const;
     
     // Doo-Sabin subdivision
-    HalfEdgeMeshPtr applyDooSabin(HalfEdgeMeshPtr mesh) const;
+    rude::HalfEdgeMeshPtr applyDooSabin(rude::HalfEdgeMeshPtr mesh) const;
     
     // Helper methods
-    bool isCreaseEdge(HalfEdgeEdgePtr edge) const;
-    bool isBoundaryVertex(HalfEdgeVertexPtr vertex) const;
-    bool isBoundaryEdge(HalfEdgeEdgePtr edge) const;
-    float calculateDihedralAngle(HalfEdgeEdgePtr edge) const;
+    bool isCreaseEdge(rude::EdgePtr edge) const;
+    bool isBoundaryVertex(rude::VertexPtr vertex) const;
+    bool isBoundaryEdge(rude::EdgePtr edge) const;
+    float calculateDihedralAngle(rude::EdgePtr edge) const;
     
     // Mesh construction helpers
-    HalfEdgeMeshPtr buildSubdividedMesh(
-        const std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints,
-        const std::unordered_map<HalfEdgeEdgePtr, QVector3D>& edgePoints,
-        const std::unordered_map<HalfEdgeVertexPtr, QVector3D>& vertexPoints) const;
+    rude::HalfEdgeMeshPtr buildSubdividedMesh(
+        const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
+        const std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints,
+        const std::unordered_map<rude::VertexPtr, glm::vec3>& vertexPoints) const;
     
-    void createSubdividedFaces(HalfEdgeMeshPtr newMesh,
-                              const std::unordered_map<HalfEdgeFacePtr, QVector3D>& facePoints,
-                              const std::unordered_map<HalfEdgeEdgePtr, QVector3D>& edgePoints,
-                              const std::unordered_map<HalfEdgeVertexPtr, QVector3D>& vertexPoints) const;
+    void createSubdividedFaces(rude::HalfEdgeMeshPtr newMesh,
+                              const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
+                              const std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints,
+                              const std::unordered_map<rude::VertexPtr, glm::vec3>& vertexPoints) const;
     
     // Adaptive subdivision helpers
-    float calculateSubdivisionError(HalfEdgeFacePtr face) const;
-    bool needsSubdivision(HalfEdgeFacePtr face, float threshold) const;
+    float calculateSubdivisionError(rude::FacePtr face) const;
+    bool needsSubdivision(rude::FacePtr face, float threshold) const;
     
     // Quality metrics
-    float calculateAspectRatio(HalfEdgeFacePtr face) const;
-    float calculateTriangleQuality(HalfEdgeFacePtr face) const;
+    float calculateAspectRatio(rude::FacePtr face) const;
+    float calculateTriangleQuality(rude::FacePtr face) const;
 };

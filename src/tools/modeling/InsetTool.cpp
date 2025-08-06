@@ -1,8 +1,11 @@
 #include "InsetTool.h"
-#include "HalfEdgeMesh.h"
+
+#include "core/mesh_elements.hpp"
+#include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
+#include <glm/glm.hpp>
 
 InsetTool::InsetTool() {
     clearResults();
@@ -51,23 +54,40 @@ HalfEdgeFacePtr InsetTool::insetFaceIndividual(HalfEdgeFacePtr face, float inset
         return nullptr;
     }
     
-    // Get face vertices in order
-    auto originalVertices = face->getVertices();
+    // Get face vertices in order by traversing half-edge structure
+    std::vector<HalfEdgeVertexPtr> originalVertices;
+    if (face->halfEdge) {
+        auto startHE = face->halfEdge;
+        auto currentHE = startHE;
+        do {
+            if (currentHE->vertex) {
+                originalVertices.push_back(currentHE->vertex);
+            }
+            currentHE = currentHE->next;
+        } while (currentHE && currentHE != startHE);
+    }
+    
     if (originalVertices.size() < 3) {
         qWarning() << "InsetTool: Face has less than 3 vertices";
         return nullptr;
     }
     
     // Calculate face center and normal
-    QVector3D faceCenter = calculateFaceCenter(face);
-    QVector3D faceNormal = face->computeNormal();
+    glm::vec3 faceCenter = calculateFaceCenter(face);
+    // Calculate face normal manually since computeNormal() doesn't exist
+    glm::vec3 faceNormal(0.0f, 1.0f, 0.0f); // Default normal
+    if (originalVertices.size() >= 3) {
+        glm::vec3 v1 = originalVertices[1]->position - originalVertices[0]->position;
+        glm::vec3 v2 = originalVertices[2]->position - originalVertices[0]->position;
+        faceNormal = glm::normalize(glm::cross(v1, v2));
+    }
     
     // Create inset vertices
     std::vector<HalfEdgeVertexPtr> insetVertices;
     insetVertices.reserve(originalVertices.size());
     
     for (auto originalVertex : originalVertices) {
-        QVector3D insetPosition = calculateInsetPosition(originalVertex, face, insetAmount);
+        glm::vec3 insetPosition = calculateInsetPosition(originalVertex, face, insetAmount);
         
         // Apply depth if specified
         if (m_insetDepth != 0.0f) {
@@ -120,54 +140,76 @@ std::vector<HalfEdgeFacePtr> InsetTool::insetRegion(const std::vector<HalfEdgeFa
     return resultFaces;
 }
 
-QVector3D InsetTool::calculateFaceCenter(HalfEdgeFacePtr face) const {
-    if (!face) return QVector3D();
+glm::vec3 InsetTool::calculateFaceCenter(HalfEdgeFacePtr face) const {
+    if (!face) return glm::vec3();
     
-    auto vertices = face->getVertices();
-    if (vertices.empty()) return QVector3D();
+    // Traverse half-edge structure to get vertices
+    std::vector<HalfEdgeVertexPtr> vertices;
+    if (face->halfEdge) {
+        auto startHE = face->halfEdge;
+        auto currentHE = startHE;
+        do {
+            if (currentHE->vertex) {
+                vertices.push_back(currentHE->vertex);
+            }
+            currentHE = currentHE->next;
+        } while (currentHE && currentHE != startHE);
+    }
     
-    QVector3D center(0, 0, 0);
+    if (vertices.empty()) return glm::vec3();
+    
+    glm::vec3 center(0, 0, 0);
     for (auto vertex : vertices) {
-        center += vertex->getPosition();
+        center += vertex->position; // Direct member access instead of getPosition()
     }
     
     return center / static_cast<float>(vertices.size());
 }
 
-QVector3D InsetTool::calculateInsetPosition(HalfEdgeVertexPtr vertex, HalfEdgeFacePtr face, float insetAmount) const {
-    if (!vertex || !face) return QVector3D();
+glm::vec3 InsetTool::calculateInsetPosition(HalfEdgeVertexPtr vertex, HalfEdgeFacePtr face, float insetAmount) const {
+    if (!vertex || !face) return glm::vec3();
     
-    QVector3D originalPos = vertex->getPosition();
-    QVector3D faceCenter = calculateFaceCenter(face);
+    glm::vec3 originalPos = vertex->position;
+    glm::vec3 faceCenter = calculateFaceCenter(face);
     
     if (m_scaleEvenThickness) {
         // Calculate inset direction based on vertex normal within the face
-        auto adjacentFaces = vertex->getAdjacentFaces();
-        QVector3D vertexNormal(0, 0, 0);
-        
-        for (auto adjFace : adjacentFaces) {
-            vertexNormal += adjFace->computeNormal();
-        }
-        
-        if (adjacentFaces.size() > 0) {
-            vertexNormal /= static_cast<float>(adjacentFaces.size());
-            vertexNormal = vertexNormal.normalized();
-        }
+        // Note: rude::Vertex doesn't have getAdjacentFaces() method
+        // Using simplified approach for now
+        glm::vec3 vertexNormal(0, 1, 0); // Default normal
         
         // Calculate inset direction perpendicular to vertex normal in face plane
-        QVector3D faceNormal = face->computeNormal();
-        QVector3D toCenter = (faceCenter - originalPos).normalized();
-        QVector3D insetDirection = QVector3D::crossProduct(
-            QVector3D::crossProduct(faceNormal, toCenter), faceNormal).normalized();
+        // Calculate face normal manually
+        glm::vec3 faceNormal(0.0f, 1.0f, 0.0f);
+        // Get face vertices to calculate normal
+        std::vector<HalfEdgeVertexPtr> faceVertices;
+        if (face->halfEdge) {
+            auto startHE = face->halfEdge;
+            auto currentHE = startHE;
+            do {
+                if (currentHE->vertex) {
+                    faceVertices.push_back(currentHE->vertex);
+                }
+                currentHE = currentHE->next;
+            } while (currentHE && currentHE != startHE);
+        }
+        if (faceVertices.size() >= 3) {
+            glm::vec3 v1 = faceVertices[1]->position - faceVertices[0]->position;
+            glm::vec3 v2 = faceVertices[2]->position - faceVertices[0]->position;
+            faceNormal = glm::normalize(glm::cross(v1, v2));
+        }
+        
+        glm::vec3 toCenter = glm::normalize(faceCenter - originalPos);
+        glm::vec3 insetDirection = glm::normalize(glm::cross(glm::cross(faceNormal, toCenter), faceNormal));
         
         return originalPos + insetDirection * insetAmount;
     } else {
         // Simple linear interpolation toward face center
-        QVector3D toCenter = faceCenter - originalPos;
-        float centerDistance = toCenter.length();
+        glm::vec3 toCenter = faceCenter - originalPos;
+        float centerDistance = glm::length(toCenter);
         
         if (centerDistance > insetAmount) {
-            return originalPos + toCenter.normalized() * insetAmount;
+            return originalPos + glm::normalize(toCenter) * insetAmount;
         } else {
             return faceCenter;
         }
@@ -177,9 +219,21 @@ QVector3D InsetTool::calculateInsetPosition(HalfEdgeVertexPtr vertex, HalfEdgeFa
 std::vector<HalfEdgeVertexPtr> InsetTool::createInsetVertices(HalfEdgeFacePtr face, float insetAmount) {
     std::vector<HalfEdgeVertexPtr> insetVertices;
     
-    auto originalVertices = face->getVertices();
+    // Traverse half-edge structure to get vertices
+    std::vector<HalfEdgeVertexPtr> originalVertices;
+    if (face->halfEdge) {
+        auto startHE = face->halfEdge;
+        auto currentHE = startHE;
+        do {
+            if (currentHE->vertex) {
+                originalVertices.push_back(currentHE->vertex);
+            }
+            currentHE = currentHE->next;
+        } while (currentHE && currentHE != startHE);
+    }
+    
     for (auto vertex : originalVertices) {
-        QVector3D insetPos = calculateInsetPosition(vertex, face, insetAmount);
+        glm::vec3 insetPos = calculateInsetPosition(vertex, face, insetAmount);
         auto insetVertex = duplicateVertex(vertex, insetPos);
         if (insetVertex) {
             insetVertices.push_back(insetVertex);
@@ -216,14 +270,14 @@ void InsetTool::createBridgeFaces(const std::vector<HalfEdgeVertexPtr>& original
     }
 }
 
-HalfEdgeVertexPtr InsetTool::duplicateVertex(HalfEdgeVertexPtr vertex, const QVector3D& newPosition) {
+HalfEdgeVertexPtr InsetTool::duplicateVertex(HalfEdgeVertexPtr vertex, const glm::vec3& newPosition) {
     if (!vertex || !m_mesh) return nullptr;
     
     auto newVertex = m_mesh->addVertex(newPosition);
     if (newVertex) {
-        // Copy vertex properties
-        newVertex->setNormal(vertex->getNormal());
-        newVertex->setTexCoord(vertex->getTexCoord());
+        // Copy vertex properties using direct member access
+        newVertex->normal = vertex->normal;
+        newVertex->texCoord = vertex->texCoord;
     }
     
     return newVertex;

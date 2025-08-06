@@ -2,9 +2,7 @@
 
 #include "Common.h"
 #include <QObject>
-#include <QVector3D>
-#include <QVector4D>
-#include <QMatrix4x4>
+#include <glm/glm.hpp>
 #include <memory>
 
 // Forward declarations
@@ -54,14 +52,14 @@ public:
     void setVisible(bool visible);
     bool isVisible() const { return m_visible; }
 
-    void setMainAxisColor(const QVector4D& color);
-    QVector4D getMainAxisColor() const { return m_mainAxisColor; }
+    void setMainAxisColor(const glm::vec4& color);
+    glm::vec4 getMainAxisColor() const { return m_mainAxisColor; }
 
-    void setGridLineColor(const QVector4D& color);
-    QVector4D getGridLineColor() const { return m_gridLineColor; }
+    void setGridLineColor(const glm::vec4& color);
+    glm::vec4 getGridLineColor() const { return m_gridLineColor; }
 
-    void setSubdivisionColor(const QVector4D& color);
-    QVector4D getSubdivisionColor() const { return m_subdivisionColor; }
+    void setSubdivisionColor(const glm::vec4& color);
+    glm::vec4 getSubdivisionColor() const { return m_subdivisionColor; }
 
     void setLineWidth(float width);
     float getLineWidth() const { return m_lineWidth; }
@@ -77,12 +75,12 @@ public:
     bool isDepthFading() const { return m_depthFading; }
 
     // Rendering
-    void render(std::shared_ptr<Renderer> renderer, const QMatrix4x4& viewMatrix, const QMatrix4x4& projMatrix);
+    void render(std::shared_ptr<Renderer> renderer, const glm::mat4& viewMatrix, const glm::mat4& projMatrix);
     void updateGrid(); // Regenerate grid mesh when settings change
 
     // Grid plane
-    void setGridPlane(const QVector3D& normal, float offset = 0.0f);
-    QVector3D getGridPlane() const { return m_gridPlane; }
+    void setGridPlane(const glm::vec3& normal, float offset = 0.0f);
+    glm::vec3 getGridPlane() const { return m_gridPlane; }
     float getGridOffset() const { return m_gridOffset; }
 
 signals:
@@ -105,9 +103,9 @@ private:
     bool m_visible;
 
     // Appearance
-    QVector4D m_mainAxisColor;     // X=0, Z=0 lines
-    QVector4D m_gridLineColor;     // Major grid lines
-    QVector4D m_subdivisionColor;  // Minor subdivision lines
+    glm::vec4 m_mainAxisColor;     // X=0, Z=0 lines
+    glm::vec4 m_gridLineColor;     // Major grid lines
+    glm::vec4 m_subdivisionColor;  // Minor subdivision lines
     float m_lineWidth;
     float m_fadeDistance;
 
@@ -116,11 +114,11 @@ private:
     bool m_depthFading;            // Fade grid lines based on depth
     
     // Grid plane (for non-XZ grids)
-    QVector3D m_gridPlane;         // Grid plane normal
+    glm::vec3 m_gridPlane;         // Grid plane normal
     float m_gridOffset;            // Offset from origin
 
     // Rendering data
-    MeshPtr m_gridMesh;
+    rude::MeshPtr m_gridMesh;
     bool m_meshNeedsUpdate;
 
     // Performance tracking

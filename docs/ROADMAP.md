@@ -1,301 +1,222 @@
 # RudeBase3D Development Roadmap
 
+*Last Updated: July 2025*
+
 ## 🎯 Project Vision
 
-To create a professional-grade, open-source 3D modeling application that rivals industry standards like Blender and Maya, with a focus on modern architecture, extensibility, and user experience.
+RudeBase3D aims to become a professional-grade, open-source 3D modeling application that rivals industry standards like Blender and Maya, with a focus on modern architecture, performance, and extensibility.
+
+## 📋 Current Status: **Alpha Development**
+
+- ✅ **Core Architecture**: Industry-standard modular structure
+- ✅ **Basic 3D Viewport**: OpenGL rendering with camera controls
+- ✅ **Scene Management**: Hierarchical scene graph
+- ✅ **Basic Primitives**: Cube, sphere, cylinder generation
+- ✅ **Transform Tools**: Move, rotate, scale with gizmos
+- 🔄 **Half-Edge Mesh System**: Advanced geometry operations
+- 🔄 **Material System**: PBR materials with texture support
 
 ## 🗺️ Development Phases
 
-### **Phase 1: Foundation** (Months 1-3) ✅
-**Status**: COMPLETED
-- ✅ Core architecture restructuring
-- ✅ Modular codebase organization
-- ✅ Basic 3D viewport and rendering
-- ✅ Scene management system
-- ✅ Transform tools with gizmos
-- ✅ Professional development workflow
+### Phase 1: Foundation (Q3 2025)
+**Goal**: Solid foundation for 3D modeling operations
 
-### **Phase 2: Core Modeling** (Months 4-6) 🔄
-**Status**: IN PROGRESS
-- 🔄 Half-edge mesh operations
-- ⏳ Basic modeling tools (extrude, inset, bevel)
-- ⏳ Selection system improvements
-- ⏳ Undo/redo command system
-- ⏳ Material system enhancements
-- ⏳ File I/O improvements (OBJ, STL, PLY)
+#### Core Systems
+- [x] Project architecture restructuring
+- [x] Build system and CI/CD pipeline
+- [x] Basic scene management
+- [ ] Comprehensive unit testing framework
+- [ ] Memory management optimization
+- [ ] Error handling and logging system
 
-### **Phase 3: Advanced Modeling** (Months 7-12)
-**Status**: PLANNED
-- ⏳ Subdivision surfaces
-- ⏳ Boolean operations
-- ⏳ Advanced selection modes
-- ⏳ Loop cut and edge flow tools
-- ⏳ Proportional editing
-- ⏳ Modifier system foundation
-
-### **Phase 4: Rendering & Visualization** (Months 13-18)
-**Status**: PLANNED
-- ⏳ PBR material system
-- ⏳ Advanced lighting (IBL, area lights)
-- ⏳ Viewport shading modes
-- ⏳ Real-time shadows
-- ⏳ Post-processing effects
-- ⏳ HDRI environment support
-
-### **Phase 5: Professional Tools** (Months 19-24)
-**Status**: PLANNED
-- ⏳ NURBS surface modeling
-- ⏳ Sculpting tools foundation
-- ⏳ Animation system basics
-- ⏳ Node-based material editor
-- ⏳ Python scripting API
-- ⏳ Plugin architecture
-
-## 📊 Feature Categories
-
-### **🏗️ Core Systems**
-
-#### Geometry Processing
+#### Geometry Engine
 - [x] Basic mesh representation
-- [x] Half-edge data structure
-- [ ] Subdivision surfaces (Loop, Catmull-Clark)
-- [ ] Mesh validation and repair
-- [ ] Spatial data structures (BVH, Octree)
-- [ ] Boolean operations (Union, Difference, Intersection)
-- [ ] Mesh simplification and optimization
+- [ ] Complete half-edge mesh implementation
+- [ ] Mesh validation and repair tools
+- [ ] Spatial data structures (octree, BVH)
+- [ ] Geometry algorithms (decimation, smoothing)
 
-#### Rendering Pipeline
-- [x] Basic OpenGL renderer
-- [x] Camera system with multiple projection modes
-- [ ] Deferred rendering pipeline
-- [ ] PBR material system
-- [ ] Shadow mapping (cascaded, soft shadows)
-- [ ] Image-based lighting (IBL)
-- [ ] Screen-space reflections (SSR)
-- [ ] Temporal anti-aliasing (TAA)
-
-#### Scene Management
-- [x] Scene graph hierarchy
-- [x] Transform system
-- [ ] Instance rendering
-- [ ] Level-of-detail (LOD) system
-- [ ] Culling optimizations
-- [ ] Asset streaming
-- [ ] Scene serialization improvements
-
-### **🛠️ Modeling Tools**
-
-#### Basic Tools
-- [x] Transform gizmos (move, rotate, scale)
-- [x] Basic primitive generation
-- [ ] Extrude tool
-- [ ] Inset tool
-- [ ] Bevel tool
-- [ ] Bridge tool
-- [ ] Knife tool
-- [ ] Loop cut tool
-
-#### Advanced Tools
-- [ ] Proportional editing
-- [ ] Smooth and relax tools
-- [ ] Edge flow and retopology tools
-- [ ] Array and mirror modifiers
-- [ ] Lattice deformation
-- [ ] Curve-based modeling
-- [ ] Procedural modeling nodes
-
-#### Selection System
-- [x] Basic object selection
-- [ ] Component selection (vertex, edge, face)
-- [ ] Box select, circle select, lasso select
-- [ ] Select similar
-- [ ] Selection sets and groups
-- [ ] Hide/show functionality
-- [ ] Isolation mode
-
-### **🎨 User Interface**
-
-#### Core UI
-- [x] Modular panel system
+#### User Interface
+- [x] Main window and viewport
 - [x] Scene hierarchy panel
 - [x] Properties panel
-- [ ] Tool palette
-- [ ] Timeline and animation controls
-- [ ] Node editor
-- [ ] Text editor for scripts
-- [ ] Customizable layouts
+- [ ] Toolbar and menu system
+- [ ] Customizable UI layouts
+- [ ] Theme system and dark mode
 
-#### Viewport
-- [x] 3D viewport with navigation
-- [x] Grid system
-- [ ] Multiple viewport layouts
-- [ ] Viewport overlays and gizmos
-- [ ] Minimap navigation
-- [ ] Camera bookmarks
-- [ ] Annotation tools
+### Phase 2: Modeling Tools (Q4 2025)
+**Goal**: Professional modeling capabilities
 
-### **📁 Import/Export**
+#### Selection System
+- [ ] Advanced selection modes (vertex, edge, face, object)
+- [ ] Box select, lasso select, paint select
+- [ ] Selection filters and groups
+- [ ] Smart selection algorithms
 
-#### Basic Formats
-- [x] OBJ import/export
-- [ ] STL import/export
-- [ ] PLY import/export
-- [ ] FBX support
-- [ ] glTF 2.0 support
-- [ ] Alembic support
-- [ ] USD support
+#### Modeling Operations
+- [ ] Extrude tool with options
+- [ ] Bevel and inset operations
+- [ ] Loop cut and slide
+- [ ] Knife tool for custom cuts
+- [ ] Subdivision surfaces
+- [ ] Boolean operations (union, difference, intersection)
 
-#### Advanced Features
-- [ ] Material preservation
-- [ ] Animation data
-- [ ] Texture embedding
-- [ ] Batch processing
-- [ ] Format conversion tools
-- [ ] Validation and repair
+#### Transform Tools
+- [ ] Advanced gizmo system
+- [ ] Proportional editing
+- [ ] Snap system (vertex, edge, face, grid)
+- [ ] Precision input and constraints
+- [ ] Custom pivot points
 
-### **🎮 User Experience**
+### Phase 3: Advanced Features (Q1 2026)
+**Goal**: Professional workflow features
 
-#### Workflow
-- [ ] Comprehensive undo/redo system
-- [ ] Keyboard shortcuts customization
-- [ ] Tool presets and favorites
-- [ ] Session management
-- [ ] Auto-save and recovery
-- [ ] Project templates
-- [ ] Asset libraries
+#### NURBS and Curves
+- [ ] NURBS surface creation and editing
+- [ ] Bezier and B-spline curves
+- [ ] Surface lofting and sweeping
+- [ ] Curve-based modeling tools
 
-#### Accessibility
-- [ ] High-DPI display support
-- [ ] Keyboard navigation
-- [ ] Screen reader compatibility
-- [ ] Color blind friendly themes
-- [ ] Customizable UI scaling
-- [ ] Voice commands (future)
+#### Sculpting System
+- [ ] Dynamic topology sculpting
+- [ ] Brush system with pressure sensitivity
+- [ ] Sculpting tools (grab, smooth, inflate, etc.)
+- [ ] Multi-resolution meshes
+- [ ] Displacement mapping
 
-## 🚀 Release Milestones
+#### Animation Foundation
+- [ ] Keyframe animation system
+- [ ] Basic rigging tools
+- [ ] Constraint system
+- [ ] Timeline and graph editor
 
-### **v0.1.0 "Genesis"** - Q1 2025 ✅
-**Theme**: Foundation and Architecture
-- ✅ Restructured codebase
-- ✅ Basic 3D viewport
-- ✅ Scene management
-- ✅ Transform tools
-- ✅ Development workflow
+### Phase 4: Production Features (Q2 2026)
+**Goal**: Production-ready application
 
-### **v0.2.0 "Builder"** - Q2 2025 🎯
-**Theme**: Core Modeling Tools
-- Basic mesh editing operations
-- Half-edge mesh improvements
-- Selection system enhancements
-- Undo/redo system
-- Material editor basics
+#### Materials and Rendering
+- [ ] Node-based material editor
+- [ ] PBR material workflow
+- [ ] Texture painting tools
+- [ ] Advanced lighting system
+- [ ] Real-time ray tracing (if supported)
 
-### **v0.3.0 "Sculptor"** - Q3 2025
-**Theme**: Advanced Modeling
-- Subdivision surfaces
-- Boolean operations
-- Advanced selection modes
-- Loop cut and edge tools
-- Proportional editing
+#### File I/O
+- [ ] Industry-standard format support:
+  - [x] OBJ import/export
+  - [ ] FBX import/export
+  - [ ] glTF/GLB support
+  - [ ] Alembic cache files
+  - [ ] USD support
+- [ ] Native project file format
+- [ ] Asset library system
 
-### **v0.4.0 "Artist"** - Q4 2025
-**Theme**: Rendering and Materials
-- PBR material system
-- Advanced lighting
-- Viewport improvements
-- HDRI support
-- Texture management
+#### Plugin System
+- [ ] Plugin architecture framework
+- [ ] Python scripting integration
+- [ ] C++ plugin SDK
+- [ ] Community plugin marketplace
 
-### **v0.5.0 "Professional"** - Q1 2026
-**Theme**: Production Features
-- NURBS modeling
-- Animation basics
-- Node editor
-- Python scripting
-- Plugin system
+### Phase 5: Polish and Optimization (Q3-Q4 2026)
+**Goal**: Performance and user experience optimization
 
-### **v1.0.0 "Launch"** - Q2 2026
-**Theme**: Production Ready
-- Feature complete for basic workflow
-- Performance optimizations
-- Documentation complete
-- Community ecosystem
-- Industry validation
+#### Performance
+- [ ] Multi-threading optimization
+- [ ] GPU-accelerated operations
+- [ ] Level-of-detail systems
+- [ ] Viewport performance optimization
+- [ ] Memory usage optimization
 
-## 📈 Success Metrics
+#### User Experience
+- [ ] Comprehensive documentation
+- [ ] Video tutorial series
+- [ ] Interactive help system
+- [ ] User preference system
+- [ ] Keyboard shortcut customization
 
-### **Technical Metrics**
-- **Performance**: Handle 1M+ polygon scenes smoothly
-- **Stability**: < 0.1% crash rate in production use
-- **Compatibility**: Support major file formats (95%+ accuracy)
-- **Scalability**: Efficient memory usage and multi-threading
+#### Quality Assurance
+- [ ] Comprehensive testing suite
+- [ ] Performance benchmarking
+- [ ] Memory leak detection
+- [ ] Cross-platform compatibility testing
+- [ ] User acceptance testing
 
-### **Community Metrics**
-- **Contributors**: 100+ active contributors by v1.0
-- **Users**: 10,000+ regular users by v1.0
-- **Ecosystem**: 50+ community plugins/extensions
-- **Recognition**: Industry acknowledgment and adoption
+## 🎯 Feature Priorities
 
-### **Quality Metrics**
-- **Code Coverage**: > 80% test coverage
-- **Documentation**: Complete API and user documentation
-- **Localization**: Support for 10+ languages
-- **Accessibility**: WCAG 2.1 AA compliance
+### High Priority (Next 3 months)
+1. Complete half-edge mesh implementation
+2. Advanced selection system
+3. Basic modeling tools (extrude, bevel, loop cut)
+4. Comprehensive testing framework
+5. Documentation and tutorials
 
-## 🔬 Research Areas
+### Medium Priority (3-6 months)
+1. NURBS surface support
+2. Sculpting tools foundation
+3. Node-based material editor
+4. Plugin system architecture
+5. Animation framework
 
-### **Performance Optimization**
-- GPU-accelerated mesh operations
-- Multi-threaded computation
-- Memory-efficient data structures
-- Real-time ray tracing integration
-- Vulkan rendering backend
-
-### **User Experience**
-- AI-assisted modeling tools
-- Machine learning for mesh optimization
-- Voice and gesture controls
-- VR/AR integration
-- Collaborative editing
-
-### **Advanced Features**
-- Procedural modeling systems
-- Physics-based simulation
-- Fluid dynamics integration
-- Particle systems
-- Advanced rendering techniques
+### Low Priority (6+ months)
+1. Advanced rendering features
+2. Simulation systems
+3. VR/AR support
+4. Cloud collaboration features
+5. Mobile companion app
 
 ## 🤝 Community Involvement
 
-### **Contribution Opportunities**
-- **Developers**: Core features, bug fixes, optimizations
-- **Artists**: Testing, feedback, asset creation
-- **Designers**: UI/UX improvements, icon design
-- **Writers**: Documentation, tutorials, translations
-- **Testers**: Quality assurance, bug reporting
+### Ways to Contribute
+- **Code Development**: Features, bug fixes, optimizations
+- **Testing**: Bug reports, feature testing, performance testing
+- **Documentation**: User guides, API documentation, tutorials
+- **Design**: UI/UX improvements, icon design, branding
+- **Community**: Discord moderation, user support, outreach
 
-### **Community Programs**
-- **Student Projects**: University collaboration programs
-- **Mentorship**: Experienced developers guide newcomers
-- **Bounties**: Funded development for specific features
-- **Hackathons**: Community coding events
-- **Conferences**: Presentations and workshops
+### Skill Areas Needed
+- **C++ Development**: Core engine development
+- **Qt/QML**: User interface development
+- **OpenGL/Vulkan**: Rendering and graphics programming
+- **Computer Graphics**: Algorithms and mathematical foundations
+- **Technical Writing**: Documentation and tutorials
+- **3D Modeling**: User experience and workflow testing
 
-## 📞 Feedback and Adaptation
+## 📊 Success Metrics
 
-This roadmap is a living document that evolves based on:
-- **Community Feedback**: User surveys and feature requests
-- **Market Changes**: Industry trends and competitive analysis
-- **Technical Discoveries**: New technologies and optimizations
-- **Resource Availability**: Development capacity and funding
+### Technical Metrics
+- Build success rate across platforms
+- Test coverage percentage
+- Performance benchmarks
+- Memory usage optimization
+- Plugin ecosystem growth
 
-### **Regular Reviews**
-- **Monthly**: Progress assessment and priority adjustments
-- **Quarterly**: Major milestone planning and resource allocation
-- **Annually**: Strategic vision review and long-term planning
+### Community Metrics
+- GitHub stars and forks
+- Discord community size
+- Contributor count
+- Download numbers
+- User retention rate
+
+## 🔗 Resources
+
+- **GitHub**: https://github.com/The-No-Hands-company/RudeBase3D
+- **Discord**: [Community Server] *(coming soon)*
+- **Documentation**: [docs/](docs/)
+- **Wiki**: [GitHub Wiki] *(coming soon)*
+- **Issue Tracker**: [GitHub Issues](https://github.com/The-No-Hands-company/RudeBase3D/issues)
+
+## 📅 Release Schedule
+
+### Planned Releases
+- **v0.1.0 Alpha** (August 2025): Basic modeling foundation
+- **v0.2.0 Alpha** (September 2025): Advanced selection and tools
+- **v0.3.0 Alpha** (October 2025): NURBS and advanced geometry
+- **v0.4.0 Beta** (December 2025): Material system and rendering
+- **v1.0.0 Stable** (March 2026): First stable release
+
+*Dates are estimates and may change based on development progress and community feedback.*
 
 ---
 
-**Join us in building the future of 3D modeling!** 🎨🚀
+**Join us in building the future of open-source 3D modeling!** 🚀
 
-*Last updated: July 1, 2025*
+*This roadmap is a living document and will be updated regularly based on community feedback and development progress.*

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Common.h"
-#include "HalfEdgeMesh.h"
-#include <QVector3D>
+
+#include <glm/glm.hpp>
 #include <QRect>
 #include <unordered_set>
 #include <vector>
@@ -33,14 +33,14 @@ public:
     void invertSelection();
 
     // Point selection (from mouse picking)
-    bool selectAtPoint(const QVector3D& worldPos, bool addToSelection = false);
+    bool selectAtPoint(const glm::vec3& worldPos, bool addToSelection = false);
     
     // Box selection
-    void beginBoxSelection(const QVector3D& startPos);
-    void updateBoxSelection(const QVector3D& currentPos);
+    void beginBoxSelection(const glm::vec3& startPos);
+    void updateBoxSelection(const glm::vec3& currentPos);
     void endBoxSelection(bool addToSelection = false);
     bool isBoxSelecting() const { return m_boxSelecting; }
-    QRect getSelectionBox() const { return m_selectionBox; }
+    std::pair<glm::vec2, glm::vec2> getSelectionBox() const { return m_selectionBox; }
 
     // Selection queries
     bool hasSelection() const;
@@ -67,14 +67,14 @@ public:
     // Ray-mesh intersection for picking
     struct RayHit {
         bool hit = false;
-        QVector3D point;
+        glm::vec3 point;
         float distance = 0.0f;
         HalfEdgeVertexPtr vertex;
         HalfEdgeEdgePtr edge;
         HalfEdgeFacePtr face;
     };
     
-    RayHit raycast(const QVector3D& rayOrigin, const QVector3D& rayDirection) const;
+    RayHit raycast(const glm::vec3& rayOrigin, const glm::vec3& rayDirection) const;
 
 private:
     SelectionType m_selectionType = SelectionType::Vertex;
@@ -82,23 +82,23 @@ private:
     
     // Box selection state
     bool m_boxSelecting = false;
-    QVector3D m_boxStart;
-    QVector3D m_boxEnd;
-    QRect m_selectionBox;
+    glm::vec3 m_boxStart;
+    glm::vec3 m_boxEnd;
+    std::pair<glm::vec2, glm::vec2> m_selectionBox;
     
     // Selection sets for performance
-    std::unordered_set<unsigned int> m_selectedVertices;
-    std::unordered_set<unsigned int> m_selectedEdges;
-    std::unordered_set<unsigned int> m_selectedFaces;
+    std::unordered_set<HalfEdgeVertexPtr> m_selectedVertices;
+    std::unordered_set<HalfEdgeEdgePtr> m_selectedEdges;
+    std::unordered_set<HalfEdgeFacePtr> m_selectedFaces;
     
     // Helper methods
     void updateSelectionVisualization();
-    HalfEdgeVertexPtr findClosestVertex(const QVector3D& point, float maxDistance = 0.1f) const;
-    HalfEdgeEdgePtr findClosestEdge(const QVector3D& point, float maxDistance = 0.1f) const;
-    HalfEdgeFacePtr findClosestFace(const QVector3D& point) const;
+    HalfEdgeVertexPtr findClosestVertex(const glm::vec3& point, float maxDistance = 0.1f) const;
+    HalfEdgeEdgePtr findClosestEdge(const glm::vec3& point, float maxDistance = 0.1f) const;
+    HalfEdgeFacePtr findClosestFace(const glm::vec3& point) const;
     
     // Ray-triangle intersection
-    bool rayTriangleIntersect(const QVector3D& rayOrigin, const QVector3D& rayDirection,
-                              const QVector3D& v0, const QVector3D& v1, const QVector3D& v2,
-                              float& t, QVector3D& hitPoint) const;
+    bool rayTriangleIntersect(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
+                              const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2,
+                              float& t, glm::vec3& hitPoint) const;
 };

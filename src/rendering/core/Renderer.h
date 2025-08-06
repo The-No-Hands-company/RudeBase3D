@@ -1,13 +1,16 @@
 #pragma once
 
+#include "core/mesh_forward.hpp"
 #include "Common.h"
-#include <QOpenGLFunctions_3_3_Core>
-#include <QOpenGLShaderProgram>
+// Removed Qt includes
 #include <memory>
 #include <unordered_map>
 #include <string_view>
+#include <glm/glm.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
-class Renderer : protected QOpenGLFunctions_3_3_Core {
+class Renderer {
 public:
     Renderer();
     ~Renderer();
@@ -23,82 +26,74 @@ public:
     // Rendering
     void beginFrame();
     void endFrame();
-    
-    void setViewMatrix(const QMatrix4x4& view);
-    void setProjectionMatrix(const QMatrix4x4& projection);
-    void setModelMatrix(const QMatrix4x4& model);
+    void setViewMatrix(const glm::mat4& view);
+    void setProjectionMatrix(const glm::mat4& projection);
+    void setModelMatrix(const glm::mat4& model);
     
     // Material and lighting
     void setMaterial(MaterialPtr material);
-    void setLighting(const QVector3D& lightDir, const QVector4D& lightColor);
-    void setViewPosition(const QVector3D& viewPos);
+    void setLighting(const glm::vec3& lightDir, const glm::vec4& lightColor);
+    void setViewPosition(const glm::vec3& viewPos);
     
     // Render mesh
-    void renderMesh(MeshPtr mesh, RenderMode mode = RenderMode::Solid);
+    void renderMesh(rude::MeshPtr mesh, RenderMode mode = RenderMode::Solid);
     
     // Utility rendering
-    void renderLine(const QVector3D& start, const QVector3D& end, const QVector4D& color);
-    void renderAABB(const QVector3D& min, const QVector3D& max, const QVector4D& color);
+    void renderLine(const glm::vec3& start, const glm::vec3& end, const glm::vec4& color);
+    void renderAABB(const glm::vec3& min, const glm::vec3& max, const glm::vec4& color);
     
     // State management
     void enableDepthTest(bool enable);
     void enableBlending(bool enable);
     void setLineWidth(float width);
-    void setClearColor(const QVector4D& color);
+    void setClearColor(const glm::vec4& color);
+    
+    // Default shaders
+    const std::string& getDefaultVertexShader();
+    const std::string& getDefaultFragmentShader();
+    const std::string& getWireframeVertexShader();
+    const std::string& getWireframeFragmentShader();
+    const std::string& getLineVertexShader();
+    const std::string& getLineFragmentShader();
 
 private:
     struct ShaderProgram {
-        std::unique_ptr<QOpenGLShaderProgram> program;
-        
-        // Common uniforms
+        unsigned int programID;
+        // Uniform locations
         int mvpMatrixLoc;
         int modelMatrixLoc;
         int viewMatrixLoc;
         int projectionMatrixLoc;
         int normalMatrixLoc;
-        
-        // Material uniforms
         int diffuseColorLoc;
         int specularColorLoc;
         int ambientColorLoc;
         int shininessLoc;
-        
-        // Lighting uniforms
         int lightDirectionLoc;
         int lightColorLoc;
         int viewPosLoc;
-        
-        // Other uniforms
         int colorLoc;
     };
     
-    std::unordered_map<QString, std::unique_ptr<ShaderProgram>> m_shaderPrograms;
+    std::unordered_map<std::string, std::unique_ptr<ShaderProgram>> m_shaderPrograms;
     ShaderProgram* m_currentShader;
     
     // Matrices
-    QMatrix4x4 m_viewMatrix;
-    QMatrix4x4 m_projectionMatrix;
-    QMatrix4x4 m_modelMatrix;
+    glm::mat4 m_viewMatrix;
+    glm::mat4 m_projectionMatrix;
+    glm::mat4 m_modelMatrix;
     
     // Lighting
-    QVector3D m_lightDirection;
-    QVector4D m_lightColor;
-    QVector3D m_viewPosition;
+    glm::vec3 m_lightDirection;
+    glm::vec4 m_lightColor;
+    glm::vec3 m_viewPosition;
     
     // Line rendering
     unsigned int m_lineVAO;
     unsigned int m_lineVBO;
     
     // Helper methods
-    bool createShaderProgram(const QString& name, const QString& vertexSource, const QString& fragmentSource);
+    bool createShaderProgram(const std::string& name, const std::string& vertexSource, const std::string& fragmentSource);
     void updateUniforms();
     void initializeLineRenderer();
-    
-    // Default shaders
-    static const QString& getDefaultVertexShader();
-    static const QString& getDefaultFragmentShader();
-    static const QString& getWireframeVertexShader();
-    static const QString& getWireframeFragmentShader();
-    static const QString& getLineVertexShader();
-    static const QString& getLineFragmentShader();
 };

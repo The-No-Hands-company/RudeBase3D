@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.h"
+#include <QDockWidget>
 #include <QWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -17,18 +18,22 @@
 #include <memory>
 
 // Forward declarations
-class Scene;
+class Entity; // Entity is in global namespace
+namespace rude { 
+    class Scene; 
+}
 
-class PropertiesPanel : public QWidget {
+class PropertiesPanel : public QDockWidget {
     Q_OBJECT
 
 public:
     explicit PropertiesPanel(QWidget* parent = nullptr);
     ~PropertiesPanel() = default;
 
-    void setScene(std::shared_ptr<Scene> scene);
-    std::shared_ptr<Scene> getScene() const { return m_scene; }
+    void setScene(std::shared_ptr<rude::Scene> scene);
+    std::shared_ptr<rude::Scene> getScene() const { return m_scene; }
     
+    void setEntity(Entity* entity);
     void refreshProperties();
     void setSelectedObject(SceneObjectPtr object);
 
@@ -54,7 +59,7 @@ private slots:
     void onMaterialPresetChanged(int index);
 
 private:
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
     SceneObjectPtr m_selectedObject;
     
     QVBoxLayout* m_mainLayout;
@@ -101,8 +106,8 @@ private:
     void updateTransformProperties();
     void updateMaterialProperties();
     
-    void setColorButton(QPushButton* button, const QVector4D& color);
-    QVector4D getColorFromButton(QPushButton* button);
+    void setColorButton(QPushButton* button, const glm::vec4& color);
+    glm::vec4 getColorFromButton(QPushButton* button);
     void openColorDialog(QPushButton* button);
     
     QDoubleSpinBox* createDoubleSpinBox(double min = -999999.0, double max = 999999.0, 

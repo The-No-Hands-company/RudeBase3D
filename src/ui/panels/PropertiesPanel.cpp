@@ -1,33 +1,28 @@
 #include "PropertiesPanel.h"
-#include "Scene.h"
+#include "core/scene.hpp"
 #include "SceneObject.h"
 #include "Material.h"
 #include <QColorDialog>
 
 PropertiesPanel::PropertiesPanel(QWidget* parent)
-    : QWidget(parent)
+    : QDockWidget("Properties", parent)
     , m_mainLayout(nullptr)
     , m_updateInProgress(false)
 {
+    // Create a central widget for the dock widget
+    QWidget* centralWidget = new QWidget(this);
+    setWidget(centralWidget);
+    
     setupUI();
     connectSignals();
 }
 
-void PropertiesPanel::setScene(std::shared_ptr<Scene> scene)
+void PropertiesPanel::setScene(std::shared_ptr<rude::Scene> scene)
 {
-    // Disconnect from previous scene
-    if (m_scene) {
-        disconnect(m_scene.get(), nullptr, this, nullptr);
-    }
-    
+    // Disconnect from previous scene (no longer needed, rude::Scene is not a QObject)
     m_scene = scene;
-    
-    // Connect to new scene
-    if (m_scene) {
-        connect(m_scene.get(), &Scene::selectionChanged, this, &PropertiesPanel::setSelectedObject);
-    }
-    
-    setSelectedObject(m_scene ? m_scene->getSelectedObject() : nullptr);
+    // No signal/slot connection, must update selection manually
+    setSelectedObject(nullptr);
 }
 
 void PropertiesPanel::refreshProperties()
@@ -55,7 +50,8 @@ void PropertiesPanel::setSelectedObject(SceneObjectPtr object)
 
 void PropertiesPanel::setupUI()
 {
-    m_mainLayout = new QVBoxLayout(this);
+    QWidget* centralWidget = widget(); // Get the central widget we set in constructor
+    m_mainLayout = new QVBoxLayout(centralWidget);
     
     setupObjectGroup();
     setupTransformGroup();
@@ -66,7 +62,8 @@ void PropertiesPanel::setupUI()
 
 void PropertiesPanel::setupObjectGroup()
 {
-    m_objectGroup = new QGroupBox("Object", this);
+    QWidget* centralWidget = widget(); // Get the central widget
+    m_objectGroup = new QGroupBox("Object", centralWidget);
     auto layout = new QGridLayout(m_objectGroup);
     
     // Name
@@ -83,7 +80,8 @@ void PropertiesPanel::setupObjectGroup()
 
 void PropertiesPanel::setupTransformGroup()
 {
-    m_transformGroup = new QGroupBox("Transform", this);
+    QWidget* centralWidget = widget(); // Get the central widget
+    m_transformGroup = new QGroupBox("Transform", centralWidget);
     auto layout = new QGridLayout(m_transformGroup);
     
     // Position
@@ -131,7 +129,8 @@ void PropertiesPanel::setupTransformGroup()
 
 void PropertiesPanel::setupMaterialGroup()
 {
-    m_materialGroup = new QGroupBox("Material", this);
+    QWidget* centralWidget = widget(); // Get the central widget
+    m_materialGroup = new QGroupBox("Material", centralWidget);
     auto layout = new QGridLayout(m_materialGroup);
     
     // Material preset
@@ -234,7 +233,7 @@ void PropertiesPanel::updateObjectProperties()
     
     m_updateInProgress = true;
     
-    m_nameEdit->setText(m_selectedObject->getName());
+    m_nameEdit->setText(QString::fromStdString(m_selectedObject->getName()));
     m_visibleCheckBox->setChecked(m_selectedObject->isVisible());
     
     m_updateInProgress = false;
@@ -251,19 +250,22 @@ void PropertiesPanel::updateTransformProperties()
     const Transform& transform = m_selectedObject->getTransform();
     
     // Position
-    QVector3D position = transform.getPosition();
+    const glm::vec3& pos = transform.getPosition();
+    QVector3D position(pos.x, pos.y, pos.z);
     m_positionX->setValue(position.x());
     m_positionY->setValue(position.y());
     m_positionZ->setValue(position.z());
     
     // Rotation (Euler angles)
-    QVector3D rotation = transform.getEulerAngles();
+    const glm::vec3& rot = transform.getEulerAngles();
+    QVector3D rotation(rot.x, rot.y, rot.z);
     m_rotationX->setValue(rotation.x());
     m_rotationY->setValue(rotation.y());
     m_rotationZ->setValue(rotation.z());
     
     // Scale
-    QVector3D scale = transform.getScale();
+    const glm::vec3& scl = transform.getScale();
+    QVector3D scale(scl.x, scl.y, scl.z);
     m_scaleX->setValue(scale.x());
     m_scaleY->setValue(scale.y());
     m_scaleZ->setValue(scale.z());
@@ -302,7 +304,7 @@ void PropertiesPanel::onNameChanged()
         return;
     }
     
-    m_selectedObject->setName(m_nameEdit->text());
+    m_selectedObject->setName(m_nameEdit->text().toStdString());
 }
 
 void PropertiesPanel::onVisibilityChanged(bool visible)
@@ -320,7 +322,8 @@ void PropertiesPanel::onPositionChanged()
         return;
     }
     
-    QVector3D position(m_positionX->value(), m_positionY->value(), m_positionZ->value());
+    QVector3D qPosition(m_positionX->value(), m_positionY->value(), m_positionZ->value());
+    glm::vec3 position(qPosition.x(), qPosition.y(), qPosition.z());
     m_selectedObject->getTransform().setPosition(position);
 }
 
@@ -330,7 +333,8 @@ void PropertiesPanel::onRotationChanged()
         return;
     }
     
-    QVector3D rotation(m_rotationX->value(), m_rotationY->value(), m_rotationZ->value());
+    QVector3D qRotation(m_rotationX->value(), m_rotationY->value(), m_rotationZ->value());
+    glm::vec3 rotation(qRotation.x(), qRotation.y(), qRotation.z());
     m_selectedObject->getTransform().setEulerAngles(rotation);
 }
 
@@ -340,7 +344,7 @@ void PropertiesPanel::onScaleChanged()
         return;
     }
     
-    QVector3D scale(m_scaleX->value(), m_scaleY->value(), m_scaleZ->value());
+    glm::vec3 scale(m_scaleX->value(), m_scaleY->value(), m_scaleZ->value());
     m_selectedObject->getTransform().setScale(scale);
 }
 
@@ -441,20 +445,20 @@ void PropertiesPanel::onMaterialPresetChanged(int index)
     updateMaterialProperties();
 }
 
-void PropertiesPanel::setColorButton(QPushButton* button, const QVector4D& color)
+void PropertiesPanel::setColorButton(QPushButton* button, const glm::vec4& color)
 {
     QColor qcolor;
-    qcolor.setRgbF(color.x(), color.y(), color.z(), color.w());
+    qcolor.setRgbF(color.x, color.y, color.z, color.w);
     
     QString styleSheet = QString("background-color: %1").arg(qcolor.name());
     button->setStyleSheet(styleSheet);
     button->setProperty("color", qcolor);
 }
 
-QVector4D PropertiesPanel::getColorFromButton(QPushButton* button)
+glm::vec4 PropertiesPanel::getColorFromButton(QPushButton* button)
 {
     QColor color = button->property("color").value<QColor>();
-    return QVector4D(color.redF(), color.greenF(), color.blueF(), color.alphaF());
+    return glm::vec4(color.redF(), color.greenF(), color.blueF(), color.alphaF());
 }
 
 void PropertiesPanel::openColorDialog(QPushButton* button)
@@ -463,7 +467,7 @@ void PropertiesPanel::openColorDialog(QPushButton* button)
     QColor newColor = QColorDialog::getColor(currentColor, this, "Select Color");
     
     if (newColor.isValid()) {
-        setColorButton(button, QVector4D(newColor.redF(), newColor.greenF(), newColor.blueF(), newColor.alphaF()));
+        setColorButton(button, glm::vec4(newColor.redF(), newColor.greenF(), newColor.blueF(), newColor.alphaF()));
     }
 }
 
@@ -475,4 +479,28 @@ QDoubleSpinBox* PropertiesPanel::createDoubleSpinBox(double min, double max, dou
     spinBox->setDecimals(decimals);
     spinBox->setMinimumWidth(80);
     return spinBox;
+}
+
+void PropertiesPanel::setEntity(Entity* entity)
+{
+    // TODO: Implement entity property editing
+    // This is a stub implementation to resolve linking error
+    (void)entity; // Suppress unused parameter warning
+    
+    // Clear current properties
+    if (m_nameEdit) m_nameEdit->clear();
+    if (m_visibleCheckBox) m_visibleCheckBox->setChecked(true);
+    
+    // Reset transform values
+    if (m_positionX) m_positionX->setValue(0.0);
+    if (m_positionY) m_positionY->setValue(0.0);
+    if (m_positionZ) m_positionZ->setValue(0.0);
+    if (m_rotationX) m_rotationX->setValue(0.0);
+    if (m_rotationY) m_rotationY->setValue(0.0);
+    if (m_rotationZ) m_rotationZ->setValue(0.0);
+    if (m_scaleX) m_scaleX->setValue(1.0);
+    if (m_scaleY) m_scaleY->setValue(1.0);
+    if (m_scaleZ) m_scaleZ->setValue(1.0);
+    
+    // TODO: Load actual entity properties when Entity class is properly integrated
 }

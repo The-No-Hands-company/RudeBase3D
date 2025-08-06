@@ -1,9 +1,12 @@
 #include "LoopCutTool.h"
-#include "HalfEdgeMesh.h"
+
+#include "core/mesh_elements.hpp"
+#include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <algorithm>
 #include <unordered_set>
 #include <queue>
+#include <glm/glm.hpp>
 
 LoopCutTool::LoopCutTool() {
     clearResults();
@@ -124,15 +127,27 @@ HalfEdgeEdgePtr LoopCutTool::findNextLoopEdge(HalfEdgeEdgePtr currentEdge, HalfE
     if (!currentEdge) return nullptr;
     
     // Get the face on one side of the current edge
-    auto face = currentEdge->getFace();
-    if (!face && currentEdge->getTwin()) {
-        face = currentEdge->getTwin()->getFace();
+    auto face = currentEdge->halfEdge ? currentEdge->halfEdge->face : nullptr;
+    if (!face && currentEdge->halfEdge && currentEdge->halfEdge->twin) {
+        face = currentEdge->halfEdge->twin->face;
     }
     
     if (!face) return nullptr;
     
     // Find the edge opposite to the current edge in the face
-    auto faceEdges = face->getEdges();
+    // Since rude::Face doesn't have getEdges(), we need to traverse the half-edge loop
+    std::vector<rude::EdgePtr> faceEdges;
+    if (face->halfEdge) {
+        auto startHE = face->halfEdge;
+        auto currentHE = startHE;
+        do {
+            if (currentHE->edge) {
+                faceEdges.push_back(currentHE->edge);
+            }
+            currentHE = currentHE->next;
+        } while (currentHE && currentHE != startHE);
+    }
+    
     if (faceEdges.size() != 4) {
         // For now, only handle quad faces properly
         // TODO: Handle n-gons and triangles
@@ -143,8 +158,8 @@ HalfEdgeEdgePtr LoopCutTool::findNextLoopEdge(HalfEdgeEdgePtr currentEdge, HalfE
     auto it = std::find(faceEdges.begin(), faceEdges.end(), currentEdge);
     if (it == faceEdges.end()) {
         // Try with twin edge
-        auto twin = currentEdge->getTwin();
-        if (twin) {
+        if (currentEdge->halfEdge && currentEdge->halfEdge->twin && currentEdge->halfEdge->twin->edge) {
+            auto twin = currentEdge->halfEdge->twin->edge;
             it = std::find(faceEdges.begin(), faceEdges.end(), twin);
         }
     }
@@ -162,11 +177,11 @@ std::vector<HalfEdgeFacePtr> LoopCutTool::findAffectedFaces(const std::vector<Ha
     std::unordered_set<HalfEdgeFacePtr> affectedFaces;
     
     for (auto edge : edgeLoop) {
-        if (edge->getFace()) {
-            affectedFaces.insert(edge->getFace());
+        if (edge->halfEdge && edge->halfEdge->face) {
+            affectedFaces.insert(edge->halfEdge->face);
         }
-        if (edge->getTwin() && edge->getTwin()->getFace()) {
-            affectedFaces.insert(edge->getTwin()->getFace());
+        if (edge->halfEdge && edge->halfEdge->twin && edge->halfEdge->twin->face) {
+            affectedFaces.insert(edge->halfEdge->twin->face);
         }
     }
     
@@ -219,16 +234,16 @@ std::pair<HalfEdgeVertexPtr, HalfEdgeEdgePtr> LoopCutTool::splitEdge(HalfEdgeEdg
         return std::make_pair(nullptr, nullptr);
     }
     
-    auto originVertex = edge->getOriginVertex();
-    auto targetVertex = edge->getTargetVertex();
+    auto originVertex = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+    auto targetVertex = (edge->halfEdge && edge->halfEdge->twin) ? edge->halfEdge->twin->vertex : nullptr;
     
     if (!originVertex || !targetVertex) {
         return std::make_pair(nullptr, nullptr);
     }
     
     // Create new vertex at the split position
-    QVector3D newPosition = originVertex->getPosition() + 
-                           (targetVertex->getPosition() - originVertex->getPosition()) * position;
+    glm::vec3 newPosition = originVertex->position + 
+                           (targetVertex->position - originVertex->position) * position;
     
     auto newVertex = m_mesh->addVertex(newPosition);
     if (!newVertex) {
@@ -236,19 +251,20 @@ std::pair<HalfEdgeVertexPtr, HalfEdgeEdgePtr> LoopCutTool::splitEdge(HalfEdgeEdg
     }
     
     // Interpolate vertex properties
-    QVector3D newNormal = originVertex->getNormal() + 
-                         (targetVertex->getNormal() - originVertex->getNormal()) * position;
-    newVertex->setNormal(newNormal.normalized());
+    glm::vec3 newNormal = originVertex->normal + 
+                         (targetVertex->normal - originVertex->normal) * position;
+    newVertex->normal = newNormal;
     
-    QVector2D newTexCoord = originVertex->getTexCoord() + 
-                           (targetVertex->getTexCoord() - originVertex->getTexCoord()) * position;
-    newVertex->setTexCoord(newTexCoord);
+    glm::vec2 newTexCoord = originVertex->texCoord + 
+                           (targetVertex->texCoord - originVertex->texCoord) * position;
+    newVertex->texCoord = newTexCoord;
     
     // Create new edge from new vertex to target
     auto newEdge = m_mesh->addEdge(newVertex, targetVertex);
     if (newEdge) {
-        // Update original edge to end at new vertex
-        edge->setTargetVertex(newVertex);
+        // TODO: Update original edge connectivity properly
+        // The rude::Edge doesn't have setTargetVertex() method
+        // This would require more complex topology updates
         m_createdEdges.push_back(newEdge);
     }
     
@@ -284,9 +300,19 @@ void LoopCutTool::updateFaceConnectivity(HalfEdgeFacePtr face) {
     
     // Update face connectivity after loop cut
     // This would involve complex topology updates
-    // For now, just ensure the face is still valid
-    auto edges = face->getEdges();
-    if (edges.size() < 3) {
+    // For now, just ensure the face is still valid by counting edges manually
+    int edgeCount = 0;
+    if (face->halfEdge) {
+        auto startHE = face->halfEdge;
+        auto currentHE = startHE;
+        do {
+            edgeCount++;
+            currentHE = currentHE->next;
+            if (edgeCount > 100) break; // Safety limit
+        } while (currentHE && currentHE != startHE);
+    }
+    
+    if (edgeCount < 3) {
         qWarning() << "LoopCutTool: Face has invalid edge count after cut";
     }
 }
@@ -295,8 +321,8 @@ bool LoopCutTool::isManifoldEdge(HalfEdgeEdgePtr edge) const {
     if (!edge) return false;
     
     int faceCount = 0;
-    if (edge->getFace()) faceCount++;
-    if (edge->getTwin() && edge->getTwin()->getFace()) faceCount++;
+    if (edge->halfEdge && edge->halfEdge->face) faceCount++;
+    if (edge->halfEdge && edge->halfEdge->twin && edge->halfEdge->twin->face) faceCount++;
     
     return faceCount > 0 && faceCount <= 2;
 }
@@ -313,16 +339,39 @@ bool LoopCutTool::wouldCreateInvalidTopology(HalfEdgeEdgePtr edge, float positio
 bool LoopCutTool::isValidLoopContinuation(HalfEdgeEdgePtr currentEdge, HalfEdgeEdgePtr nextEdge) const {
     if (!currentEdge || !nextEdge) return false;
     
-    // Check if edges are roughly parallel (simplified check)
-    QVector3D dir1 = currentEdge->getVector().normalized();
-    QVector3D dir2 = nextEdge->getVector().normalized();
+    // Calculate edge vectors manually
+    glm::vec3 dir1(0.0f);
+    glm::vec3 dir2(0.0f);
     
-    float dot = QVector3D::dotProduct(dir1, dir2);
+    // Get vertices for currentEdge
+    if (currentEdge->halfEdge && currentEdge->halfEdge->vertex && 
+        currentEdge->halfEdge->twin && currentEdge->halfEdge->twin->vertex) {
+        auto v1 = currentEdge->halfEdge->vertex;
+        auto v2 = currentEdge->halfEdge->twin->vertex;
+        dir1 = v2->position - v1->position;
+    }
+    
+    // Get vertices for nextEdge
+    if (nextEdge->halfEdge && nextEdge->halfEdge->vertex && 
+        nextEdge->halfEdge->twin && nextEdge->halfEdge->twin->vertex) {
+        auto v1 = nextEdge->halfEdge->vertex;
+        auto v2 = nextEdge->halfEdge->twin->vertex;
+        dir2 = v2->position - v1->position;
+    }
+    
+    if (glm::length(dir1) < 1e-6f || glm::length(dir2) < 1e-6f) {
+        return false;
+    }
+    
+    // Check if edges are roughly parallel (simplified check)
+    dir1 = glm::normalize(dir1);
+    dir2 = glm::normalize(dir2);
+    float dot = glm::dot(dir1, dir2);
     return std::abs(dot) > 0.5f; // Roughly parallel
 }
 
-QVector3D LoopCutTool::calculateLoopDirection(HalfEdgeEdgePtr startEdge) const {
-    if (!startEdge) return QVector3D(1, 0, 0);
+glm::vec3 LoopCutTool::calculateLoopDirection(HalfEdgeEdgePtr startEdge) const {
+    if (!startEdge) return glm::vec3(1, 0, 0);
     
     switch (m_loopDirection) {
         case LoopDirection::Custom:
@@ -330,7 +379,17 @@ QVector3D LoopCutTool::calculateLoopDirection(HalfEdgeEdgePtr startEdge) const {
             
         case LoopDirection::Automatic:
         default:
-            return startEdge->getVector().normalized();
+            // Calculate edge vector manually
+            if (startEdge->halfEdge && startEdge->halfEdge->vertex && 
+                startEdge->halfEdge->twin && startEdge->halfEdge->twin->vertex) {
+                auto v1 = startEdge->halfEdge->vertex;
+                auto v2 = startEdge->halfEdge->twin->vertex;
+                glm::vec3 dir = v2->position - v1->position;
+                if (glm::length(dir) > 1e-6f) {
+                    return glm::normalize(dir);
+                }
+            }
+            return glm::vec3(1, 0, 0);
     }
 }
 

@@ -1,24 +1,35 @@
 #include "MainWindow.h"
 #include "UIManager.h"
-#include "SceneManager.h"
-#include "Viewport3D.h"
+#include "ViewportManager.h"
 #include "SceneHierarchyPanel.h"
 #include "PropertiesPanel.h"
-#include "InputController.h"
 #include "RenderSystem.h"
 #include "LightingSystem.h"
 #include "GridSystem.h"
 #include "Camera.h"
-#include "CameraController.h"
 #include "Scene.h"
 #include "SceneObject.h"
 #include "Material.h"
 #include "AssetManager.h"
 #include "FileFormatHandlers.h"
 #include "ExtrudeTool.h"
-#include "ModelingToolManager.h" // Add ModelingToolManager include
-#include "EditContext.h" // Add EditContext include
-#include "GeometryConverter.h" // Add GeometryConverter include
+#include "ModelingToolManager.h"
+#include "EditContext.h"
+#include "GeometryConverter.h"
+#include "core/core_system.hpp"
+#include "core/scene_manager.hpp"
+#include "core/entity.hpp"
+#include "core/selection_manager.hpp"
+#include "panels/outliner_panel.hpp"
+#include "panels/properties_panel.hpp"
+#include "panels/selection_panel.hpp"
+#include "toolbars/toolbar_manager.hpp"
+#include "toolbars/main_toolbar.hpp"
+#include "toolbars/primitives_toolbar.hpp"
+#include "toolbars/selection_toolbar.hpp"
+#include "toolbars/transform_toolbar.hpp"
+#include "gizmo/gizmo_manager.hpp"
+
 #include <QFileDialog>
 #include <QApplication>
 #include <QMenuBar>
@@ -35,9 +46,7 @@
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
-    , m_sceneManager(std::make_shared<SceneManager>())
-    , m_cameraController(std::make_shared<CameraController>())
-    , m_inputController(std::make_shared<InputController>())
+    , m_sceneManager(std::make_shared<rude::SceneManager>())
     , m_renderSystem(std::make_shared<RenderSystem>())
     , m_assetManager(std::make_shared<AssetManager>())
     , m_uiManager(std::make_shared<UIManager>(this, this))
@@ -50,12 +59,19 @@ MainWindow::MainWindow(QWidget* parent)
 {
     qDebug() << "MainWindow constructor started";
     
-    // Create initial scene through SceneManager
-    m_sceneManager->newScene();
-    m_scene = m_sceneManager->getScene();
+    // Use CoreSystem for scene management instead of local scene manager
+    auto& coreSystem = CoreSystem::getInstance();
+    auto* coreSceneManager = coreSystem.getSceneManager();
+    
+    // Get the scene from CoreSystem instead of local manager
+    if (coreSceneManager) {
+        m_scene = coreSceneManager->getScene();
+    } else {
+        // Fallback to legacy scene manager during transition
+        m_scene = m_sceneManager->getScene();
+    }
     
     // Set up component dependencies
-    m_cameraController->setScene(m_scene);
     m_renderSystem->setScene(m_scene);
     
     // Initialize and configure lighting system
@@ -66,6 +82,12 @@ MainWindow::MainWindow(QWidget* parent)
     m_gridSystem->setGridSize(20.0f);
     m_gridSystem->setGridDivisions(20);
     m_gridSystem->setVisible(true);
+    
+    // Setup update timer for ECS system
+    m_updateTimer = new QTimer(this);
+    connect(m_updateTimer, &QTimer::timeout, this, &MainWindow::updateSystems);
+    m_updateTimer->start(16); // ~60 FPS (16ms)
+    m_frameTimer.start();
     
     qDebug() << "Setting up UI...";
     setupUI();
@@ -87,30 +109,32 @@ void MainWindow::setupUI()
     // Set up UI using UIManager
     m_uiManager->setupUI();
     
-    // Get the viewport and panels from UIManager
-    m_viewport = m_uiManager->getViewport();
+    // Get the viewport manager and panels from UIManager
+    m_viewportManager = m_uiManager->getViewportManager();
     m_hierarchyPanel = m_uiManager->getSceneHierarchy();
-    m_propertiesPanel = m_uiManager->getPropertiesPanel();
+    // TODO: Fix type mismatch - UIManager returns PropertiesPanel* but we need rude::PropertiesPanel*
+    // m_propertiesPanel = m_uiManager->getPropertiesPanel();
     
-    // Set up component integrations - use MainWindow's controllers
-    m_viewport->setScene(m_scene);
-    m_viewport->setCameraController(m_cameraController);
-    m_viewport->setInputController(m_inputController);
+    // Set up component integrations with ViewportManager
+    m_viewportManager->setScene(m_scene);
+    m_viewportManager->setLightingSystem(m_lightingSystem);
+    m_viewportManager->setGridSystem(m_gridSystem);
+    m_viewportManager->setRenderSystem(m_renderSystem);
+    
+    // Set camera controller type (Maya style by default)
+    m_viewportManager->setCameraControllerType("Maya");
+    
+    // Set up modern panel system
+    setupModernPanels();
+    
+    // Set up modern toolbar system
+    setupModernToolbars();
     
     // Connect lighting and grid systems to viewport and render system
-    m_viewport->setLightingSystem(m_lightingSystem);
-    m_viewport->setGridSystem(m_gridSystem);
-    m_renderSystem->setLightingSystem(m_lightingSystem);
-    m_renderSystem->setGridSystem(m_gridSystem);
+    // These are now handled by ViewportManager automatically
     
-    // Set up MainWindow's controllers
-    m_cameraController->setCamera(m_viewport->getCamera());
-    m_cameraController->setScene(m_scene);
-    m_inputController->setCameraController(m_cameraController);
-    m_inputController->setScene(m_scene);
-    m_inputController->setViewport(m_viewport);
-    m_inputController->setSelectionManager(m_viewport->getSelectionManager()); // Connect SelectionManager to InputController
-    m_renderSystem->setCamera(m_viewport->getCamera());
+    // Note: ViewportManager now manages camera controllers internally
+    // Legacy controller setup is no longer needed
     
     // Set up modeling tools
     m_modelingToolManager->setEditContext(m_editContext.get());
@@ -157,21 +181,25 @@ void MainWindow::connectSignals()
     
     // Render and transform modes
     connect(m_uiManager.get(), &UIManager::renderModeChanged, this, [this](RenderMode mode) {
-        if (m_viewport) m_viewport->setRenderMode(mode);
+        if (m_viewportManager) m_viewportManager->setGlobalRenderMode(mode);
     });
     connect(m_uiManager.get(), &UIManager::transformModeChanged, this, [this](TransformMode mode) {
-        if (m_viewport) m_viewport->setTransformMode(mode);
+        (void)mode; // Suppress unused parameter warning
+        // TODO: Implement transform mode on ViewportManager
+        // For now, this will be handled per viewport
     });
     
     // Scene and viewport connections
-    if (m_viewport && m_scene) {
-        connect(m_viewport, &Viewport3D::objectSelected, this, &MainWindow::onObjectSelected);
-        connect(m_viewport, &Viewport3D::transformModeChanged, this, &MainWindow::onTransformModeChanged);
+    if (m_viewportManager) {
+        connect(m_viewportManager, &ViewportManager::activeViewportChanged, 
+                this, &MainWindow::onViewportChanged);
+        // TODO: Connect individual viewport signals through the manager
     }
     
     // Scene manager connections
     if (m_sceneManager) {
-        connect(m_sceneManager.get(), &SceneManager::sceneChanged, this, &MainWindow::updateStatusBar);
+        // TODO: rude::SceneManager doesn't have sceneChanged signal - need to implement or find alternative
+        // connect(m_sceneManager.get(), &rude::SceneManager::sceneChanged, this, &MainWindow::updateStatusBar);
     }
     
     // Edit tool connections will be handled by UIManager
@@ -192,24 +220,34 @@ void MainWindow::newScene()
     qDebug() << "newScene() started";
     if (maybeSave()) {
         qDebug() << "maybeSave() returned true, creating new scene";
-        m_sceneManager->newScene();
-        qDebug() << "SceneManager newScene() completed";
         
-        m_scene = m_sceneManager->getScene();
-        qDebug() << "Got scene from SceneManager";
+        // Use CoreSystem for scene management
+        auto& coreSystem = CoreSystem::getInstance();
+        auto* coreSceneManager = coreSystem.getSceneManager();
+        auto* selectionManager = coreSystem.getSelectionManager();
         
+        if (coreSceneManager) {
+            // Clear current selection first
+            if (selectionManager) {
+                selectionManager->clearSelection();
+            }
+            // Create new scene through CoreSystem
+            auto newScene = std::make_shared<rude::Scene>();
+            coreSceneManager->setScene(newScene);
+            m_scene = newScene;
+            qDebug() << "Created new scene through CoreSystem";
+        } else {
+            // Fallback: create a new scene and assign to manager
+            auto newScene = std::make_shared<rude::Scene>();
+            m_sceneManager->setScene(newScene);
+            m_scene = newScene;
+            qDebug() << "Created new scene through fallback SceneManager";
+        }
         // Update component references to new scene
-        m_viewport->setScene(m_scene);
-        qDebug() << "Set scene on viewport";
-        
-        m_cameraController->setScene(m_scene);
-        qDebug() << "Set scene on camera controller";
-        
+        m_viewportManager->setScene(m_scene);
+        qDebug() << "Set scene on viewport manager";
         m_renderSystem->setScene(m_scene);
         qDebug() << "Set scene on render system";
-        
-        m_inputController->setScene(m_scene);
-        qDebug() << "Set scene on input controller";
         
         setCurrentFile("");
         qDebug() << "Set current file";
@@ -218,11 +256,7 @@ void MainWindow::newScene()
         qDebug() << "About to call updateUI from newScene";
         updateUI();
         
-        // Frame the scene to show all objects properly
-        if (m_cameraController) {
-            qDebug() << "Auto-framing scene after creation";
-            m_cameraController->frameScene();
-        }
+        // ViewportManager now handles camera control and scene framing
         
         qDebug() << "newScene() completed";
     } else {
@@ -238,25 +272,25 @@ void MainWindow::openScene()
     
     if (!fileName.isEmpty()) {
         // Try to import the file using FileFormatHandlers
+        std::string fileNameStd = fileName.toStdString();
         if (fileName.endsWith(".obj", Qt::CaseInsensitive)) {
-            auto result = OBJFileHandler::importFromFile(fileName);
+            auto result = OBJFileHandler::importFromFile(fileNameStd);
             if (result.success && !result.meshes.empty()) {
                 // Add all imported meshes to the scene
                 for (size_t i = 0; i < result.meshes.size(); ++i) {
                     auto mesh = result.meshes[i];
-                    QString objectName = (i < result.meshNames.size()) ? result.meshNames[i] : QString("Imported_Object_%1").arg(i);
-                    
-                    auto object = std::make_shared<SceneObject>(objectName);
-                    object->setMesh(mesh);
-                    
-                    // Create a default material
-                    auto material = std::make_shared<Material>();
-                    material->setDiffuseColor(QVector4D(0.7f, 0.7f, 0.7f, 1.0f));
-                    material->setSpecularColor(QVector4D(0.3f, 0.3f, 0.3f, 1.0f));
-                    material->setShininess(32.0f);
-                    object->setMaterial(material);
-                    
-                    m_sceneManager->addObject(object);
+                    QString objectName = (i < result.meshNames.size()) ? QString::fromStdString(result.meshNames[i]) : QString("Imported_Object_%1").arg(i);
+                    std::string entityName = objectName.toStdString();
+                    // TODO: Fix Entity type conflict - rude::Entity* vs Entity*
+                    // Entity* entity = m_sceneManager->createEntity(entityName);
+                    // TODO: Stub - SceneManager::createEntity not implemented yet
+                    // auto rudeEntity = m_sceneManager->createEntity(entityName);
+                    rude::Entity* rudeEntity = nullptr; // Stub for now
+                    if (rudeEntity) {
+                        // TODO: Calling setMesh on incomplete rude::Entity type - need proper include or type unification
+                        // rudeEntity->setMesh(mesh);
+                        // TODO: Assign material if your ECS supports it
+                    }
                 }
                 
                 if (!result.meshes.empty()) {
@@ -275,50 +309,48 @@ void MainWindow::openScene()
                     QString("Failed to import file: %1\n\nError: %2").arg(fileName, result.errorMessage));
             }
         } else if (fileName.endsWith(".stl", Qt::CaseInsensitive)) {
-            auto result = STLFileHandler::importFromFile(fileName);
+            auto result = STLFileHandler::importFromFile(fileNameStd);
             if (result.success && result.mesh) {
-                auto mesh = result.mesh; // STL contains one mesh
-                
-                auto object = std::make_shared<SceneObject>(QFileInfo(fileName).baseName());
-                object->setMesh(mesh);
-                
-                auto material = std::make_shared<Material>();
-                material->setDiffuseColor(QVector4D(0.7f, 0.7f, 0.7f, 1.0f));
-                material->setSpecularColor(QVector4D(0.3f, 0.3f, 0.3f, 1.0f));
-                material->setShininess(32.0f);
-                object->setMaterial(material);
-                
-                m_sceneManager->addObject(object);
+                auto mesh = result.mesh;
+                std::string entityName = QFileInfo(fileName).baseName().toStdString();
+                // TODO: Fix Entity type conflict - rude::Entity* vs Entity*
+                // Entity* entity = m_sceneManager->createEntity(entityName);
+                // TODO: Stub - SceneManager::createEntity not implemented yet
+                // auto rudeEntity = m_sceneManager->createEntity(entityName);
+                rude::Entity* rudeEntity = nullptr; // Stub for now
+                if (rudeEntity) {
+                    // TODO: Calling setMesh on incomplete rude::Entity type - need proper include or type unification
+                    // rudeEntity->setMesh(mesh);
+                    // TODO: Assign material if your ECS supports it
+                }
                 setCurrentFile(fileName);
                 m_sceneModified = false;
                 updateUI();
                 frameScene();
-                
                 statusBar()->showMessage(QString("Imported %1").arg(QFileInfo(fileName).fileName()), 2000);
             } else {
                 QMessageBox::warning(this, "Import Error", 
                     QString("Failed to import STL file: %1\n\nError: %2").arg(fileName, result.errorMessage));
             }
         } else if (fileName.endsWith(".ply", Qt::CaseInsensitive)) {
-            auto result = PLYFileHandler::importFromFile(fileName);
+            auto result = PLYFileHandler::importFromFile(fileNameStd);
             if (result.success && result.mesh) {
-                auto mesh = result.mesh; // PLY contains one mesh
-                
-                auto object = std::make_shared<SceneObject>(QFileInfo(fileName).baseName());
-                object->setMesh(mesh);
-                
-                auto material = std::make_shared<Material>();
-                material->setDiffuseColor(QVector4D(0.7f, 0.7f, 0.7f, 1.0f));
-                material->setSpecularColor(QVector4D(0.3f, 0.3f, 0.3f, 1.0f));
-                material->setShininess(32.0f);
-                object->setMaterial(material);
-                
-                m_sceneManager->addObject(object);
+                auto mesh = result.mesh;
+                std::string entityName = QFileInfo(fileName).baseName().toStdString();
+                // TODO: Fix Entity type conflict - rude::Entity* vs Entity*
+                // Entity* entity = m_sceneManager->createEntity(entityName);
+                // TODO: Stub - SceneManager::createEntity not implemented yet
+                // auto rudeEntity = m_sceneManager->createEntity(entityName);
+                rude::Entity* rudeEntity = nullptr; // Stub for now
+                if (rudeEntity) {
+                    // TODO: Calling setMesh on incomplete rude::Entity type - need proper include or type unification
+                    // rudeEntity->setMesh(mesh);
+                    // TODO: Assign material if your ECS supports it
+                }
                 setCurrentFile(fileName);
                 m_sceneModified = false;
                 updateUI();
                 frameScene();
-                
                 statusBar()->showMessage(QString("Imported %1").arg(QFileInfo(fileName).fileName()), 2000);
             } else {
                 QMessageBox::warning(this, "Import Error", 
@@ -337,20 +369,28 @@ void MainWindow::saveScene()
         saveSceneAs();
     } else {
         // Quick save to current file
-        auto selectedObject = m_sceneManager->getSelectedObject();
-        if (!selectedObject || !selectedObject->getMesh()) {
+        // Use SelectionManager to get selected entity
+        auto& coreSystem = CoreSystem::getInstance();
+        auto* selectionManager = coreSystem.getSelectionManager();
+        Entity* selectedEntity = nullptr;
+        if (selectionManager) {
+            const auto& selectedEntities = selectionManager->getSelectedEntities();
+            if (!selectedEntities.empty()) {
+                selectedEntity = *selectedEntities.begin();
+            }
+        }
+        if (!selectedEntity || !selectedEntity->getMesh()) {
             QMessageBox::information(this, "Save", 
                 "Please select an object to save.\n\nNote: Currently only individual object export is supported.");
             return;
         }
-        
         bool success = false;
+        std::string currentFileStd = m_currentFile.toStdString();
         if (m_currentFile.endsWith(".obj", Qt::CaseInsensitive)) {
-            success = OBJFileHandler::exportToFile(m_currentFile, selectedObject->getMesh());
+            success = OBJFileHandler::exportToFile(currentFileStd, selectedEntity->getMesh());
         } else if (m_currentFile.endsWith(".stl", Qt::CaseInsensitive)) {
-            success = STLFileHandler::exportToFile(m_currentFile, selectedObject->getMesh());
+            success = STLFileHandler::exportToFile(currentFileStd, selectedEntity->getMesh());
         }
-        
         if (success) {
             m_sceneModified = false;
             updateUI();
@@ -364,37 +404,44 @@ void MainWindow::saveScene()
 
 void MainWindow::saveSceneAs()
 {
-    auto selectedObject = m_sceneManager->getSelectedObject();
-    if (!selectedObject || !selectedObject->getMesh()) {
+    // Use SelectionManager to get selected entity
+    auto& coreSystem = CoreSystem::getInstance();
+    auto* selectionManager = coreSystem.getSelectionManager();
+    Entity* selectedEntity = nullptr;
+    if (selectionManager) {
+        const auto& selectedEntities = selectionManager->getSelectedEntities();
+        if (!selectedEntities.empty()) {
+            selectedEntity = *selectedEntities.begin();
+        }
+    }
+    if (!selectedEntity || !selectedEntity->getMesh()) {
         QMessageBox::information(this, "Export", 
             "Please select an object to export.\n\nNote: Currently only individual object export is supported.");
         return;
     }
-    
     QString fileName = QFileDialog::getSaveFileName(this,
-        "Export 3D Model", selectedObject->getName(),
+        "Export 3D Model", QString::fromStdString(selectedEntity->getName()),
         "OBJ Files (*.obj);;STL Files (*.stl);;All Files (*)");
-    
     if (!fileName.isEmpty()) {
         bool success = false;
-        
+        std::string fileNameStd = fileName.toStdString();
         if (fileName.endsWith(".obj", Qt::CaseInsensitive)) {
-            success = OBJFileHandler::exportToFile(fileName, selectedObject->getMesh());
+            success = OBJFileHandler::exportToFile(fileNameStd, selectedEntity->getMesh());
         } else if (fileName.endsWith(".stl", Qt::CaseInsensitive)) {
-            success = STLFileHandler::exportToFile(fileName, selectedObject->getMesh());
+            success = STLFileHandler::exportToFile(fileNameStd, selectedEntity->getMesh());
         } else if (fileName.endsWith(".ply", Qt::CaseInsensitive)) {
-            success = PLYFileHandler::exportToFile(fileName, selectedObject->getMesh());
+            success = PLYFileHandler::exportToFile(fileNameStd, selectedEntity->getMesh());
         } else {
             // Default to OBJ if no extension specified
             if (!fileName.contains('.')) {
                 fileName += ".obj";
+                fileNameStd = fileName.toStdString();
             }
-            success = OBJFileHandler::exportToFile(fileName, selectedObject->getMesh());
+            success = OBJFileHandler::exportToFile(fileNameStd, selectedEntity->getMesh());
         }
-        
         if (success) {
             statusBar()->showMessage(QString("Exported %1 to %2")
-                .arg(selectedObject->getName(), QFileInfo(fileName).fileName()), 2000);
+                .arg(QString::fromStdString(selectedEntity->getName()), QFileInfo(fileName).fileName()), 2000);
         } else {
             QMessageBox::warning(this, "Export Error", 
                 QString("Failed to export to file: %1").arg(fileName));
@@ -409,73 +456,52 @@ void MainWindow::exitApplication()
 
 void MainWindow::createCube()
 {
-    auto cube = m_sceneManager->createCube();
-    m_sceneManager->selectObject(cube);
-    m_sceneModified = true;
-    updateUI();
+    createPrimitiveHelper("cube");
 }
 
 void MainWindow::createSphere()
 {
-    auto sphere = m_sceneManager->createSphere();
-    m_sceneManager->selectObject(sphere);
-    m_sceneModified = true;
-    updateUI();
+    createPrimitiveHelper("sphere");
 }
 
 void MainWindow::createCylinder()
 {
-    auto cylinder = m_sceneManager->createCylinder();
-    m_sceneManager->selectObject(cylinder);
-    m_sceneModified = true;
-    updateUI();
+    createPrimitiveHelper("cylinder");
 }
 
 void MainWindow::createPlane()
 {
-    auto plane = m_sceneManager->createPlane();
-    m_sceneManager->selectObject(plane);
-    m_sceneModified = true;
-    updateUI();
+    createPrimitiveHelper("plane");
 }
 
 void MainWindow::createCone()
 {
-    auto cone = m_sceneManager->createCone();
-    m_sceneManager->selectObject(cone);
-    m_sceneModified = true;
-    updateUI();
+    createPrimitiveHelper("cone");
 }
 
 void MainWindow::createTorus()
 {
-    auto torus = m_sceneManager->createTorus();
-    m_sceneManager->selectObject(torus);
-    m_sceneModified = true;
-    updateUI();
+    createPrimitiveHelper("torus");
 }
 
 void MainWindow::createIcosphere()
 {
-    auto icosphere = m_sceneManager->createIcosphere();
-    m_sceneManager->selectObject(icosphere);
-    m_sceneModified = true;
-    updateUI();
+    createPrimitiveHelper("icosphere");
 }
 
 void MainWindow::resetCamera()
 {
-    m_viewport->resetCamera();
+    m_viewportManager->resetAllCameras();
 }
 
 void MainWindow::frameScene()
 {
-    m_viewport->frameScene();
+    m_viewportManager->frameSceneAll();
 }
 
 void MainWindow::frameSelection()
 {
-    m_viewport->frameSelectedObject();
+    m_viewportManager->frameSelectionAll();
 }
 
 void MainWindow::toggleGrid(bool show)
@@ -487,64 +513,81 @@ void MainWindow::toggleGrid(bool show)
 
 void MainWindow::setWireframeMode()
 {
-    m_viewport->setRenderMode(RenderMode::Wireframe);
+    m_viewportManager->setGlobalRenderMode(RenderMode::Wireframe);
 }
 
 void MainWindow::setSolidMode()
 {
-    m_viewport->setRenderMode(RenderMode::Solid);
+    m_viewportManager->setGlobalRenderMode(RenderMode::Solid);
 }
 
 void MainWindow::setSolidWireframeMode()
 {
-    m_viewport->setRenderMode(RenderMode::SolidWireframe);
+    m_viewportManager->setGlobalRenderMode(RenderMode::SolidWireframe);
 }
 
 void MainWindow::setSelectMode()
 {
-    m_viewport->setTransformMode(TransformMode::Select);
+    // TODO: Implement transform mode on ViewportManager
+    // For now, this will be handled per viewport
+    if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+        // activeViewport->setTransformMode(TransformMode::Select);
+    }
 }
 
 void MainWindow::setTranslateMode()
 {
-    m_viewport->setTransformMode(TransformMode::Translate);
+    // TODO: Implement transform mode on ViewportManager
+    if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+        // activeViewport->setTransformMode(TransformMode::Translate);
+    }
 }
 
 void MainWindow::setRotateMode()
 {
-    m_viewport->setTransformMode(TransformMode::Rotate);
+    // TODO: Implement transform mode on ViewportManager
+    if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+        // activeViewport->setTransformMode(TransformMode::Rotate);
+    }
 }
 
 void MainWindow::setScaleMode()
 {
-    m_viewport->setTransformMode(TransformMode::Scale);
+    // TODO: Implement transform mode on ViewportManager
+    if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+        // activeViewport->setTransformMode(TransformMode::Scale);
+    }
 }
 
 void MainWindow::setObjectSelection()
 {
-    if (m_viewport) {
-        m_viewport->setSelectionType(SelectionType::Object);
+    // TODO: Implement selection type on ViewportManager
+    if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+        // activeViewport->setSelectionType(SelectionType::Object);
     }
 }
 
 void MainWindow::setVertexSelection()
 {
-    if (m_viewport) {
-        m_viewport->setSelectionType(SelectionType::Vertex);
+    // TODO: Implement selection type on ViewportManager
+    if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+        // activeViewport->setSelectionType(SelectionType::Vertex);
     }
 }
 
 void MainWindow::setEdgeSelection()
 {
-    if (m_viewport) {
-        m_viewport->setSelectionType(SelectionType::Edge);
+    // TODO: Implement selection type on ViewportManager
+    if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+        // activeViewport->setSelectionType(SelectionType::Edge);
     }
 }
 
 void MainWindow::setFaceSelection()
 {
-    if (m_viewport) {
-        m_viewport->setSelectionType(SelectionType::Face);
+    // TODO: Implement selection type on ViewportManager
+    if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+        // activeViewport->setSelectionType(SelectionType::Face);
     }
 }
 
@@ -649,13 +692,14 @@ MainWindow::~MainWindow()
         disconnect(m_uiManager.get(), nullptr, this, nullptr);
     }
     
-    // Critical: Clear viewport's shared_ptr references before MainWindow's 
+    // Critical: Clear viewport manager's shared_ptr references before MainWindow's 
     // shared_ptr members are destroyed to prevent use-after-free
-    if (m_viewport) {
-        // Clear all shared_ptr references in Viewport3D
-        m_viewport->setScene(nullptr);
-        m_viewport->setCameraController(nullptr);
-        m_viewport->setInputController(nullptr);
+    if (m_viewportManager) {
+        // Clear all shared_ptr references in ViewportManager
+        m_viewportManager->setScene(nullptr);
+        m_viewportManager->setLightingSystem(nullptr);
+        m_viewportManager->setGridSystem(nullptr);
+        m_viewportManager->setRenderSystem(nullptr);
     }
     
     // Clear panel references
@@ -663,18 +707,10 @@ MainWindow::~MainWindow()
         m_hierarchyPanel->setScene(nullptr);
     }
     if (m_propertiesPanel) {
-        m_propertiesPanel->setSelectedObject(nullptr);
+        m_propertiesPanel->setEntity(nullptr);
     }
     
     // Clear other cross-references
-    if (m_inputController) {
-        m_inputController->setScene(nullptr);
-        m_inputController->setViewport(nullptr);
-    }
-    if (m_cameraController) {
-        m_cameraController->setScene(nullptr);
-        m_cameraController->setCamera(nullptr);
-    }
     if (m_renderSystem) {
         m_renderSystem->setScene(nullptr);
         m_renderSystem->setCamera(nullptr);
@@ -698,8 +734,6 @@ MainWindow::~MainWindow()
     m_gridSystem.reset();
     m_renderSystem.reset();
     m_assetManager.reset();
-    m_inputController.reset();
-    m_cameraController.reset();
     
     // Reset UI manager last since other components may depend on it
     m_uiManager.reset();
@@ -712,29 +746,36 @@ MainWindow::~MainWindow()
 // Edit tool methods
 void MainWindow::beginExtrude()
 {
-    if (!m_extrudeTool || !m_viewport) {
+    if (!m_extrudeTool || !m_viewportManager) {
         qDebug() << "Cannot begin extrude: missing tools";
         return;
     }
     
     // Get the current mesh from the selected object
-    auto selectedObject = m_scene->getSelectedObject();
-    if (!selectedObject || !selectedObject->getMesh()) {
+    // Use SelectionManager to get selected entity
+    auto& coreSystem = CoreSystem::getInstance();
+    auto* selectionManager = coreSystem.getSelectionManager();
+    Entity* selectedEntity = nullptr;
+    if (selectionManager) {
+        const auto& selectedEntities = selectionManager->getSelectedEntities();
+        if (!selectedEntities.empty()) {
+            selectedEntity = *selectedEntities.begin();
+        }
+    }
+    if (!selectedEntity || !selectedEntity->getMesh()) {
         qDebug() << "Cannot extrude: no mesh selected";
         return;
     }
-    
     // Convert to HalfEdgeMesh for editing
-    auto halfEdgeMesh = GeometryConverter::toHalfEdge(selectedObject->getMesh());
+    auto halfEdgeMesh = GeometryConverter::toHalfEdge(selectedEntity->getMesh());
     if (!halfEdgeMesh) {
         qDebug() << "Failed to convert mesh to HalfEdge format";
         return;
     }
-    
     // Set up the extrude tool
     m_extrudeTool->setMesh(halfEdgeMesh);
-    m_extrudeTool->setSelectionManager(m_viewport->getSelectionManager());
-    
+    // TODO: Update selection manager access for ViewportManager
+    // m_extrudeTool->setSelectionManager(m_viewportManager->getActiveViewport()->getSelectionManager());
     // Begin the extrude operation
     if (m_extrudeTool->beginExtrude()) {
         qDebug() << "Extrude operation started";
@@ -753,7 +794,9 @@ void MainWindow::confirmEdit()
         statusBar()->showMessage("Edit operation confirmed", 2000);
         
         // Update the viewport
-        m_viewport->update();
+        if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+            activeViewport->update();
+        }
     }
 }
 
@@ -768,7 +811,9 @@ void MainWindow::cancelEdit()
         statusBar()->showMessage("Edit operation cancelled", 2000);
         
         // Update the viewport
-        m_viewport->update();
+        if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+            activeViewport->update();
+        }
     }
 }
 
@@ -783,7 +828,9 @@ void MainWindow::beginInset()
     if (m_modelingToolManager->executeInset()) {
         qDebug() << "Inset operation started";
         statusBar()->showMessage("Inset operation completed", 2000);
-        m_viewport->update();
+        if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+            activeViewport->update();
+        }
     } else {
         qDebug() << "Failed to execute inset operation";
         statusBar()->showMessage("Inset failed - ensure faces are selected", 2000);
@@ -801,7 +848,9 @@ void MainWindow::beginLoopCut()
     if (m_modelingToolManager->executeLoopCut()) {
         qDebug() << "Loop cut operation started";
         statusBar()->showMessage("Loop cut operation completed", 2000);
-        m_viewport->update();
+        if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+            activeViewport->update();
+        }
     } else {
         qDebug() << "Failed to execute loop cut operation";
         statusBar()->showMessage("Loop cut failed - ensure edges are selected", 2000);
@@ -819,7 +868,9 @@ void MainWindow::beginSubdivision()
     if (m_modelingToolManager->executeSubdivision()) {
         qDebug() << "Subdivision operation started";
         statusBar()->showMessage("Subdivision operation completed", 2000);
-        m_viewport->update();
+        if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+            activeViewport->update();
+        }
     } else {
         qDebug() << "Failed to execute subdivision operation";
         statusBar()->showMessage("Subdivision failed - ensure faces are selected", 2000);
@@ -837,9 +888,252 @@ void MainWindow::beginBevel()
     if (m_modelingToolManager->executeBevel()) {
         qDebug() << "Bevel operation started";
         statusBar()->showMessage("Bevel operation completed", 2000);
-        m_viewport->update();
+        if (auto activeViewport = m_viewportManager->getActiveViewport()) {
+            activeViewport->update();
+        }
     } else {
         qDebug() << "Failed to execute bevel operation";
         statusBar()->showMessage("Bevel failed - ensure edges or vertices are selected", 2000);
     }
+}
+
+void MainWindow::onViewportChanged(ViewportWidget* viewport)
+{
+    // Handle viewport activation change
+    if (viewport) {
+        qDebug() << "Active viewport changed to:" << viewport->getViewName();
+        this->updateStatusBar();
+    }
+}
+
+void MainWindow::setupModernPanels()
+{
+    qDebug() << "Setting up modern panel system...";
+    
+    // Get reference to core system for scene and selection management
+    auto& coreSystem = CoreSystem::getInstance();
+    auto* sceneManager = coreSystem.getSceneManager();
+    auto* selectionManager = coreSystem.getSelectionManager();
+    
+    // Create the modern outliner panel
+    m_outlinerPanel = new OutlinerPanel(this);
+    m_outlinerPanel->setWindowTitle("Outliner");
+    m_outlinerPanel->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    
+    // Set the scene in the outliner panel
+    if (sceneManager) {
+        // Note: OutlinerPanel expects a raw Scene pointer, not shared_ptr
+        // This is a temporary adaptation during the transition
+        m_outlinerPanel->setScene(sceneManager->getScene().get());
+    }
+    
+    // Create the modern properties panel
+    m_modernPropertiesPanel = new PropertiesPanel(this);
+    m_modernPropertiesPanel->setWindowTitle("Properties");
+    m_modernPropertiesPanel->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    
+    // Create the selection panel
+    m_selectionPanel = new SelectionPanel(this);
+    m_selectionPanel->setWindowTitle("Selection");
+    m_selectionPanel->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    
+    // Connect the selection panel to the core system's selection manager
+    if (selectionManager) {
+        m_selectionPanel->setSelectionManager(selectionManager);
+    }
+    
+    // Add panels to the right dock area
+    addDockWidget(Qt::RightDockWidgetArea, m_outlinerPanel);
+    addDockWidget(Qt::RightDockWidgetArea, m_modernPropertiesPanel);
+    addDockWidget(Qt::RightDockWidgetArea, m_selectionPanel);
+    
+    // Tabify the panels
+    tabifyDockWidget(m_outlinerPanel, m_modernPropertiesPanel);
+    tabifyDockWidget(m_modernPropertiesPanel, m_selectionPanel);
+    
+    // Ensure outliner is visible by default
+    m_outlinerPanel->raise();
+    
+    // Connect panel signals to appropriate slots
+    connect(m_outlinerPanel, &OutlinerPanel::selectionChanged, this, [this, selectionManager](Entity* entity) {
+        if (selectionManager && entity) {
+            // Update selection in the selection manager
+            // This is a temporary solution during the transition period
+            // We'll need to adapt the selection system properly
+            rude::SelectionData selData;
+            selData.type = rude::ComponentType::Entity;
+            selData.entity = entity;
+            selectionManager->clearSelection();
+            selectionManager->selectEntity(entity, rude::SelectionMode::Replace);
+            
+            // Also update properties panel
+            if (m_modernPropertiesPanel) {
+                // TODO: Fix Entity type mismatch - modernPropertiesPanel expects rude::Entity* but we have Entity*
+                // m_modernPropertiesPanel->setEntity(entity);
+            }
+        }
+    });
+    
+    // Connect selection panel signals to core system
+    connect(m_selectionPanel, &SelectionPanel::selectionModeChanged, this, [this, selectionManager](rude::ComponentType mode) {
+        qDebug() << "Selection mode changed to:" << static_cast<int>(mode);
+        // Update the selection manager's current mode
+        if (selectionManager) {
+            // Set the selection mode in the manager - this would be implemented in SelectionManager
+            // selectionManager->setSelectionMode(mode);
+        }
+        
+        // Update the viewport to reflect the new selection mode
+        if (m_viewportManager) {
+            // This would update any selection visualization in the viewport
+            // m_viewportManager->setSelectionMode(mode);
+        }
+    });
+    
+    connect(m_selectionPanel, &SelectionPanel::operationRequested, this, [this](const QString& operation) {
+        qDebug() << "Operation requested:" << operation;
+        // Route operation to appropriate handler
+        if (operation == "extrude") {
+            beginExtrude();
+        } else if (operation == "bevel") {
+            beginBevel();
+        } else if (operation == "subdivide") {
+            beginSubdivision();
+        }
+    });
+    
+    qDebug() << "Modern panel system setup complete";
+}
+
+void MainWindow::setupModernToolbars()
+{
+    qDebug() << "Setting up modern toolbar system...";
+    
+    // Create the toolbar manager
+    m_toolbarManager = std::make_unique<ToolbarManager>(this);
+    
+    // Create all toolbars
+    m_toolbarManager->createAllToolbars();
+    
+    // Set up the toolbar layout
+    m_toolbarManager->setupToolbarLayout();
+    
+    // Connect toolbar actions to the appropriate slots
+    auto* mainToolbar = m_toolbarManager->getMainToolbar();
+    auto* primitivesToolbar = m_toolbarManager->getPrimitivesToolbar();
+    auto* selectionToolbar = m_toolbarManager->getSelectionToolbar();
+    auto* transformToolbar = m_toolbarManager->getTransformToolbar();
+    
+    // Connect main toolbar signals
+    if (mainToolbar) {
+        connect(mainToolbar, &MainToolbar::selectionToolChanged, this, [this](const QString& tool) {
+            qDebug() << "Selection tool changed to:" << tool;
+            // Update selection mode in core system
+            auto* selectionManager = CoreSystem::getInstance().getSelectionManager();
+            if (selectionManager) {
+                // Map tool name to selection component type
+                rude::ComponentType componentType = rude::ComponentType::Entity;
+                if (tool == "vertex") componentType = rude::ComponentType::Vertex;
+                else if (tool == "edge") componentType = rude::ComponentType::Edge;
+                else if (tool == "face") componentType = rude::ComponentType::Face;
+                
+                // Update selection panel to reflect the change
+                if (m_selectionPanel) {
+                    m_selectionPanel->setCurrentMode(componentType);
+                }
+            }
+        });
+        
+        connect(mainToolbar, &MainToolbar::transformToolChanged, this, [this](const QString& tool) {
+            qDebug() << "Transform tool changed to:" << tool;
+            // Update gizmo type in viewport
+            if (m_viewportManager) {
+                // Map tool name to gizmo type
+                GizmoType gizmoType = GizmoType::Translate;
+                if (tool == "rotate") gizmoType = GizmoType::Rotate;
+                else if (tool == "scale") gizmoType = GizmoType::Scale;
+                
+                // Update all viewports with new gizmo type
+                for (int i = 0; i < m_viewportManager->getViewportCount(); ++i) {
+                    auto* viewport = m_viewportManager->getViewport(i);
+                    if (viewport) {
+                        auto* gizmoManager = viewport->getGizmoManager();
+                        if (gizmoManager) {
+                            gizmoManager->setActiveGizmo(gizmoType);
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Connect primitives toolbar to create functions
+    if (primitivesToolbar) {
+        // These connections would be implemented to hook up primitive creation
+        // to existing create methods
+        // connect(primitivesToolbar, &PrimitivesToolbar::createPrimitiveRequested, 
+        //         this, &MainWindow::handlePrimitiveCreation);
+    }
+    
+    // Connect selection toolbar to selection system
+    if (selectionToolbar) {
+        // connect(selectionToolbar, &SelectionToolbar::selectionModeChanged,
+        //         this, &MainWindow::handleSelectionModeChange);
+    }
+    
+    // Connect transform toolbar to transform system
+    if (transformToolbar) {
+        // connect(transformToolbar, &TransformToolbar::transformModeChanged,
+        //         this, &MainWindow::handleTransformModeChange);
+    }
+    
+    qDebug() << "Modern toolbar system setup complete";
+}
+
+void MainWindow::createPrimitiveHelper(const QString& primitiveType)
+{
+    // Use CoreSystem for primitive creation
+    auto& coreSystem = CoreSystem::getInstance();
+    auto* coreSceneManager = coreSystem.getSceneManager();
+    (void)coreSceneManager; // Suppress unused variable warning - TODO: Use when Entity types are unified
+    auto* selectionManager = coreSystem.getSelectionManager();
+
+    std::string primitiveTypeName = primitiveType.toStdString();
+    // TODO: Fix Entity type conflict - rude::Entity* vs Entity*
+    // Entity* entity = m_sceneManager->createPrimitive(primitiveTypeName);
+    // TODO: Stub - SceneManager::createPrimitive not implemented yet
+    // auto rudeEntity = m_sceneManager->createPrimitive(primitiveTypeName);
+    rude::Entity* rudeEntity = nullptr; // Stub for now
+    if (rudeEntity) {
+        if (selectionManager) {
+            selectionManager->clearSelection();
+            // TODO: Fix Entity type mismatch - selectEntity expects rude::Entity* but we have Entity*
+            // selectionManager->selectEntity(entity, rude::SelectionMode::Replace);
+        }
+        // m_sceneManager->setSelectedObject(entity); // Selection is now handled by SelectionManager
+        m_sceneModified = true;
+        updateUI();
+        if (m_outlinerPanel) {
+            m_outlinerPanel->updateEntityList();
+        }
+        qDebug() << "Created" << primitiveType << "primitive";
+    }
+}
+
+void MainWindow::updateSystems() {
+    // Calculate delta time
+    qint64 elapsed = m_frameTimer.restart();
+    m_deltaTime = elapsed / 1000.0f; // Convert to seconds
+    
+    // Clamp delta time to prevent huge jumps during debugging or when window is inactive
+    if (m_deltaTime > 0.033f) { // Max 30 FPS to prevent huge steps
+        m_deltaTime = 0.033f;
+    }
+    
+    // Update core systems through CoreSystem
+    auto& coreSystem = CoreSystem::getInstance();
+    coreSystem.update(m_deltaTime);
+    
+    // You could also update other systems here if needed
+    // For example, viewport updates, UI animations, etc.
 }

@@ -1,13 +1,16 @@
+
 #pragma once
 
 #include "Common.h"
-#include <QObject>
-#include <QTimer>
+#include "core/scene_manager.hpp"
 #include <memory>
+#include <glm/glm.hpp>
 
+// Forward declarations
 class Camera;
-class Scene;
+class SelectionManager;
 
+// Camera controller navigation modes
 enum class CameraMode {
     Orbit,      // Orbit around a pivot point (default for modeling)
     Fly,        // Free-flying camera (FPS-style)
@@ -19,44 +22,46 @@ enum class OrbitMode {
     WorldCenter,    // Orbit around world origin (0,0,0)
     SceneCenter,    // Orbit around scene bounding box center
     Selection,      // Orbit around selected object
-    CustomPivot     // Orbit around user-defined pivot point
+    CustomPivot     // Orbit around a custom pivot point
 };
 
-class CameraController : public QObject
-{
-    Q_OBJECT
-    
+class CameraController {
 public:
-    explicit CameraController(QObject* parent = nullptr);
-    
-    // Dependencies
-    void setCamera(std::shared_ptr<Camera> camera);
-    void setScene(std::shared_ptr<Scene> scene);
-    
+    // Signals (Qt-style, but can be replaced with callback/event system if needed)
+    void cameraChanged();
+
+    CameraController();
+
+    void setSceneManager(std::shared_ptr<rude::SceneManager> sceneManager);
+    void setSelectionManager(std::shared_ptr<SelectionManager> selectionManager);
+
     // Camera modes
     void setCameraMode(CameraMode mode);
     CameraMode getCameraMode() const { return m_cameraMode; }
-    
+
     void setOrbitMode(OrbitMode mode);
     OrbitMode getOrbitMode() const { return m_orbitMode; }
-    
-    void setCustomPivot(const QVector3D& pivot);
-    QVector3D getCustomPivot() const { return m_customPivot; }
-    
+
+    void setCustomPivot(const glm::vec3& pivot);
+    glm::vec3 getCustomPivot() const { return m_customPivot; }
+    glm::vec3 getCurrentPivot() const;
+    float getDistanceToTarget() const;
+
     // Camera operations
     void resetCamera();
     void frameScene(bool animate = true);
     void frameSelectedObject(bool animate = true);
     void frameAll(bool animate = true);
     void updateAspectRatio(float aspectRatio);
-    
+    void setCamera(std::shared_ptr<Camera> camera);
+
     // Basic camera movement
     void orbit(float deltaYaw, float deltaPitch);
-    void orbitAroundPoint(const QVector3D& center, float deltaYaw, float deltaPitch);
-    void pan(const QVector3D& delta);
-    void dolly(float delta); // Forward/backward movement along view direction
-    void zoom(float delta);  // FOV-based zoom for perspective cameras
-    
+    void orbitAroundPoint(const glm::vec3& center, float deltaYaw, float deltaPitch);
+    void pan(const glm::vec2& delta);
+    void dolly(float delta);
+    void zoom(float delta);
+
     // Advanced camera movement (fly mode)
     void moveForward(float distance);
     void moveBackward(float distance);
@@ -65,12 +70,12 @@ public:
     void moveUp(float distance);
     void moveDown(float distance);
     void rotate(float deltaPitch, float deltaYaw, float deltaRoll = 0.0f);
-    
+
     // Focus and framing
-    void focusOnPoint(const QVector3D& point, bool animate = true);
+    void focusOnPoint(const glm::vec3& point, bool animate = true);
     void focusOnObject(std::shared_ptr<class SceneObject> object, bool animate = true);
-    void setViewDirection(const QVector3D& direction, const QVector3D& up = QVector3D(0, 1, 0), bool animate = true);
-    
+    void setViewDirection(const glm::vec3& direction, const glm::vec3& up = glm::vec3(0, 1, 0), bool animate = true);
+
     // Predefined views
     void setTopView(bool animate = true);
     void setBottomView(bool animate = true);
@@ -79,7 +84,7 @@ public:
     void setLeftView(bool animate = true);
     void setRightView(bool animate = true);
     void setIsometricView(bool animate = true);
-    
+
     // Settings
     void setMovementSpeed(float speed) { m_movementSpeed = speed; }
     void setRotationSpeed(float speed) { m_rotationSpeed = speed; }
@@ -87,53 +92,43 @@ public:
     void setZoomSpeed(float speed) { m_zoomSpeed = speed; }
     void setAnimationSpeed(float speed) { m_animationSpeed = speed; }
     void setInvertY(bool invert) { m_invertY = invert; }
-    
+
     float getMovementSpeed() const { return m_movementSpeed; }
     float getRotationSpeed() const { return m_rotationSpeed; }
     float getPanSpeed() const { return m_panSpeed; }
     float getZoomSpeed() const { return m_zoomSpeed; }
     bool isYInverted() const { return m_invertY; }
-    
+
     // Camera queries
-    QVector3D getWorldPosition() const;
-    QMatrix4x4 getViewMatrix() const;
-    QMatrix4x4 getProjectionMatrix() const;
-    QVector3D screenToWorldRay(const QVector2D& screenPos, const QSize& viewportSize) const;
-    QVector3D getCurrentPivot() const;
-    float getDistanceToTarget() const;
-    
-signals:
-    void cameraChanged();
-    void cameraModeChanged(CameraMode mode);
-    void orbitModeChanged(OrbitMode mode);
-    
-private slots:
+    glm::vec3 getWorldPosition() const;
+    glm::mat4 getViewMatrix() const;
+    glm::mat4 getProjectionMatrix() const;
+    glm::vec3 screenToWorldRay(const glm::vec2& screenPos, const glm::ivec2& viewportSize) const;
+
+    // Animation methods
     void updateAnimation();
-    
+    void startAnimation(const glm::vec3& targetPosition, const glm::vec3& targetLookAt);
+    void stopAnimation();
+    bool isAnimating() const { return m_animationTime < m_animationDuration; }
+
 private:
     // Helper methods
-    QVector3D getSceneCenter() const;
-    QVector3D getSelectionCenter() const;
-    float calculateFramingDistance(const QVector3D& sceneSize) const;
-    QVector3D calculateFramingPosition(const QVector3D& target, const QVector3D& size) const;
-    
-    // Animation helpers
-    void startAnimation(const QVector3D& targetPosition, const QVector3D& targetLookAt);
-    void stopAnimation();
-    bool isAnimating() const { return m_animationTimer && m_animationTimer->isActive(); }
-    
-    // Orbit helpers
-    QVector3D getOrbitCenter() const;
+    glm::vec3 getSceneCenter() const;
+    glm::vec3 getSelectionCenter() const;
+    float calculateFramingDistance(const glm::vec3& sceneSize) const;
+    glm::vec3 calculateFramingPosition(const glm::vec3& target, const glm::vec3& size) const;
+    glm::vec3 getOrbitCenter() const;
     void updateOrbitDistance();
-    
+
     std::shared_ptr<Camera> m_camera;
-    std::shared_ptr<Scene> m_scene;
-    
+    std::shared_ptr<rude::SceneManager> m_sceneManager;
+    std::shared_ptr<SelectionManager> m_selectionManager;
+
     // Camera control modes
     CameraMode m_cameraMode;
     OrbitMode m_orbitMode;
-    QVector3D m_customPivot;
-    
+    glm::vec3 m_customPivot;
+
     // Movement settings
     float m_movementSpeed;
     float m_rotationSpeed;
@@ -141,17 +136,16 @@ private:
     float m_zoomSpeed;
     float m_animationSpeed;
     bool m_invertY;
-    
+
     // Orbit settings
     float m_orbitDistance;
-    QVector3D m_orbitCenter;
-    
+    glm::vec3 m_orbitCenter;
+
     // Animation system
-    QTimer* m_animationTimer;
-    QVector3D m_animStartPosition;
-    QVector3D m_animTargetPosition;
-    QVector3D m_animStartLookAt;
-    QVector3D m_animTargetLookAt;
+    glm::vec3 m_animStartPosition;
+    glm::vec3 m_animTargetPosition;
+    glm::vec3 m_animStartLookAt;
+    glm::vec3 m_animTargetLookAt;
     float m_animationTime;
     float m_animationDuration;
 };

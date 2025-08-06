@@ -1,5 +1,6 @@
 #include "AssetManager.h"
 #include "Mesh.h"
+#include "core/mesh.hpp"
 #include "Material.h"
 #include "MeshGenerator.h"
 #include <QDebug>
@@ -31,21 +32,21 @@ void AssetManager::cleanup()
     clearCache();
 }
 
-std::shared_ptr<Mesh> AssetManager::createMesh(const QString& name)
+rude::MeshPtr AssetManager::createMesh(const QString& name)
 {
     QString uniqueName = name;
     if (m_meshCache.contains(name)) {
         uniqueName = generateUniqueName(name, getMeshNames());
     }
     
-    auto mesh = std::make_shared<Mesh>();
+    auto mesh = std::make_shared<rude::Mesh>();
     m_meshCache[uniqueName] = mesh;
     
     emit assetLoaded(uniqueName, "Mesh");
     return mesh;
 }
 
-std::shared_ptr<Mesh> AssetManager::getMesh(const QString& name) const
+rude::MeshPtr AssetManager::getMesh(const QString& name) const
 {
     return m_meshCache.value(name);
 }
@@ -101,7 +102,8 @@ void AssetManager::removeMaterial(const QString& name)
     m_materialCache.remove(name);
 }
 
-std::shared_ptr<Mesh> AssetManager::createCubeMesh(float size)
+// Use rude::MeshPtr for all mesh creation
+rude::MeshPtr AssetManager::createCubeMesh(float size)
 {
     QString name = QString("Cube_%1").arg(m_meshCounter++);
     auto mesh = MeshGenerator::generateCube(size);
@@ -112,7 +114,7 @@ std::shared_ptr<Mesh> AssetManager::createCubeMesh(float size)
     return mesh;
 }
 
-std::shared_ptr<Mesh> AssetManager::createSphereMesh(float radius, int segments, int rings)
+rude::MeshPtr AssetManager::createSphereMesh(float radius, int segments, int rings)
 {
     QString name = QString("Sphere_%1").arg(m_meshCounter++);
     auto mesh = MeshGenerator::generateSphere(radius, segments, rings);
@@ -123,7 +125,7 @@ std::shared_ptr<Mesh> AssetManager::createSphereMesh(float radius, int segments,
     return mesh;
 }
 
-std::shared_ptr<Mesh> AssetManager::createPlaneMesh(float width, float height)
+rude::MeshPtr AssetManager::createPlaneMesh(float width, float height)
 {
     QString name = QString("Plane_%1").arg(m_meshCounter++);
     auto mesh = MeshGenerator::generatePlane(width, height);
@@ -134,7 +136,7 @@ std::shared_ptr<Mesh> AssetManager::createPlaneMesh(float width, float height)
     return mesh;
 }
 
-std::shared_ptr<Mesh> AssetManager::createCylinderMesh(float radius, float height, int segments)
+rude::MeshPtr AssetManager::createCylinderMesh(float radius, float height, int segments)
 {
     QString name = QString("Cylinder_%1").arg(m_meshCounter++);
     auto mesh = MeshGenerator::generateCylinder(radius, height, segments);
@@ -145,7 +147,7 @@ std::shared_ptr<Mesh> AssetManager::createCylinderMesh(float radius, float heigh
     return mesh;
 }
 
-std::shared_ptr<Mesh> AssetManager::createConeMesh(float radius, float height, int segments)
+rude::MeshPtr AssetManager::createConeMesh(float radius, float height, int segments)
 {
     QString name = QString("Cone_%1").arg(m_meshCounter++);
     // TODO: Implement generateCone, using generateCylinder as temporary workaround
@@ -157,7 +159,7 @@ std::shared_ptr<Mesh> AssetManager::createConeMesh(float radius, float height, i
     return mesh;
 }
 
-std::shared_ptr<Mesh> AssetManager::createGridMesh(float size, int divisions)
+rude::MeshPtr AssetManager::createGridMesh(float size, int divisions)
 {
     QString name = QString("Grid_%1").arg(m_meshCounter++);
     auto mesh = MeshGenerator::generateGrid(size, divisions);
@@ -177,8 +179,8 @@ std::shared_ptr<Material> AssetManager::createDefaultMaterial()
     }
     
     auto material = std::make_shared<Material>();
-    material->setDiffuseColor(QVector4D(0.7f, 0.7f, 0.7f, 1.0f));
-    material->setSpecularColor(QVector4D(0.3f, 0.3f, 0.3f, 1.0f));
+    material->setDiffuseColor(glm::vec4(0.7f, 0.7f, 0.7f, 1.0f));
+    material->setSpecularColor(glm::vec4(0.3f, 0.3f, 0.3f, 1.0f));
     material->setShininess(32.0f);
     
     m_materialCache[name] = material;
@@ -186,12 +188,12 @@ std::shared_ptr<Material> AssetManager::createDefaultMaterial()
     return material;
 }
 
-std::shared_ptr<Material> AssetManager::createColoredMaterial(const QVector4D& color)
+std::shared_ptr<Material> AssetManager::createColoredMaterial(const glm::vec4& color)
 {
     QString name = QString("ColoredMaterial_%1").arg(m_materialCounter++);
     auto material = std::make_shared<Material>();
     material->setDiffuseColor(color);
-    material->setSpecularColor(QVector4D(0.2f, 0.2f, 0.2f, 1.0f));
+    material->setSpecularColor(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
     material->setShininess(16.0f);
     
     m_materialCache[name] = material;
@@ -199,14 +201,14 @@ std::shared_ptr<Material> AssetManager::createColoredMaterial(const QVector4D& c
     return material;
 }
 
-std::shared_ptr<Material> AssetManager::createMetallicMaterial(const QVector4D& color, float metallic, float roughness)
+std::shared_ptr<Material> AssetManager::createMetallicMaterial(const glm::vec4& color, float metallic, float roughness)
 {
     QString name = QString("MetallicMaterial_%1").arg(m_materialCounter++);
     auto material = std::make_shared<Material>();
     material->setDiffuseColor(color);
     
     // Calculate specular based on metallic value
-    QVector4D specular = color * metallic + QVector4D(0.04f, 0.04f, 0.04f, 1.0f) * (1.0f - metallic);
+    glm::vec4 specular = color * metallic + glm::vec4(0.04f, 0.04f, 0.04f, 1.0f) * (1.0f - metallic);
     material->setSpecularColor(specular);
     
     // Convert roughness to shininess (inverse relationship)

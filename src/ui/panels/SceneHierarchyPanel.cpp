@@ -1,9 +1,11 @@
 #include "SceneHierarchyPanel.h"
-#include "Scene.h"
-#include "SceneObject.h"
+#include "core/scene.hpp"
+#include "core/entity.hpp"
+#include <QtWidgets>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QVariant>
 
 SceneHierarchyPanel::SceneHierarchyPanel(QWidget* parent)
     : QWidget(parent)
@@ -18,22 +20,9 @@ SceneHierarchyPanel::SceneHierarchyPanel(QWidget* parent)
     connectSignals();
 }
 
-void SceneHierarchyPanel::setScene(std::shared_ptr<Scene> scene)
+void SceneHierarchyPanel::setScene(std::shared_ptr<rude::Scene> scene)
 {
-    // Disconnect from previous scene
-    if (m_scene) {
-        disconnect(m_scene.get(), nullptr, this, nullptr);
-    }
-    
     m_scene = scene;
-    
-    // Connect to new scene
-    if (m_scene) {
-        connect(m_scene.get(), &Scene::objectAdded, this, &SceneHierarchyPanel::refreshHierarchy);
-        connect(m_scene.get(), &Scene::objectRemoved, this, &SceneHierarchyPanel::refreshHierarchy);
-        connect(m_scene.get(), &Scene::selectionChanged, this, &SceneHierarchyPanel::selectObject);
-    }
-    
     refreshHierarchy();
 }
 
@@ -45,25 +34,14 @@ void SceneHierarchyPanel::refreshHierarchy()
         return;
     }
     
-    for (const auto& object : m_scene->getObjects()) {
+    // Use the new ECS API
+    auto entities = m_scene->getAllEntities();
+    for (auto* entity : entities) {
         auto item = new QTreeWidgetItem(m_treeWidget);
-        updateItemFromObject(item, object);
+        updateItemFromEntity(item, entity);
     }
     
     m_treeWidget->expandAll();
-}
-
-void SceneHierarchyPanel::selectObject(SceneObjectPtr object)
-{
-    if (!object) {
-        m_treeWidget->clearSelection();
-        return;
-    }
-    
-    auto item = findItemByObjectId(object->getId());
-    if (item) {
-        m_treeWidget->setCurrentItem(item);
-    }
 }
 
 void SceneHierarchyPanel::setupUI()
@@ -124,12 +102,11 @@ void SceneHierarchyPanel::onItemSelectionChanged()
     m_deleteButton->setEnabled(hasSelection);
     
     if (hasSelection && m_scene) {
-        auto object = getObjectFromItem(selectedItems.first());
-        m_scene->setSelectedObject(object);
-        emit objectSelected(object);
-    } else if (m_scene) {
-        m_scene->clearSelection();
-        emit objectSelected(nullptr);
+        auto entity = getEntityFromItem(selectedItems.first());
+        // TODO: Implement entity selection system if needed
+        emit entitySelected(entity);
+    } else {
+        emit entitySelected(nullptr);
     }
 }
 
@@ -141,12 +118,13 @@ void SceneHierarchyPanel::onItemChanged(QTreeWidgetItem* item, int column)
         return;
     }
     
-    auto object = getObjectFromItem(item);
-    if (object) {
+    auto entity = getEntityFromItem(item);
+    if (entity) {
         QString newName = item->text(0);
-        if (newName != object->getName()) {
-            object->setName(newName);
-            emit objectRenamed(object, newName);
+        std::string stdName = newName.toStdString();
+        if (stdName != entity->getName()) {
+            entity->name = stdName;  // Direct assignment since name is public
+            emit entityRenamed(entity, newName);
         }
     }
 }
@@ -166,16 +144,18 @@ void SceneHierarchyPanel::onDeleteSelectedObject()
         return;
     }
     
-    auto object = getObjectFromItem(selectedItems.first());
-    if (object) {
-        int ret = QMessageBox::question(this, "Delete Object", 
-                                       QString("Are you sure you want to delete '%1'?").arg(object->getName()),
-                                       QMessageBox::Yes | QMessageBox::No, 
-                                       QMessageBox::No);
+    auto entity = getEntityFromItem(selectedItems.first());
+    if (entity) {
+        QString entityName = QString::fromStdString(entity->getName());
+        auto ret = QMessageBox::question(this, "Delete Entity", 
+                                        QString("Are you sure you want to delete '%1'?").arg(entityName),
+                                        QMessageBox::Yes | QMessageBox::No, 
+                                        QMessageBox::No);
         
         if (ret == QMessageBox::Yes) {
-            m_scene->removeObject(object);
-            emit objectDeleted(object);
+            m_scene->removeEntity(entity);
+            refreshHierarchy();
+            emit entityDeleted(entity);
         }
     }
 }
@@ -198,55 +178,49 @@ void SceneHierarchyPanel::onDuplicateSelectedObject()
         return;
     }
     
-    auto object = getObjectFromItem(selectedItems.first());
-    if (object) {
-        // Create a copy of the object
-        auto newObject = std::make_shared<SceneObject>(object->getName() + "_Copy");
-        newObject->setMesh(object->getMesh());
-        newObject->setMaterial(object->getMaterial());
-        newObject->getTransform() = object->getTransform();
-        newObject->getTransform().translate(QVector3D(1.0f, 0.0f, 0.0f)); // Offset slightly
-        
-        m_scene->addObject(newObject);
-        m_scene->setSelectedObject(newObject);
+    auto entity = getEntityFromItem(selectedItems.first());
+    if (entity) {
+        // Use the scene's duplicate method
+        auto duplicatedEntity = m_scene->duplicateEntity(entity);
+        if (duplicatedEntity) {
+            refreshHierarchy();
+            emit entitySelected(duplicatedEntity);
+        }
     }
 }
 
-QTreeWidgetItem* SceneHierarchyPanel::findItemByObjectId(unsigned int objectId)
+QTreeWidgetItem* SceneHierarchyPanel::findItemByEntityId(unsigned int entityId)
 {
     for (int i = 0; i < m_treeWidget->topLevelItemCount(); ++i) {
         auto item = m_treeWidget->topLevelItem(i);
-        if (item->data(0, Qt::UserRole).toUInt() == objectId) {
+        if (item->data(0, Qt::UserRole).toUInt() == entityId) {
             return item;
         }
     }
     return nullptr;
 }
 
-SceneObjectPtr SceneHierarchyPanel::getObjectFromItem(QTreeWidgetItem* item)
+Entity* SceneHierarchyPanel::getEntityFromItem(QTreeWidgetItem* item)
 {
     if (!item || !m_scene) {
         return nullptr;
     }
     
-    unsigned int objectId = item->data(0, Qt::UserRole).toUInt();
-    return m_scene->getObject(objectId);
+    unsigned int entityId = item->data(0, Qt::UserRole).toUInt();
+    return m_scene->findEntityById(entityId);
 }
 
-void SceneHierarchyPanel::updateItemFromObject(QTreeWidgetItem* item, SceneObjectPtr object)
+void SceneHierarchyPanel::updateItemFromEntity(QTreeWidgetItem* item, Entity* entity)
 {
-    if (!item || !object) {
+    if (!item || !entity) {
         return;
     }
     
-    item->setText(0, object->getName());
-    item->setData(0, Qt::UserRole, object->getId());
+    QString entityName = QString::fromStdString(entity->getName());
+    item->setText(0, entityName);
+    item->setData(0, Qt::UserRole, QVariant(entity->getId()));
     item->setFlags(item->flags() | Qt::ItemIsEditable);
     
-    // Set icon or color based on object visibility
-    if (!object->isVisible()) {
-        item->setForeground(0, QBrush(QColor(128, 128, 128)));
-    } else {
-        item->setForeground(0, QBrush(QColor(255, 255, 255)));
-    }
+    // Set color based on entity state (assume all entities are visible for now)
+    item->setForeground(0, QBrush(QColor(255, 255, 255)));
 }

@@ -1,7 +1,12 @@
+
 #include "HybridGeometryManager.h"
 #include <chrono>
 #include <algorithm>
 #include <stdexcept>
+#include "geometry/core/GeometryTypes.h"
+#include "geometry/subdivision/SubdivisionMesh.h"
+#include "core/mesh.hpp"
+#include "core/mesh_elements.hpp"
 
 // ===============================
 // HybridGeometry Implementation
@@ -10,27 +15,24 @@
 HybridGeometry::HybridGeometry(GeometryVariant primary) 
     : m_primary(primary), m_primaryType(getRepresentationType(primary)) {}
 
-MeshPtr HybridGeometry::getFaceVertexMesh(bool forceUpdate) {
+rude::MeshPtr HybridGeometry::getFaceVertexMesh(bool forceUpdate) {
     if (m_primaryType == GeometryRepresentation::FaceVertex && !forceUpdate) {
-        return getPrimaryAs<Mesh>();
+        return getPrimaryAs<rude::Mesh>();
     }
-    
-    return getCachedAs<Mesh>(GeometryRepresentation::FaceVertex, forceUpdate);
+    return getCachedAs<rude::Mesh>(GeometryRepresentation::FaceVertex, forceUpdate);
 }
 
-HalfEdgeMeshPtr HybridGeometry::getHalfEdgeMesh(bool forceUpdate) {
+rude::HalfEdgeMeshPtr HybridGeometry::getHalfEdgeMesh(bool forceUpdate) {
     if (m_primaryType == GeometryRepresentation::HalfEdge && !forceUpdate) {
-        return getPrimaryAs<HalfEdgeMesh>();
+        return getPrimaryAs<rude::HalfEdgeMesh>();
     }
-    
-    return getCachedAs<HalfEdgeMesh>(GeometryRepresentation::HalfEdge, forceUpdate);
+    return getCachedAs<rude::HalfEdgeMesh>(GeometryRepresentation::HalfEdge, forceUpdate);
 }
 
 NURBSSurfacePtr HybridGeometry::getNURBSSurface(bool forceUpdate) {
     if (m_primaryType == GeometryRepresentation::NURBS && !forceUpdate) {
         return getPrimaryAs<NURBSSurface>();
     }
-    
     return getCachedAs<NURBSSurface>(GeometryRepresentation::NURBS, forceUpdate);
 }
 
@@ -38,7 +40,6 @@ SubdivisionMeshPtr HybridGeometry::getSubdivisionMesh(bool forceUpdate) {
     if (m_primaryType == GeometryRepresentation::Subdivision && !forceUpdate) {
         return getPrimaryAs<SubdivisionMesh>();
     }
-    
     return getCachedAs<SubdivisionMesh>(GeometryRepresentation::Subdivision, forceUpdate);
 }
 
@@ -60,12 +61,12 @@ VoxelGridPtr HybridGeometry::getVoxelGrid(float voxelSize, bool forceUpdate) {
     
     switch (m_primaryType) {
         case GeometryRepresentation::FaceVertex: {
-            auto mesh = getPrimaryAs<Mesh>();
+            auto mesh = getPrimaryAs<rude::Mesh>();
             voxelGrid = GeometryConverter::toVoxels(mesh, voxelSize);
             break;
         }
         case GeometryRepresentation::HalfEdge: {
-            auto halfEdge = getPrimaryAs<HalfEdgeMesh>();
+            auto halfEdge = getPrimaryAs<rude::HalfEdgeMesh>();
             voxelGrid = GeometryConverter::toVoxels(halfEdge, voxelSize);
             break;
         }
@@ -104,7 +105,6 @@ PointCloudPtr HybridGeometry::getPointCloud(int samplesPerFace, bool forceUpdate
     if (m_primaryType == GeometryRepresentation::PointCloud && !forceUpdate) {
         return getPrimaryAs<PointCloud>();
     }
-    
     return getCachedAs<PointCloud>(GeometryRepresentation::PointCloud, forceUpdate);
 }
 
@@ -112,16 +112,14 @@ ImplicitSurfacePtr HybridGeometry::getImplicitSurface(float bandwidth, bool forc
     if (m_primaryType == GeometryRepresentation::Implicit && !forceUpdate) {
         return getPrimaryAs<ImplicitSurface>();
     }
-    
     return getCachedAs<ImplicitSurface>(GeometryRepresentation::Implicit, forceUpdate);
 }
 
-MeshPtr HybridGeometry::getRenderMesh(int subdivisionLevel) {
+rude::MeshPtr HybridGeometry::getRenderMesh(int subdivisionLevel) {
     if (m_primaryType == GeometryRepresentation::Subdivision) {
         auto subdivision = getPrimaryAs<SubdivisionMesh>();
         return subdivision->generateRenderMesh(subdivisionLevel);
     }
-    
     return getFaceVertexMesh();
 }
 
@@ -219,9 +217,9 @@ uint64_t HybridGeometry::getCurrentTime() {
 GeometryRepresentation HybridGeometry::getRepresentationType(const GeometryVariant& variant) {
     return std::visit([](const auto& ptr) -> GeometryRepresentation {
         using T = std::decay_t<decltype(*ptr)>;
-        if constexpr (std::is_same_v<T, Mesh>) {
+        if constexpr (std::is_same_v<T, rude::Mesh>) {
             return GeometryRepresentation::FaceVertex;
-        } else if constexpr (std::is_same_v<T, HalfEdgeMesh>) {
+        } else if constexpr (std::is_same_v<T, rude::HalfEdgeMesh>) {
             return GeometryRepresentation::HalfEdge;
         } else if constexpr (std::is_same_v<T, NURBSSurface>) {
             return GeometryRepresentation::NURBS;
@@ -254,10 +252,10 @@ std::shared_ptr<T> HybridGeometry::getCachedAs(GeometryRepresentation type, bool
     
     switch (type) {
         case GeometryRepresentation::FaceVertex: {
-            if constexpr (std::is_same_v<T, Mesh>) {
+            if constexpr (std::is_same_v<T, rude::Mesh>) {
                 switch (m_primaryType) {
                     case GeometryRepresentation::HalfEdge:
-                        converted = GeometryConverter::toFaceVertex(getPrimaryAs<HalfEdgeMesh>());
+                        converted = GeometryConverter::toFaceVertex(getPrimaryAs<rude::HalfEdgeMesh>());
                         break;
                     // Add other conversions as they become available
                     default:
@@ -267,10 +265,10 @@ std::shared_ptr<T> HybridGeometry::getCachedAs(GeometryRepresentation type, bool
             break;
         }
         case GeometryRepresentation::HalfEdge: {
-            if constexpr (std::is_same_v<T, HalfEdgeMesh>) {
+            if constexpr (std::is_same_v<T, rude::HalfEdgeMesh>) {
                 switch (m_primaryType) {
                     case GeometryRepresentation::FaceVertex:
-                        converted = GeometryConverter::toHalfEdge(getPrimaryAs<Mesh>());
+                        converted = GeometryConverter::toHalfEdge(getPrimaryAs<rude::Mesh>());
                         break;
                     // Add other conversions as they become available
                     default:
@@ -335,11 +333,11 @@ std::shared_ptr<HybridGeometry> HybridGeometryManager::createGeometry(GeometryVa
     return std::make_shared<HybridGeometry>(geometry);
 }
 
-std::shared_ptr<HybridGeometry> HybridGeometryManager::createFromMesh(MeshPtr mesh) {
+std::shared_ptr<HybridGeometry> HybridGeometryManager::createFromMesh(rude::MeshPtr mesh) {
     return createGeometry(mesh);
 }
 
-std::shared_ptr<HybridGeometry> HybridGeometryManager::createFromHalfEdge(HalfEdgeMeshPtr halfEdge) {
+std::shared_ptr<HybridGeometry> HybridGeometryManager::createFromHalfEdge(rude::HalfEdgeMeshPtr halfEdge) {
     return createGeometry(halfEdge);
 }
 
@@ -495,35 +493,31 @@ GeometryProcessingPipeline::GeometryAnalysis GeometryProcessingPipeline::analyze
     
     // Compute bounding box and centroid
     if (!vertices.empty()) {
-        analysis.boundingBoxMin = analysis.boundingBoxMax = vertices[0].position;
-        analysis.centroid = QVector3D(0, 0, 0);
+        auto firstPos = vertices[0].position;
+        analysis.boundingBoxMin = analysis.boundingBoxMax = firstPos;
+        analysis.centroid = glm::vec3(0.0f);
         
         for (const auto& vertex : vertices) {
-            const QVector3D& pos = vertex.position;
-            
-            analysis.boundingBoxMin.setX(std::min(analysis.boundingBoxMin.x(), pos.x()));
-            analysis.boundingBoxMin.setY(std::min(analysis.boundingBoxMin.y(), pos.y()));
-            analysis.boundingBoxMin.setZ(std::min(analysis.boundingBoxMin.z(), pos.z()));
-            
-            analysis.boundingBoxMax.setX(std::max(analysis.boundingBoxMax.x(), pos.x()));
-            analysis.boundingBoxMax.setY(std::max(analysis.boundingBoxMax.y(), pos.y()));
-            analysis.boundingBoxMax.setZ(std::max(analysis.boundingBoxMax.z(), pos.z()));
-            
+            const glm::vec3& pos = vertex.position;
+            analysis.boundingBoxMin.x = std::min(analysis.boundingBoxMin.x, pos.x);
+            analysis.boundingBoxMin.y = std::min(analysis.boundingBoxMin.y, pos.y);
+            analysis.boundingBoxMin.z = std::min(analysis.boundingBoxMin.z, pos.z);
+            analysis.boundingBoxMax.x = std::max(analysis.boundingBoxMax.x, pos.x);
+            analysis.boundingBoxMax.y = std::max(analysis.boundingBoxMax.y, pos.y);
+            analysis.boundingBoxMax.z = std::max(analysis.boundingBoxMax.z, pos.z);
             analysis.centroid += pos;
         }
-        
-        analysis.centroid /= vertices.size();
+        analysis.centroid /= static_cast<float>(vertices.size());
     }
     
     // Compute surface area
     for (size_t i = 0; i < indices.size(); i += 3) {
-        const QVector3D& v0 = vertices[indices[i]].position;
-        const QVector3D& v1 = vertices[indices[i + 1]].position;
-        const QVector3D& v2 = vertices[indices[i + 2]].position;
-        
-        QVector3D edge1 = v1 - v0;
-        QVector3D edge2 = v2 - v0;
-        float triangleArea = QVector3D::crossProduct(edge1, edge2).length() * 0.5f;
+        const glm::vec3& v0 = vertices[indices[i]].position;
+        const glm::vec3& v1 = vertices[indices[i + 1]].position;
+        const glm::vec3& v2 = vertices[indices[i + 2]].position;
+        glm::vec3 edge1 = v1 - v0;
+        glm::vec3 edge2 = v2 - v0;
+        float triangleArea = glm::length(glm::cross(edge1, edge2)) * 0.5f;
         analysis.surfaceArea += triangleArea;
     }
     

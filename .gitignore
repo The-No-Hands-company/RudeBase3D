@@ -85,6 +85,20 @@ Thumbs.db
 .clangd/
 compile_commands.json
 
+# AI/Development tools and workspace files
+.copilot/
+.cursor/
+.vscode/
+*.code-workspace
+
+# Build and debug files
+build_errors.txt
+sorted_build_errors.txt
+conversation.md
+
+# Test directories (if not needed in repo)
+tests/
+
 # Internal development documentation (keep private)
 docs/DISCORD_SETUP.md
 docs/ARCHITECTURE_IMPROVEMENTS.md

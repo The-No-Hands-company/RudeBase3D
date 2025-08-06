@@ -1,5 +1,5 @@
 #include "UIManager.h"
-#include "Viewport3D.h"
+#include "../viewport/ViewportManager.h"
 #include "SceneHierarchyPanel.h"
 #include "PropertiesPanel.h"
 #include "../components/ThemeSelector.h"
@@ -21,7 +21,7 @@ UIManager::UIManager(QMainWindow* mainWindow, QObject* parent)
     , m_mainWindow(mainWindow)
     , m_mainSplitter(nullptr)
     , m_rightSplitter(nullptr)
-    , m_viewport(nullptr)
+    , m_viewportManager(nullptr)
     , m_sceneHierarchy(nullptr)
     , m_propertiesPanel(nullptr)
     , m_themeSelector(nullptr)
@@ -70,8 +70,9 @@ void UIManager::setupCentralWidget()
     // Create main splitter (horizontal)
     m_mainSplitter = new QSplitter(Qt::Horizontal, m_mainWindow);
     
-    // Create viewport
-    m_viewport = new Viewport3D(m_mainSplitter);
+    // Create viewport manager with single viewport for now
+    m_viewportManager = new ViewportManager(m_mainSplitter);
+    m_viewportManager->setLayout(ViewportManager::LayoutType::Single); // Start with single viewport layout
     
     // Create right splitter (vertical) for panels
     m_rightSplitter = new QSplitter(Qt::Vertical, m_mainSplitter);
@@ -85,8 +86,8 @@ void UIManager::setupCentralWidget()
     m_rightSplitter->addWidget(m_propertiesPanel);
     m_rightSplitter->setSizes({400, 400});
     
-    // Add viewport and panels to main splitter
-    m_mainSplitter->addWidget(m_viewport);
+    // Add viewport manager and panels to main splitter
+    m_mainSplitter->addWidget(m_viewportManager);
     m_mainSplitter->addWidget(m_rightSplitter);
     m_mainSplitter->setSizes({800, 300});
     

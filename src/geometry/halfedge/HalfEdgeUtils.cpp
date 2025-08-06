@@ -1,12 +1,15 @@
-#include "HalfEdgeMesh.h"
+
+#include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <unordered_set>
 #include <unordered_map>
 #include <queue>
+#include <glm/glm.hpp>
 
+namespace rude {
 namespace HalfEdgeUtils {
 
-std::pair<HalfEdgeEdgePtr, HalfEdgeEdgePtr> splitEdge(HalfEdgeMeshPtr mesh, HalfEdgeEdgePtr edge, const QVector3D& position) {
+std::pair<rude::EdgePtr, rude::EdgePtr> splitEdge(rude::HalfEdgeMeshPtr mesh, rude::EdgePtr edge, const glm::vec3& position) {
     if (!edge || !mesh) {
         return {nullptr, nullptr};
     }
@@ -17,7 +20,7 @@ std::pair<HalfEdgeEdgePtr, HalfEdgeEdgePtr> splitEdge(HalfEdgeMeshPtr mesh, Half
     return {nullptr, nullptr};
 }
 
-bool collapseEdge(HalfEdgeMeshPtr mesh, HalfEdgeEdgePtr edge) {
+bool collapseEdge(rude::HalfEdgeMeshPtr mesh, rude::EdgePtr edge) {
     if (!edge || !mesh) {
         return false;
     }
@@ -27,8 +30,8 @@ bool collapseEdge(HalfEdgeMeshPtr mesh, HalfEdgeEdgePtr edge) {
     return false;
 }
 
-bool flipEdge(HalfEdgeEdgePtr edge) {
-    if (!edge || !edge->getTwin()) {
+bool flipEdge(rude::EdgePtr edge) {
+    if (!edge) {
         return false;
     }
 
@@ -37,16 +40,16 @@ bool flipEdge(HalfEdgeEdgePtr edge) {
     return false;
 }
 
-std::vector<HalfEdgeFacePtr> extrudeFaces(HalfEdgeMeshPtr mesh, const std::vector<HalfEdgeFacePtr>& faces, float distance) {
-    std::vector<HalfEdgeFacePtr> extrudedFaces;
+std::vector<rude::FacePtr> extrudeFaces(rude::HalfEdgeMeshPtr mesh, const std::vector<rude::FacePtr>& faces, float distance) {
+    std::vector<rude::FacePtr> extrudedFaces;
     
     if (!mesh || faces.empty()) {
         return extrudedFaces;
     }
     
     // Step 1: Collect all vertices that will be moved
-    std::unordered_set<HalfEdgeVertexPtr> verticesToExtrude;
-    std::unordered_map<HalfEdgeVertexPtr, HalfEdgeVertexPtr> vertexMapping;
+    std::unordered_set<rude::VertexPtr> verticesToExtrude;
+    std::unordered_map<rude::VertexPtr, rude::VertexPtr> vertexMapping;
     
     for (const auto& face : faces) {
         if (!face) continue;
@@ -60,21 +63,22 @@ std::vector<HalfEdgeFacePtr> extrudeFaces(HalfEdgeMeshPtr mesh, const std::vecto
     // Step 2: Create new vertices for extruded positions
     for (const auto& vertex : verticesToExtrude) {
         // Calculate average normal from all adjacent faces of this vertex
-        QVector3D averageNormal(0, 0, 0);
+        glm::vec3 averageNormal(0, 0, 0);
         int normalCount = 0;
         
         // Get all faces adjacent to this vertex that are being extruded
         for (const auto& face : faces) {
             auto faceVertices = face->getVertices();
             if (std::find(faceVertices.begin(), faceVertices.end(), vertex) != faceVertices.end()) {
-                averageNormal += face->computeNormal();
+                // Use the face's normal member directly
+                averageNormal += face->normal;
                 normalCount++;
             }
         }
         
         if (normalCount > 0) {
-            averageNormal = averageNormal.normalized();
-            QVector3D newPosition = vertex->getPosition() + averageNormal * distance;
+            averageNormal = glm::normalize(averageNormal);
+            glm::vec3 newPosition = vertex->position + averageNormal * distance;
             auto newVertex = mesh->addVertex(newPosition);
             vertexMapping[vertex] = newVertex;
         }
@@ -85,7 +89,7 @@ std::vector<HalfEdgeFacePtr> extrudeFaces(HalfEdgeMeshPtr mesh, const std::vecto
         if (!face) continue;
         
         auto vertices = face->getVertices();
-        std::vector<HalfEdgeVertexPtr> newVertices;
+        std::vector<rude::VertexPtr> newVertices;
         
         for (const auto& vertex : vertices) {
             auto it = vertexMapping.find(vertex);
@@ -110,11 +114,14 @@ std::vector<HalfEdgeFacePtr> extrudeFaces(HalfEdgeMeshPtr mesh, const std::vecto
         for (const auto& edge : edges) {
             // Check if this edge is on the boundary of the extrusion
             // (i.e., the adjacent face is not being extruded)
-            auto twin = edge->getTwin();
+            auto halfEdge = face->halfEdge; // Get the half-edge from the face
+            if (!halfEdge) continue;
+            
+            auto twin = halfEdge->twin;
             bool isBoundaryEdge = !twin; // No twin means mesh boundary
             
             if (twin) {
-                auto adjacentFace = twin->getFace();
+                auto adjacentFace = twin->face;
                 if (adjacentFace && std::find(faces.begin(), faces.end(), adjacentFace) != faces.end()) {
                     // Adjacent face is also being extruded, skip this edge for side face creation
                     continue;
@@ -123,8 +130,8 @@ std::vector<HalfEdgeFacePtr> extrudeFaces(HalfEdgeMeshPtr mesh, const std::vecto
             }
             
             if (isBoundaryEdge) {
-                auto v1 = edge->getOriginVertex();
-                auto v2 = edge->getNext() ? edge->getNext()->getOriginVertex() : nullptr;
+                auto v1 = halfEdge->vertex;
+                auto v2 = halfEdge->next ? halfEdge->next->vertex : nullptr;
                 
                 if (v1 && v2) {
                     auto v1_new = vertexMapping[v1];
@@ -132,7 +139,7 @@ std::vector<HalfEdgeFacePtr> extrudeFaces(HalfEdgeMeshPtr mesh, const std::vecto
                     
                     if (v1_new && v2_new) {
                         // Create a quad face: v1 -> v2 -> v2_new -> v1_new
-                        std::vector<HalfEdgeVertexPtr> quadVertices = {v1, v2, v2_new, v1_new};
+                        std::vector<rude::VertexPtr> quadVertices = {v1, v2, v2_new, v1_new};
                         auto sideFace = mesh->addFace(quadVertices);
                         if (sideFace) {
                             extrudedFaces.push_back(sideFace);
@@ -156,8 +163,8 @@ std::vector<HalfEdgeFacePtr> extrudeFaces(HalfEdgeMeshPtr mesh, const std::vecto
     return extrudedFaces;
 }
 
-std::vector<HalfEdgeFacePtr> insetFaces(HalfEdgeMeshPtr mesh, const std::vector<HalfEdgeFacePtr>& faces, float inset) {
-    std::vector<HalfEdgeFacePtr> insetFaces;
+std::vector<rude::FacePtr> insetFaces(rude::HalfEdgeMeshPtr mesh, const std::vector<rude::FacePtr>& faces, float inset) {
+    std::vector<rude::FacePtr> insetFaces;
     
     if (!mesh || faces.empty()) {
         return insetFaces;
@@ -168,15 +175,22 @@ std::vector<HalfEdgeFacePtr> insetFaces(HalfEdgeMeshPtr mesh, const std::vector<
         
         // Get face vertices and calculate centroid
         auto vertices = face->getVertices();
-        auto centroid = face->getCentroid();
+        // Calculate centroid manually
+        glm::vec3 centroid(0.0f);
+        if (!vertices.empty()) {
+            for (const auto& vertex : vertices) {
+                centroid += vertex->position;
+            }
+            centroid /= static_cast<float>(vertices.size());
+        }
         
         if (vertices.size() < 3) continue;
         
         // Create inset vertices by moving towards centroid
-        std::vector<HalfEdgeVertexPtr> insetVertices;
+        std::vector<rude::VertexPtr> insetVertices;
         for (const auto& vertex : vertices) {
-            QVector3D toCenter = (centroid - vertex->getPosition()).normalized();
-            QVector3D newPosition = vertex->getPosition() + toCenter * inset;
+            glm::vec3 toCenter = glm::normalize(centroid - vertex->position);
+            glm::vec3 newPosition = vertex->position + toCenter * inset;
             auto newVertex = mesh->addVertex(newPosition);
             insetVertices.push_back(newVertex);
         }
@@ -198,7 +212,7 @@ std::vector<HalfEdgeFacePtr> insetFaces(HalfEdgeMeshPtr mesh, const std::vector<
                 auto v2_inset = insetVertices[next];
                 
                 // Create quad: v1 -> v2 -> v2_inset -> v1_inset
-                std::vector<HalfEdgeVertexPtr> quadVertices = {v1, v2, v2_inset, v1_inset};
+                std::vector<rude::VertexPtr> quadVertices = {v1, v2, v2_inset, v1_inset};
                 auto connectingFace = mesh->addFace(quadVertices);
                 if (connectingFace) {
                     insetFaces.push_back(connectingFace);
@@ -214,8 +228,8 @@ std::vector<HalfEdgeFacePtr> insetFaces(HalfEdgeMeshPtr mesh, const std::vector<
     return insetFaces;
 }
 
-std::vector<HalfEdgeEdgePtr> bevelEdges(HalfEdgeMeshPtr mesh, const std::vector<HalfEdgeEdgePtr>& edges, float amount) {
-    std::vector<HalfEdgeEdgePtr> beveledEdges;
+std::vector<rude::EdgePtr> bevelEdges(rude::HalfEdgeMeshPtr mesh, const std::vector<rude::EdgePtr>& edges, float amount) {
+    std::vector<rude::EdgePtr> beveledEdges;
     
     if (!mesh || edges.empty()) {
         return beveledEdges;
@@ -226,29 +240,30 @@ std::vector<HalfEdgeEdgePtr> bevelEdges(HalfEdgeMeshPtr mesh, const std::vector<
         
         // Basic edge bevel implementation
         // This is a simplified version - real bevel would be more complex
-        auto origin = edge->getOriginVertex();
-        auto target = edge->getTargetVertex();
+        auto origin = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+        auto target = edge->halfEdge && edge->halfEdge->twin ? edge->halfEdge->twin->vertex : nullptr;
         
         if (!origin || !target) continue;
         
         // Calculate bevel direction (perpendicular to edge in face plane)
-        auto edgeVector = edge->getVector();
-        auto face = edge->getFace();
+        auto edgeVector = target->position - origin->position;
+        auto face = edge->halfEdge ? edge->halfEdge->face : nullptr;
         
         if (face) {
-            auto faceNormal = face->computeNormal();
-            auto bevelDirection = QVector3D::crossProduct(edgeVector, faceNormal).normalized();
+            auto faceNormal = face->normal; // Use the face normal directly
+            auto bevelDirection = glm::cross(edgeVector, faceNormal);
             
             // Create new vertices offset from original edge vertices
-            QVector3D offset = bevelDirection * amount;
-            auto newOrigin = mesh->addVertex(origin->getPosition() + offset);
-            auto newTarget = mesh->addVertex(target->getPosition() + offset);
+            glm::vec3 offset = glm::normalize(bevelDirection) * amount;
+            auto newOrigin = mesh->addVertex(origin->position + offset);
+            auto newTarget = mesh->addVertex(target->position + offset);
             
-            // Create new edge
-            auto newEdge = mesh->addEdge(newOrigin, newTarget);
-            if (newEdge) {
-                beveledEdges.push_back(newEdge);
-            }
+            // Create new edge - TODO: Implement proper edge creation in half-edge mesh
+            // For now, this is a placeholder - edges are typically created when faces are added
+            // auto newEdge = mesh->addEdge(newOrigin, newTarget);
+            // if (newEdge) {
+            //     beveledEdges.push_back(newEdge);
+            // }
         }
     }
     
@@ -256,15 +271,15 @@ std::vector<HalfEdgeEdgePtr> bevelEdges(HalfEdgeMeshPtr mesh, const std::vector<
     return beveledEdges;
 }
 
-std::vector<HalfEdgeEdgePtr> getEdgeLoop(HalfEdgeEdgePtr startEdge) {
-    std::vector<HalfEdgeEdgePtr> loop;
+std::vector<rude::EdgePtr> getEdgeLoop(rude::EdgePtr startEdge) {
+    std::vector<rude::EdgePtr> loop;
     
     if (!startEdge) {
         return loop;
     }
     
     auto current = startEdge;
-    std::unordered_set<HalfEdgeEdgePtr> visited;
+    std::unordered_set<rude::EdgePtr> visited;
     
     do {
         if (visited.find(current) != visited.end()) {
@@ -277,11 +292,11 @@ std::vector<HalfEdgeEdgePtr> getEdgeLoop(HalfEdgeEdgePtr startEdge) {
         // Find next edge in loop
         // This is a simplified implementation
         // Real edge loop detection requires proper mesh topology analysis
-        auto twin = current->getTwin();
+        auto twin = current->halfEdge ? current->halfEdge->twin : nullptr;
         if (twin) {
-            auto next = twin->getNext();
-            if (next && next->getNext()) {
-                current = next->getNext();
+            auto next = twin->next;
+            if (next && next->next) {
+                current = next->next->edge;
             } else {
                 break;
             }
@@ -294,8 +309,8 @@ std::vector<HalfEdgeEdgePtr> getEdgeLoop(HalfEdgeEdgePtr startEdge) {
     return loop;
 }
 
-std::vector<HalfEdgeEdgePtr> getEdgeRing(HalfEdgeEdgePtr startEdge) {
-    std::vector<HalfEdgeEdgePtr> ring;
+std::vector<rude::EdgePtr> getEdgeRing(rude::EdgePtr startEdge) {
+    std::vector<rude::EdgePtr> ring;
     
     if (!startEdge) {
         return ring;
@@ -309,12 +324,12 @@ std::vector<HalfEdgeEdgePtr> getEdgeRing(HalfEdgeEdgePtr startEdge) {
     return ring;
 }
 
-HalfEdgeMeshPtr catmullClarkSubdivide(HalfEdgeMeshPtr mesh) {
+// Catmull-Clark subdivision
+rude::HalfEdgeMeshPtr catmullClarkSubdivide(rude::HalfEdgeMeshPtr mesh) {
     if (!mesh) {
         return nullptr;
     }
-    
-    auto subdividedMesh = std::make_shared<HalfEdgeMesh>();
+    auto subdividedMesh = std::make_shared<rude::HalfEdgeMesh>();
     
     // Catmull-Clark subdivision algorithm:
     // 1. Create face points (centroid of each face)
@@ -322,12 +337,20 @@ HalfEdgeMeshPtr catmullClarkSubdivide(HalfEdgeMeshPtr mesh) {
     // 3. Update original vertices (weighted average)
     // 4. Connect all points to create new faces
     
-    std::unordered_map<HalfEdgeFacePtr, HalfEdgeVertexPtr> facePoints;
-    std::unordered_map<HalfEdgeEdgePtr, HalfEdgeVertexPtr> edgePoints;
+    std::unordered_map<rude::FacePtr, rude::VertexPtr> facePoints;
+    std::unordered_map<rude::EdgePtr, rude::VertexPtr> edgePoints;
     
     // Step 1: Create face points
     for (const auto& face : mesh->getFaces()) {
-        auto centroid = face->getCentroid();
+        // Calculate centroid manually
+        auto vertices = face->getVertices();
+        glm::vec3 centroid(0.0f);
+        if (!vertices.empty()) {
+            for (const auto& vertex : vertices) {
+                centroid += vertex->position;
+            }
+            centroid /= static_cast<float>(vertices.size());
+        }
         auto facePoint = subdividedMesh->addVertex(centroid);
         facePoints[face] = facePoint;
     }
@@ -338,23 +361,23 @@ HalfEdgeMeshPtr catmullClarkSubdivide(HalfEdgeMeshPtr mesh) {
             continue; // Already processed
         }
         
-        auto origin = edge->getOriginVertex();
-        auto target = edge->getTargetVertex();
-        auto twin = edge->getTwin();
+        auto origin = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+        auto target = edge->halfEdge && edge->halfEdge->twin ? edge->halfEdge->twin->vertex : nullptr;
+        auto twin = edge->halfEdge ? edge->halfEdge->twin : nullptr;
         
         if (!origin || !target) continue;
         
-        QVector3D edgePoint = (origin->getPosition() + target->getPosition()) * 0.5f;
+        glm::vec3 edgePoint = (origin->position + target->position) * 0.5f;
         
         // Add face points if they exist
-        if (auto face = edge->getFace()) {
+        if (auto face = edge->halfEdge ? edge->halfEdge->face : nullptr) {
             if (auto fp = facePoints[face]) {
-                edgePoint += fp->getPosition();
+                edgePoint += fp->position;
             }
         }
-        if (twin && twin->getFace()) {
-            if (auto fp = facePoints[twin->getFace()]) {
-                edgePoint += fp->getPosition();
+        if (twin && twin->face) {
+            if (auto fp = facePoints[twin->face]) {
+                edgePoint += fp->position;
             }
         }
         
@@ -363,16 +386,16 @@ HalfEdgeMeshPtr catmullClarkSubdivide(HalfEdgeMeshPtr mesh) {
         auto edgePointVertex = subdividedMesh->addVertex(edgePoint);
         edgePoints[edge] = edgePointVertex;
         if (twin) {
-            edgePoints[twin] = edgePointVertex;
+            edgePoints[twin->edge] = edgePointVertex;
         }
     }
     
     // Step 3: Update original vertices (simplified)
-    std::unordered_map<HalfEdgeVertexPtr, HalfEdgeVertexPtr> originalToNew;
+    std::unordered_map<rude::VertexPtr, rude::VertexPtr> originalToNew;
     for (const auto& vertex : mesh->getVertices()) {
         // For now, just copy the vertex
         // Real Catmull-Clark would apply proper weighting
-        auto newVertex = subdividedMesh->addVertex(vertex->getPosition());
+        auto newVertex = subdividedMesh->addVertex(vertex->position);
         originalToNew[vertex] = newVertex;
     }
     
@@ -383,12 +406,14 @@ HalfEdgeMeshPtr catmullClarkSubdivide(HalfEdgeMeshPtr mesh) {
         
         for (const auto& edge : edges) {
             auto edgePoint = edgePoints[edge];
-            auto originVertex = originalToNew[edge->getOriginVertex()];
-            auto nextEdge = edge->getNext();
+            // Get origin vertex through the half-edge
+            auto originVertex = edge->halfEdge ? originalToNew[edge->halfEdge->vertex] : nullptr;
+            auto nextHalfEdge = edge->halfEdge ? edge->halfEdge->next : nullptr;
+            auto nextEdge = nextHalfEdge ? nextHalfEdge->edge : nullptr;
             auto nextEdgePoint = nextEdge ? edgePoints[nextEdge] : nullptr;
             
             if (facePoint && edgePoint && originVertex && nextEdgePoint) {
-                std::vector<HalfEdgeVertexPtr> quadVertices = {
+                std::vector<rude::VertexPtr> quadVertices = {
                     originVertex, edgePoint, facePoint, nextEdgePoint
                 };
                 subdividedMesh->addFace(quadVertices);
@@ -400,24 +425,23 @@ HalfEdgeMeshPtr catmullClarkSubdivide(HalfEdgeMeshPtr mesh) {
     return subdividedMesh;
 }
 
-HalfEdgeMeshPtr loopSubdivide(HalfEdgeMeshPtr mesh) {
+// Loop subdivision
+rude::HalfEdgeMeshPtr loopSubdivide(rude::HalfEdgeMeshPtr mesh) {
     if (!mesh) {
         return nullptr;
     }
-    
     // Loop subdivision is primarily for triangle meshes
     // This is a simplified implementation
     qDebug() << "Loop subdivision not yet implemented";
     return nullptr;
 }
 
-std::vector<std::vector<HalfEdgeVertexPtr>> findConnectedComponents(HalfEdgeMeshPtr mesh) {
+std::vector<std::vector<rude::VertexPtr>> findConnectedComponents(rude::HalfEdgeMeshPtr mesh) {
     if (!mesh) {
         return {};
     }
-    
-    std::vector<std::vector<HalfEdgeVertexPtr>> components;
-    std::unordered_set<HalfEdgeVertexPtr> visited;
+    std::vector<std::vector<rude::VertexPtr>> components;
+    std::unordered_set<rude::VertexPtr> visited;
     
     for (const auto& vertex : mesh->getVertices()) {
         if (visited.find(vertex) != visited.end()) {
@@ -425,8 +449,8 @@ std::vector<std::vector<HalfEdgeVertexPtr>> findConnectedComponents(HalfEdgeMesh
         }
         
         // BFS to find connected component
-        std::vector<HalfEdgeVertexPtr> component;
-        std::queue<HalfEdgeVertexPtr> queue;
+        std::vector<rude::VertexPtr> component;
+        std::queue<rude::VertexPtr> queue;
         
         queue.push(vertex);
         visited.insert(vertex);
@@ -436,8 +460,25 @@ std::vector<std::vector<HalfEdgeVertexPtr>> findConnectedComponents(HalfEdgeMesh
             queue.pop();
             component.push_back(current);
             
-            // Add adjacent vertices
-            auto adjacent = current->getAdjacentVertices();
+            // Add adjacent vertices - manually traverse half-edge structure
+            std::vector<rude::VertexPtr> adjacent;
+            if (current->halfEdge) {
+                auto startHE = current->halfEdge;
+                auto currentHE = startHE;
+                do {
+                    // Get the twin to find the vertex at the other end of the edge
+                    if (currentHE->twin && currentHE->twin->vertex) {
+                        adjacent.push_back(currentHE->twin->vertex);
+                    }
+                    // Move to next outgoing half-edge around this vertex
+                    if (currentHE->twin && currentHE->twin->next) {
+                        currentHE = currentHE->twin->next;
+                    } else {
+                        break;
+                    }
+                } while (currentHE && currentHE != startHE);
+            }
+            
             for (const auto& adj : adjacent) {
                 if (visited.find(adj) == visited.end()) {
                     visited.insert(adj);
@@ -452,18 +493,17 @@ std::vector<std::vector<HalfEdgeVertexPtr>> findConnectedComponents(HalfEdgeMesh
     return components;
 }
 
-std::vector<HalfEdgeEdgePtr> findNonManifoldEdges(HalfEdgeMeshPtr mesh) {
+std::vector<rude::EdgePtr> findNonManifoldEdges(rude::HalfEdgeMeshPtr mesh) {
     if (!mesh) {
         return {};
     }
-    
-    std::vector<HalfEdgeEdgePtr> nonManifoldEdges;
+    std::vector<rude::EdgePtr> nonManifoldEdges;
     
     for (const auto& edge : mesh->getEdges()) {
         int faceCount = 0;
-        if (edge->getFace()) faceCount++;
-        if (auto twin = edge->getTwin()) {
-            if (twin->getFace()) faceCount++;
+        if (edge->halfEdge && edge->halfEdge->face) faceCount++;
+        if (auto twin = edge->halfEdge ? edge->halfEdge->twin : nullptr) {
+            if (twin->face) faceCount++;
         }
         
         // Non-manifold if more than 2 faces share this edge
@@ -475,12 +515,11 @@ std::vector<HalfEdgeEdgePtr> findNonManifoldEdges(HalfEdgeMeshPtr mesh) {
     return nonManifoldEdges;
 }
 
-std::vector<HalfEdgeVertexPtr> findNonManifoldVertices(HalfEdgeMeshPtr mesh) {
+std::vector<rude::VertexPtr> findNonManifoldVertices(rude::HalfEdgeMeshPtr mesh) {
     if (!mesh) {
         return {};
     }
-    
-    std::vector<HalfEdgeVertexPtr> nonManifoldVertices;
+    std::vector<rude::VertexPtr> nonManifoldVertices;
     
     for (const auto& vertex : mesh->getVertices()) {
         // Check if vertex has non-manifold configuration
@@ -500,3 +539,4 @@ std::vector<HalfEdgeVertexPtr> findNonManifoldVertices(HalfEdgeMeshPtr mesh) {
 }
 
 } // namespace HalfEdgeUtils
+} // namespace rude

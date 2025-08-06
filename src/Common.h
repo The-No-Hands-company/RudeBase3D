@@ -1,11 +1,12 @@
 #pragma once
 
-#include <QtOpenGL>
-#include <QOpenGLWidget>
-#include <QMatrix4x4>
-#include <QVector3D>
-#include <QVector4D>
-#include <QQuaternion>
+#ifdef USE_QT
+#include <QtCore/QString>
+#include <QtCore/QObject>
+#include <QtOpenGLWidgets/QOpenGLWidget>
+#endif
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <memory>
 #include <vector>
 #include <string>
@@ -14,18 +15,36 @@
 #include <ranges>
 #include <expected>
 #include <span>
+#include <glm/glm.hpp>
+#include "core/mesh_forward.hpp"
+
+// Conversion utilities between Qt and GLM types (deprecated, to be removed)
+// inline glm::vec3 toGlm(const QVector3D& qvec) {
+//     return glm::vec3(qvec.x(), qvec.y(), qvec.z());
+// }
+// inline glm::vec2 toGlm(const QVector2D& qvec) {
+//     return glm::vec2(qvec.x(), qvec.y());
+// }
+// inline QVector3D toQt(const glm::vec3& gvec) {
+//     return QVector3D(gvec.x, gvec.y, gvec.z);
+// }
+// inline QVector2D toQt(const glm::vec2& gvec) {
+//     return QVector2D(gvec.x, gvec.y);
+// }
 
 // Forward declarations
 class Scene;
 class SceneObject;
 class Camera;
-class Mesh;
+namespace rude {
+    class HalfEdgeMesh;
+    class Vertex;
+    class Edge;
+    class Face;
+}
+
 class Material;
 class Transform;
-class HalfEdgeMesh;
-class HalfEdgeVertex;
-class HalfEdgeEdge;
-class HalfEdgeFace;
 class GeometryConverter;
 class NURBSSurface;
 class SubdivisionMesh;
@@ -37,16 +56,10 @@ class HybridGeometry;
 class HybridGeometryManager;
 class GeometryProcessingPipeline;
 
-// Enum for primitive types
-enum class PrimitiveType {
-    Cube,
-    Sphere,
-    Cylinder,
-    Plane,
-    Torus,
-    Cone,
-    Icosphere
-};
+// Forward declaration of PrimitiveType from rude namespace
+namespace rude {
+    enum class PrimitiveType;
+}
 
 // Enum for transform modes
 enum class TransformMode {
@@ -85,12 +98,11 @@ enum class SelectionType {
 
 // Common typedefs
 using SceneObjectPtr = std::shared_ptr<SceneObject>;
-using MeshPtr = std::shared_ptr<Mesh>;
 using MaterialPtr = std::shared_ptr<Material>;
-using HalfEdgeMeshPtr = std::shared_ptr<HalfEdgeMesh>;
-using HalfEdgeVertexPtr = std::shared_ptr<HalfEdgeVertex>;
-using HalfEdgeEdgePtr = std::shared_ptr<HalfEdgeEdge>;
-using HalfEdgeFacePtr = std::shared_ptr<HalfEdgeFace>;
+using HalfEdgeMeshPtr = std::shared_ptr<rude::HalfEdgeMesh>;
+using HalfEdgeVertexPtr = std::shared_ptr<rude::Vertex>;
+using HalfEdgeEdgePtr = std::shared_ptr<rude::Edge>;
+using HalfEdgeFacePtr = std::shared_ptr<rude::Face>;
 using NURBSSurfacePtr = std::shared_ptr<NURBSSurface>;
 using SubdivisionMeshPtr = std::shared_ptr<SubdivisionMesh>;
 using VoxelGridPtr = std::shared_ptr<VoxelGrid>;
@@ -99,20 +111,6 @@ using ImplicitSurfacePtr = std::shared_ptr<ImplicitSurface>;
 using BVHTreePtr = std::shared_ptr<BVHTree>;
 using HybridGeometryPtr = std::shared_ptr<HybridGeometry>;
 
-// Vertex structure for face-vertex meshes
-struct Vertex {
-    QVector3D position;
-    QVector3D normal;
-    QVector2D texCoord;
-    QVector4D color = QVector4D(1.0f, 1.0f, 1.0f, 1.0f);
-    
-    Vertex() = default;
-    Vertex(const QVector3D& pos) : position(pos), normal(0, 1, 0), texCoord(0, 0) {}
-    Vertex(const QVector3D& pos, const QVector3D& norm) : position(pos), normal(norm), texCoord(0, 0) {}
-    Vertex(const QVector3D& pos, const QVector3D& norm, const QVector2D& tex) 
-        : position(pos), normal(norm), texCoord(tex) {}
-};
-
 // Geometry processing constants
 constexpr float PI = 3.14159265359f;
 constexpr float EPSILON = 1e-6f;
@@ -120,9 +118,23 @@ constexpr float DEG_TO_RAD = PI / 180.0f;
 constexpr float RAD_TO_DEG = 180.0f / PI;
 
 // World coordinate system constants
-const QVector3D WORLD_UP(0.0f, 1.0f, 0.0f);
-const QVector3D WORLD_FORWARD(0.0f, 0.0f, -1.0f);
-const QVector3D WORLD_RIGHT(1.0f, 0.0f, 0.0f);
+const glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
+const glm::vec3 WORLD_FORWARD(0.0f, 0.0f, -1.0f);
+const glm::vec3 WORLD_RIGHT(1.0f, 0.0f, 0.0f);
+
+// Conversion functions between Qt and GLM types (deprecated, to be removed)
+// inline glm::vec3 qtToGlm(const QVector3D& v) {
+//     return glm::vec3(v.x(), v.y(), v.z());
+// }
+// inline glm::vec2 qtToGlm(const QVector2D& v) {
+//     return glm::vec2(v.x(), v.y());
+// }
+// inline QVector3D glmToQt(const glm::vec3& v) {
+//     return QVector3D(v.x, v.y, v.z);
+// }
+// inline QVector2D glmToQt(const glm::vec2& v) {
+//     return QVector2D(v.x, v.y);
+// }
 
 // C++23 Concepts for type safety
 template<typename T>
@@ -133,7 +145,7 @@ concept Transformable = requires(T t) {
 
 template<typename T>
 concept Renderable = requires(T t) {
-    { t.getMesh() } -> std::convertible_to<MeshPtr>;
+    { t.getMesh() } -> std::convertible_to<rude::MeshPtr>;
     { t.getMaterial() } -> std::convertible_to<MaterialPtr>;
     { t.isVisible() } -> std::convertible_to<bool>;
 };

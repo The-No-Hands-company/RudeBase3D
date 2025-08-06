@@ -12,7 +12,10 @@
 #include <memory>
 
 // Forward declarations
-class Scene;
+namespace rude { 
+    class Scene; 
+}
+class Entity;
 
 class SceneHierarchyPanel : public QWidget {
     Q_OBJECT
@@ -21,16 +24,15 @@ public:
     explicit SceneHierarchyPanel(QWidget* parent = nullptr);
     ~SceneHierarchyPanel() = default;
 
-    void setScene(std::shared_ptr<Scene> scene);
-    std::shared_ptr<Scene> getScene() const { return m_scene; }
+    void setScene(std::shared_ptr<rude::Scene> scene);
+    std::shared_ptr<rude::Scene> getScene() const { return m_scene; }
     
     void refreshHierarchy();
-    void selectObject(SceneObjectPtr object);
 
 signals:
-    void objectSelected(SceneObjectPtr object);
-    void objectRenamed(SceneObjectPtr object, const QString& newName);
-    void objectDeleted(SceneObjectPtr object);
+    void entitySelected(Entity* entity);
+    void entityRenamed(Entity* entity, const QString& newName);
+    void entityDeleted(Entity* entity);
 
 private slots:
     void onItemSelectionChanged();
@@ -41,7 +43,7 @@ private slots:
     void onDuplicateSelectedObject();
 
 private:
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
     
     QVBoxLayout* m_layout;
     QTreeWidget* m_treeWidget;
@@ -57,7 +59,7 @@ private:
     void setupContextMenu();
     void connectSignals();
     
-    QTreeWidgetItem* findItemByObjectId(unsigned int objectId);
-    SceneObjectPtr getObjectFromItem(QTreeWidgetItem* item);
-    void updateItemFromObject(QTreeWidgetItem* item, SceneObjectPtr object);
+    QTreeWidgetItem* findItemByEntityId(unsigned int entityId);
+    Entity* getEntityFromItem(QTreeWidgetItem* item);
+    void updateItemFromEntity(QTreeWidgetItem* item, Entity* entity);
 };

@@ -1,0 +1,557 @@
+#include <GL/glew.h>
+#include "Renderer.h"
+#include "Mesh.h"
+#include "core/mesh.hpp"
+#include "Material.h"
+#include <glm/gtc/type_ptr.hpp>
+#include <spdlog/spdlog.h>
+// Removed Qt includes
+
+Renderer::Renderer()
+    : m_currentShader(nullptr)
+    , m_lightDirection(0.0f, -1.0f, -1.0f)
+    , m_lightColor(1.0f, 1.0f, 1.0f, 1.0f)
+    , m_lineVAO(0)
+    , m_lineVBO(0)
+{
+}
+
+Renderer::~Renderer()
+{
+    cleanup();
+}
+
+bool Renderer::initialize()
+{
+    // Initialize GLEW
+    if (glewInit() != GLEW_OK) {
+        spdlog::error("Failed to initialize GLEW");
+        return false;
+    }
+    
+    // Load default shaders
+    if (!loadShaders()) {
+        // Log error using spdlog or std::cerr
+        return false;
+    }
+    
+    // Initialize line renderer
+    initializeLineRenderer();
+    
+    // Set default OpenGL state
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+    
+    setClearColor(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
+    
+    return true;
+}
+
+void Renderer::cleanup()
+{
+    // TODO: Temporarily commented out Qt OpenGL context check due to missing Qt OpenGL includes
+    // if (QOpenGLContext::currentContext()) {
+        if (m_lineVAO != 0) {
+            glDeleteVertexArrays(1, &m_lineVAO);
+            m_lineVAO = 0;
+        }
+        
+        if (m_lineVBO != 0) {
+            glDeleteBuffers(1, &m_lineVBO);
+            m_lineVBO = 0;
+        }
+    // }
+    
+    m_shaderPrograms.clear();
+}
+
+bool Renderer::loadShaders()
+{
+    // Load default solid shader
+    if (!createShaderProgram("default", getDefaultVertexShader(), getDefaultFragmentShader())) {
+        return false;
+    }
+    
+    // Load wireframe shader
+    if (!createShaderProgram("wireframe", getWireframeVertexShader(), getWireframeFragmentShader())) {
+        return false;
+    }
+    
+    // Load line shader
+    if (!createShaderProgram("line", getLineVertexShader(), getLineFragmentShader())) {
+        return false;
+    }
+    
+    return true;
+}
+
+void Renderer::useShaderProgram(std::string_view name)
+{
+    auto it = m_shaderPrograms.find(std::string(name));
+    if (it != m_shaderPrograms.end()) {
+        m_currentShader = it->second.get();
+        glUseProgram(m_currentShader->programID);
+    }
+}
+
+void Renderer::beginFrame()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void Renderer::endFrame()
+{
+    // Nothing to do for now
+}
+
+void Renderer::setViewMatrix(const glm::mat4& view)
+{
+    m_viewMatrix = view;
+}
+
+void Renderer::setProjectionMatrix(const glm::mat4& projection)
+{
+    m_projectionMatrix = projection;
+}
+
+void Renderer::setModelMatrix(const glm::mat4& model)
+{
+    m_modelMatrix = model;
+}
+
+void Renderer::setMaterial(MaterialPtr material)
+{
+    if (!m_currentShader || !material) {
+        return;
+    }
+    
+    auto& shader = *m_currentShader;
+    
+    // Control blending based on material alpha
+    float alpha = material->getDiffuseColor().w;
+    if (alpha < 0.99f) {
+        // Enable blending for transparent materials
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    } else {
+        // Disable blending for opaque materials to prevent transparency issues
+        glDisable(GL_BLEND);
+    }
+    
+    if (shader.diffuseColorLoc >= 0) {
+        glUniform4fv(shader.diffuseColorLoc, 1, glm::value_ptr(material->getDiffuseColor()));
+    }
+    
+    if (shader.specularColorLoc >= 0) {
+        glUniform4fv(shader.specularColorLoc, 1, glm::value_ptr(material->getSpecularColor()));
+    }
+    
+    if (shader.ambientColorLoc >= 0) {
+        glUniform4fv(shader.ambientColorLoc, 1, glm::value_ptr(material->getAmbientColor()));
+    }
+    
+    if (shader.shininessLoc >= 0) {
+        glUniform1f(shader.shininessLoc, material->getShininess());
+    }
+}
+
+void Renderer::setLighting(const glm::vec3& lightDir, const glm::vec4& lightColor)
+{
+    m_lightDirection = lightDir;
+    m_lightColor = lightColor;
+    
+    if (!m_currentShader) {
+        return;
+    }
+    auto& shader = *m_currentShader;
+    if (shader.lightDirectionLoc >= 0) {
+        glUniform3fv(shader.lightDirectionLoc, 1, glm::value_ptr(m_lightDirection));
+    }
+    if (shader.lightColorLoc >= 0) {
+        glUniform4fv(shader.lightColorLoc, 1, glm::value_ptr(m_lightColor));
+    }
+}
+
+void Renderer::renderMesh(rude::MeshPtr mesh, RenderMode mode)
+{
+    if (!mesh) {
+        return;
+    }
+    
+    switch (mode) {
+        case RenderMode::Wireframe:
+            useShaderProgram("wireframe");
+            updateUniforms();
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            mesh->render();
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            break;
+            
+        case RenderMode::Solid:
+            useShaderProgram("default");
+            updateUniforms();
+            mesh->render();
+            break;
+            
+        case RenderMode::SolidWireframe:
+            // Render solid first
+            useShaderProgram("default");
+            updateUniforms();
+            mesh->render();
+            
+            // Then render wireframe on top
+            glPolygonOffset(1.0f, 1.0f);
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            useShaderProgram("wireframe");
+            updateUniforms();
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            mesh->render();
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glDisable(GL_POLYGON_OFFSET_FILL);
+            break;
+    }
+}
+
+void Renderer::renderLine(const glm::vec3& start, const glm::vec3& end, const glm::vec4& color)
+{
+    // TODO: Temporarily commented out due to shader system architectural issues
+    // Need to resolve Qt OpenGL vs raw OpenGL approach and fix ShaderProgram member access
+    spdlog::debug("Renderer::renderLine() called but temporarily disabled - Start: ({}, {}, {}) End: ({}, {}, {}) Color: ({}, {}, {}, {})", 
+                  start.x, start.y, start.z, end.x, end.y, end.z, color.x, color.y, color.z, color.w);
+    /*
+    useShaderProgram("line");
+    if (!m_currentShader) {
+        spdlog::error("No line shader available!");
+        return;
+    }
+    spdlog::debug("Using line shader, updating uniforms...");
+    // Update uniforms
+    updateUniforms();
+    if (m_currentShader->colorLoc >= 0) {
+        m_currentShader->program->setUniformValue(m_currentShader->colorLoc, glm::value_ptr(color));
+        spdlog::debug("Color uniform set successfully");
+    } else {
+        spdlog::warn("Color uniform location not found!");
+    }
+    // Upload line data
+    float vertices[] = {
+        start.x, start.y, start.z,
+        end.x, end.y, end.z
+    };
+    spdlog::debug("Uploading vertex data and rendering line...");
+    glBindVertexArray(m_lineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_lineVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glDrawArrays(GL_LINES, 0, 2);
+    glBindVertexArray(0);
+    spdlog::debug("Renderer::renderLine() completed");
+    */
+}
+
+void Renderer::renderAABB(const glm::vec3& min, const glm::vec3& max, const glm::vec4& color)
+{
+    // Draw the 12 edges of the bounding box
+    glm::vec3 corners[8] = {
+        glm::vec3(min.x, min.y, min.z), // 0
+        glm::vec3(max.x, min.y, min.z), // 1
+        glm::vec3(max.x, max.y, min.z), // 2
+        glm::vec3(min.x, max.y, min.z), // 3
+        glm::vec3(min.x, min.y, max.z), // 4
+        glm::vec3(max.x, min.y, max.z), // 5
+        glm::vec3(max.x, max.y, max.z), // 6
+        glm::vec3(min.x, max.y, max.z)  // 7
+    };
+    
+    // Bottom face
+    renderLine(corners[0], corners[1], color);
+    renderLine(corners[1], corners[2], color);
+    renderLine(corners[2], corners[3], color);
+    renderLine(corners[3], corners[0], color);
+    // Top face
+    renderLine(corners[4], corners[5], color);
+    renderLine(corners[5], corners[6], color);
+    renderLine(corners[6], corners[7], color);
+    renderLine(corners[7], corners[4], color);
+    // Vertical edges
+    renderLine(corners[0], corners[4], color);
+    renderLine(corners[1], corners[5], color);
+    renderLine(corners[2], corners[6], color);
+    renderLine(corners[3], corners[7], color);
+}
+
+void Renderer::enableDepthTest(bool enable)
+{
+    if (enable) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+}
+
+void Renderer::enableBlending(bool enable)
+{
+    if (enable) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    } else {
+        glDisable(GL_BLEND);
+    }
+}
+
+void Renderer::setLineWidth(float width)
+{
+    glLineWidth(width);
+}
+
+void Renderer::setClearColor(const glm::vec4& color)
+{
+    glClearColor(color.x, color.y, color.z, color.w);
+}
+
+bool Renderer::createShaderProgram(const std::string& name, const std::string& vertexSource, const std::string& fragmentSource)
+{
+    // TODO: Temporarily commented out due to shader system architectural issues
+    // Need to resolve Qt OpenGL vs raw OpenGL approach and fix ShaderProgram struct members
+    spdlog::warn("createShaderProgram temporarily disabled for shader: {}", name);
+    /*
+    auto shaderProgram = std::make_unique<ShaderProgram>();
+    shaderProgram->program = std::make_unique<QOpenGLShaderProgram>();
+    
+    // Compile vertex shader
+    if (!shaderProgram->program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexSource)) {
+        qDebug() << "Failed to compile vertex shader for" << name;
+        qDebug() << shaderProgram->program->log();
+        return false;
+    }
+    
+    // Compile fragment shader
+    if (!shaderProgram->program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentSource)) {
+        qDebug() << "Failed to compile fragment shader for" << name;
+        qDebug() << shaderProgram->program->log();
+        return false;
+    }
+    
+    // Link program
+    if (!shaderProgram->program->link()) {
+        qDebug() << "Failed to link shader program for" << name;
+        qDebug() << shaderProgram->program->log();
+        return false;
+    }
+    
+    // Get uniform locations
+    shaderProgram->mvpMatrixLoc = shaderProgram->program->uniformLocation("mvpMatrix");
+    shaderProgram->modelMatrixLoc = shaderProgram->program->uniformLocation("modelMatrix");
+    shaderProgram->viewMatrixLoc = shaderProgram->program->uniformLocation("viewMatrix");
+    shaderProgram->projectionMatrixLoc = shaderProgram->program->uniformLocation("projectionMatrix");
+    shaderProgram->normalMatrixLoc = shaderProgram->program->uniformLocation("normalMatrix");
+    
+    shaderProgram->diffuseColorLoc = shaderProgram->program->uniformLocation("material.diffuseColor");
+    shaderProgram->specularColorLoc = shaderProgram->program->uniformLocation("material.specularColor");
+    shaderProgram->ambientColorLoc = shaderProgram->program->uniformLocation("material.ambientColor");
+    shaderProgram->shininessLoc = shaderProgram->program->uniformLocation("material.shininess");
+    
+    shaderProgram->lightDirectionLoc = shaderProgram->program->uniformLocation("lightDirection");
+    shaderProgram->lightColorLoc = shaderProgram->program->uniformLocation("lightColor");
+    shaderProgram->viewPosLoc = shaderProgram->program->uniformLocation("viewPos");
+    
+    shaderProgram->colorLoc = shaderProgram->program->uniformLocation("color");
+    
+    m_shaderPrograms[name] = std::move(shaderProgram);
+    */
+    return false; // Return false to indicate shader creation failed
+}
+
+void Renderer::updateUniforms()
+{
+    // TODO: Temporarily commented out due to shader system architectural issues
+    // Need to resolve Qt vs glm matrix types and Qt OpenGL vs raw OpenGL approach
+    if (!m_currentShader) {
+        return;
+    }
+    /*
+    auto& shader = *m_currentShader;
+    QMatrix4x4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix;
+    QMatrix3x3 normalMatrix = m_modelMatrix.normalMatrix();
+    
+    if (shader.mvpMatrixLoc >= 0) {
+        shader.program->setUniformValue(shader.mvpMatrixLoc, mvpMatrix);
+    }
+    
+    if (shader.modelMatrixLoc >= 0) {
+        shader.program->setUniformValue(shader.modelMatrixLoc, m_modelMatrix);
+    }
+    
+    if (shader.viewMatrixLoc >= 0) {
+        shader.program->setUniformValue(shader.viewMatrixLoc, m_viewMatrix);
+    }
+    
+    if (shader.projectionMatrixLoc >= 0) {
+        shader.program->setUniformValue(shader.projectionMatrixLoc, m_projectionMatrix);
+    }
+    
+    if (shader.normalMatrixLoc >= 0) {
+        shader.program->setUniformValue(shader.normalMatrixLoc, normalMatrix);
+    }
+    
+    if (shader.lightDirectionLoc >= 0) {
+        shader.program->setUniformValue(shader.lightDirectionLoc, m_lightDirection);
+    }
+    
+    if (shader.lightColorLoc >= 0) {
+        shader.program->setUniformValue(shader.lightColorLoc, m_lightColor);
+    }
+    
+    if (shader.viewPosLoc >= 0) {
+        shader.program->setUniformValue(shader.viewPosLoc, m_viewPosition);
+    }
+    */
+}
+
+void Renderer::initializeLineRenderer()
+{
+    glGenVertexArrays(1, &m_lineVAO);
+    glGenBuffers(1, &m_lineVBO);
+}
+
+const std::string& Renderer::getDefaultVertexShader()
+{
+    static std::string shader = R"(
+#version 330 core
+
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoord;
+
+uniform mat4 mvpMatrix;
+uniform mat4 modelMatrix;
+uniform mat4 viewMatrix;
+uniform mat4 projectionMatrix;
+uniform mat3 normalMatrix;
+
+out vec3 FragPos;
+out vec3 Normal;
+out vec2 TexCoord;
+
+void main()
+{
+    FragPos = vec3(modelMatrix * vec4(aPos, 1.0));
+    Normal = normalMatrix * aNormal;
+    TexCoord = aTexCoord;
+    gl_Position = mvpMatrix * vec4(aPos, 1.0);
+}
+";
+    return shader;
+}
+
+const std::string& Renderer::getDefaultFragmentShader()
+{
+    static const std::string fragmentShader = R"(
+#version 330 core
+
+struct Material {
+    vec4 diffuseColor;
+    vec4 specularColor;
+    vec4 ambientColor;
+    float shininess;
+};
+
+in vec3 FragPos;
+in vec3 Normal;
+in vec2 TexCoord;
+
+uniform Material material;
+uniform vec3 lightDirection;
+uniform vec4 lightColor;
+uniform vec3 viewPos;
+
+out vec4 FragColor;
+
+void main()
+{
+    // Normalize vectors
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(-lightDirection);
+    vec3 viewDir = normalize(viewPos - FragPos);
+    
+    // Ambient
+    vec3 ambient = material.ambientColor.rgb * lightColor.rgb;
+    
+    // Diffuse
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * material.diffuseColor.rgb * lightColor.rgb;
+    
+    // Specular
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    vec3 specular = spec * material.specularColor.rgb * lightColor.rgb;
+    
+    vec3 result = ambient + diffuse + specular;
+    FragColor = vec4(result, material.diffuseColor.a);
+}
+)";
+    return fragmentShader;
+}
+
+const std::string& Renderer::getWireframeVertexShader()
+{
+    static std::string shader = R"(
+#version 330 core
+
+layout (location = 0) in vec3 aPos;
+
+uniform mat4 mvpMatrix;
+
+void main()
+{
+    gl_Position = mvpMatrix * vec4(aPos, 1.0);
+}
+)";
+    return shader;
+}
+
+const std::string& Renderer::getWireframeFragmentShader()
+{
+    static std::string shader = R"(
+#version 330 core
+
+uniform vec4 color;
+
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = color;
+}
+)";
+    return shader;
+}
+
+const std::string& Renderer::getLineVertexShader()
+{
+    return getWireframeVertexShader();
+}
+
+const std::string& Renderer::getLineFragmentShader()
+{
+    return getWireframeFragmentShader();
+}
+
+void Renderer::setViewPosition(const glm::vec3& viewPos)
+{
+    m_viewPosition = viewPos;
+    if (!m_currentShader) {
+        return;
+    }
+    // TODO: Temporarily commented out due to shader system architectural issues
+    /*
+    auto& shader = *m_currentShader;
+    if (shader.viewPosLoc >= 0) {
+        shader.program->setUniformValue(shader.viewPosLoc, glm::value_ptr(m_viewPosition));
+    }
+    */
+}

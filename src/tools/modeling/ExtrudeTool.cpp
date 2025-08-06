@@ -1,9 +1,12 @@
 #include "ExtrudeTool.h"
-#include "HalfEdgeMesh.h"
+
 #include "SelectionManager.h"
+#include "core/mesh_elements.hpp"
+#include "core/half_edge_mesh.hpp"
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
+#include <glm/glm.hpp>
 
 ExtrudeTool::ExtrudeTool()
     : m_extrudeMode(ExtrudeMode::Normal)
@@ -63,17 +66,28 @@ void ExtrudeTool::updateExtrude(float distance)
             for (auto face : selectedFaces) {
                 if (!face) continue;
                 
-                QVector3D normal = (m_extrudeMode == ExtrudeMode::Normal) 
+                glm::vec3 normal = (m_extrudeMode == ExtrudeMode::Normal) 
                     ? calculateFaceNormal(face) 
                     : m_extrudeDirection;
                 
                 // Update positions of vertices in the extruded face
-                auto vertices = face->getVertices();
+                // Get vertices by traversing half-edges of the face
+                std::vector<rude::VertexPtr> vertices;
+                if (face->halfEdge) {
+                    auto currentHE = face->halfEdge;
+                    do {
+                        if (currentHE->vertex) {
+                            vertices.push_back(currentHE->vertex);
+                        }
+                        currentHE = currentHE->next;
+                    } while (currentHE && currentHE != face->halfEdge);
+                }
+                
                 for (auto vertex : vertices) {
                     if (vertex) {
                         // Find corresponding new vertex and update position
-                        QVector3D newPos = vertex->getPosition() + normal * distance;
-                        vertex->setPosition(newPos);
+                        glm::vec3 newPos = vertex->position + normal * distance;
+                        vertex->position = newPos;
                     }
                 }
             }
@@ -85,18 +99,20 @@ void ExtrudeTool::updateExtrude(float distance)
             for (auto edge : selectedEdges) {
                 if (!edge) continue;
                 
-                QVector3D normal = (m_extrudeMode == ExtrudeMode::Normal) 
+                glm::vec3 normal = (m_extrudeMode == ExtrudeMode::Normal) 
                     ? calculateEdgeNormal(edge) 
                     : m_extrudeDirection;
                 
                 // Update positions of edge vertices
-                if (edge->getOriginVertex()) {
-                    QVector3D newPos = edge->getOriginVertex()->getPosition() + normal * distance;
-                    edge->getOriginVertex()->setPosition(newPos);
+                auto originVertex = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+                if (originVertex) {
+                    glm::vec3 newPos = originVertex->position + normal * distance;
+                    originVertex->position = newPos;
                 }
-                if (edge->getTargetVertex()) {
-                    QVector3D newPos = edge->getTargetVertex()->getPosition() + normal * distance;
-                    edge->getTargetVertex()->setPosition(newPos);
+                auto targetVertex = (edge->halfEdge && edge->halfEdge->twin) ? edge->halfEdge->twin->vertex : nullptr;
+                if (targetVertex) {
+                    glm::vec3 newPos = targetVertex->position + normal * distance;
+                    targetVertex->position = newPos;
                 }
             }
             break;
@@ -107,12 +123,12 @@ void ExtrudeTool::updateExtrude(float distance)
             for (auto vertex : selectedVertices) {
                 if (!vertex) continue;
                 
-                QVector3D normal = (m_extrudeMode == ExtrudeMode::Normal) 
+                glm::vec3 normal = (m_extrudeMode == ExtrudeMode::Normal) 
                     ? calculateVertexNormal(vertex) 
                     : m_extrudeDirection;
                 
-                QVector3D newPos = vertex->getPosition() + normal * distance;
-                vertex->setPosition(newPos);
+                glm::vec3 newPos = vertex->position + normal * distance;
+                vertex->position = newPos;
             }
             break;
         }
@@ -124,9 +140,9 @@ void ExtrudeTool::updateExtrude(float distance)
     updatePreview();
 }
 
-void ExtrudeTool::updateExtrude(const QVector3D& direction, float distance)
+void ExtrudeTool::updateExtrude(const glm::vec3& direction, float distance)
 {
-    m_extrudeDirection = direction.normalized();
+    m_extrudeDirection = direction;
     updateExtrude(distance);
 }
 
@@ -210,8 +226,9 @@ bool ExtrudeTool::extrudeFaces(const std::vector<HalfEdgeFacePtr>& faces)
         // Store original positions
         for (auto vertex : vertices) {
             if (vertex) {
-                m_originalData.originalPositions.push_back(vertex->getPosition());
-                m_originalData.originalVertexIds.push_back(vertex->getId());
+                m_originalData.originalPositions.push_back(vertex->position);
+                // Note: rude::Vertex doesn't have getId() method
+                // m_originalData.originalVertexIds.push_back(vertex->getId());
             }
         }
         
@@ -221,7 +238,8 @@ bool ExtrudeTool::extrudeFaces(const std::vector<HalfEdgeFacePtr>& faces)
             if (vertex) {
                 auto newVertex = duplicateVertex(vertex);
                 newVertices.push_back(newVertex);
-                m_originalData.newVertexIds.push_back(newVertex->getId());
+                // Note: rude::Vertex doesn't have getId() method
+                // m_originalData.newVertexIds.push_back(newVertex->getId());
             }
         }
         
@@ -233,7 +251,8 @@ bool ExtrudeTool::extrudeFaces(const std::vector<HalfEdgeFacePtr>& faces)
                 auto sideFace = createQuadFace(vertices[i], vertices[next], 
                                              newVertices[next], newVertices[i]);
                 if (sideFace) {
-                    m_originalData.newFaceIds.push_back(sideFace->getId());
+                    // Note: rude::Face doesn't have getId() method
+                    // m_originalData.newFaceIds.push_back(sideFace->getId());
                 }
             }
         }
@@ -252,26 +271,31 @@ bool ExtrudeTool::extrudeEdges(const std::vector<HalfEdgeEdgePtr>& edges)
     
     // For edge extrusion, create faces from the edges
     for (auto edge : edges) {
-        if (!edge || !edge->getOriginVertex() || !edge->getTargetVertex()) continue;
+        auto originVertex = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+        auto targetVertex = (edge->halfEdge && edge->halfEdge->twin) ? edge->halfEdge->twin->vertex : nullptr;
+        if (!edge || !originVertex || !targetVertex) continue;
         
         // Store original positions
-        m_originalData.originalPositions.push_back(edge->getOriginVertex()->getPosition());
-        m_originalData.originalPositions.push_back(edge->getTargetVertex()->getPosition());
-        m_originalData.originalVertexIds.push_back(edge->getOriginVertex()->getId());
-        m_originalData.originalVertexIds.push_back(edge->getTargetVertex()->getId());
+        m_originalData.originalPositions.push_back(originVertex->position);
+        m_originalData.originalPositions.push_back(targetVertex->position);
+        // Note: rude::Vertex doesn't have getId() method
+        // m_originalData.originalVertexIds.push_back(originVertex->getId());
+        // m_originalData.originalVertexIds.push_back(targetVertex->getId());
         
         // Create new vertices
-        auto newVertex1 = duplicateVertex(edge->getOriginVertex());
-        auto newVertex2 = duplicateVertex(edge->getTargetVertex());
+        auto newVertex1 = duplicateVertex(originVertex);
+        auto newVertex2 = duplicateVertex(targetVertex);
         
-        m_originalData.newVertexIds.push_back(newVertex1->getId());
-        m_originalData.newVertexIds.push_back(newVertex2->getId());
+        // Note: rude::Vertex doesn't have getId() method
+        // m_originalData.newVertexIds.push_back(newVertex1->getId());
+        // m_originalData.newVertexIds.push_back(newVertex2->getId());
         
         // Create a face connecting the original edge with the new edge
-        auto extrudeFace = createQuadFace(edge->getOriginVertex(), edge->getTargetVertex(),
+        auto extrudeFace = createQuadFace(originVertex, targetVertex,
                                         newVertex2, newVertex1);
         if (extrudeFace) {
-            m_originalData.newFaceIds.push_back(extrudeFace->getId());
+            // Note: rude::Face doesn't have getId() method
+            // m_originalData.newFaceIds.push_back(extrudeFace->getId());
         }
     }
     
@@ -287,12 +311,14 @@ bool ExtrudeTool::extrudeVertices(const std::vector<HalfEdgeVertexPtr>& vertices
         if (!vertex) continue;
         
         // Store original position
-        m_originalData.originalPositions.push_back(vertex->getPosition());
-        m_originalData.originalVertexIds.push_back(vertex->getId());
+        m_originalData.originalPositions.push_back(vertex->position);
+        // Note: rude::Vertex doesn't have getId() method
+        // m_originalData.originalVertexIds.push_back(vertex->getId());
         
         // Create new vertex
         auto newVertex = duplicateVertex(vertex);
-        m_originalData.newVertexIds.push_back(newVertex->getId());
+        // Note: rude::Vertex doesn't have getId() method
+        // m_originalData.newVertexIds.push_back(newVertex->getId());
         
         // Create edge connecting original and new vertex
         // In a full implementation, this would create proper HEDS edge topology
@@ -301,51 +327,53 @@ bool ExtrudeTool::extrudeVertices(const std::vector<HalfEdgeVertexPtr>& vertices
     return true;
 }
 
-QVector3D ExtrudeTool::calculateFaceNormal(HalfEdgeFacePtr face) const
+glm::vec3 ExtrudeTool::calculateFaceNormal(HalfEdgeFacePtr face) const
 {
-    if (!face) return QVector3D(0, 1, 0);
+    if (!face) return glm::vec3(0, 1, 0);
     
     auto vertices = face->getVertices();
-    if (vertices.size() < 3) return QVector3D(0, 1, 0);
+    if (vertices.size() < 3) return glm::vec3(0, 1, 0);
     
     // Calculate normal using cross product of two edges
-    QVector3D v1 = vertices[1]->getPosition() - vertices[0]->getPosition();
-    QVector3D v2 = vertices[2]->getPosition() - vertices[0]->getPosition();
+    glm::vec3 v1 = vertices[1]->position - vertices[0]->position;
+    glm::vec3 v2 = vertices[2]->position - vertices[0]->position;
     
-    QVector3D normal = QVector3D::crossProduct(v1, v2).normalized();
-    return normal.isNull() ? QVector3D(0, 1, 0) : normal;
+    glm::vec3 normal = glm::cross(v1, v2);
+    return glm::normalize(normal);
 }
 
-QVector3D ExtrudeTool::calculateEdgeNormal(HalfEdgeEdgePtr edge) const
+glm::vec3 ExtrudeTool::calculateEdgeNormal(HalfEdgeEdgePtr edge) const
 {
-    if (!edge || !edge->getOriginVertex() || !edge->getTargetVertex()) {
-        return QVector3D(0, 1, 0);
+    auto originVertex = edge->halfEdge ? edge->halfEdge->vertex : nullptr;
+    auto targetVertex = (edge->halfEdge && edge->halfEdge->twin) ? edge->halfEdge->twin->vertex : nullptr;
+    if (!edge || !originVertex || !targetVertex) {
+        return glm::vec3(0, 1, 0);
     }
     
     // For edge normal, we need to find adjacent faces and average their normals
     // Simplified approach: use perpendicular to edge direction
-    QVector3D edgeDir = edge->getTargetVertex()->getPosition() - edge->getOriginVertex()->getPosition();
-    QVector3D up = QVector3D(0, 1, 0);
+    glm::vec3 edgeDir = targetVertex->position - originVertex->position;
+    glm::vec3 up = glm::vec3(0, 1, 0);
     
-    QVector3D normal = QVector3D::crossProduct(edgeDir, up).normalized();
-    return normal.isNull() ? QVector3D(0, 1, 0) : normal;
+    glm::vec3 normal = glm::cross(edgeDir, up);
+    return glm::normalize(normal);
 }
 
-QVector3D ExtrudeTool::calculateVertexNormal(HalfEdgeVertexPtr vertex) const
+glm::vec3 ExtrudeTool::calculateVertexNormal(HalfEdgeVertexPtr vertex) const
 {
-    if (!vertex) return QVector3D(0, 1, 0);
+    if (!vertex) return glm::vec3(0, 1, 0);
     
     // Calculate vertex normal by averaging adjacent face normals
     auto adjacentFaces = vertex->getAdjacentFaces();
-    if (adjacentFaces.empty()) return QVector3D(0, 1, 0);
+    if (adjacentFaces.empty()) return glm::vec3(0, 1, 0);
     
-    QVector3D normalSum(0, 0, 0);
+    glm::vec3 normalSum(0, 0, 0);
     for (auto face : adjacentFaces) {
         normalSum += calculateFaceNormal(face);
     }
     
-    QVector3D normal = normalSum.normalized();
-    return normal.isNull() ? QVector3D(0, 1, 0) : normal;
+    glm::vec3 normal = glm::normalize(normalSum);
+    return glm::normalize(normal);
 }
 
 void ExtrudeTool::updatePreview()
@@ -376,10 +404,10 @@ HalfEdgeVertexPtr ExtrudeTool::duplicateVertex(HalfEdgeVertexPtr vertex)
     if (!vertex || !m_mesh) return nullptr;
     
     // Create a new vertex with the same position and properties
-    auto newVertex = m_mesh->addVertex(vertex->getPosition());
+    auto newVertex = m_mesh->addVertex(vertex->position);
     if (newVertex) {
-        newVertex->setNormal(vertex->getNormal());
-        newVertex->setTexCoord(vertex->getTexCoord());
+        newVertex->normal = vertex->normal;
+        newVertex->texCoord = vertex->texCoord;
     }
     
     return newVertex;

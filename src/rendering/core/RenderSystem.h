@@ -2,17 +2,22 @@
 
 #include "Common.h"
 #include <QObject>
-#include <QMatrix4x4>
-#include <QVector3D>
-#include <QVector4D>
+#include <glm/glm.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <memory>
 
-class Scene;
+#include "core/scene.hpp"
 class Camera;
+class Entity;
 class Renderer;
 class Mesh;
 class LightingSystem;
 class GridSystem;
+
+namespace rude {
+    class Entity;
+}
 
 class RenderSystem : public QObject
 {
@@ -27,7 +32,7 @@ public:
     void cleanup();
     
     // Dependencies
-    void setScene(std::shared_ptr<Scene> scene);
+    void setScene(std::shared_ptr<rude::Scene> scene);
     void setCamera(std::shared_ptr<Camera> camera);
     void setLightingSystem(std::shared_ptr<LightingSystem> lightingSystem);
     void setGridSystem(std::shared_ptr<GridSystem> gridSystem);
@@ -39,10 +44,8 @@ public:
     // Rendering settings
     void setRenderMode(RenderMode mode);
     RenderMode getRenderMode() const { return m_renderMode; }
-    
     void setShowGrid(bool show);
     bool isGridVisible() const;
-    
     void setShowTransformGizmo(bool show);
     bool isTransformGizmoVisible() const { return m_showTransformGizmo; }
     
@@ -59,13 +62,12 @@ public:
     void renderOverlays();
     
 signals:
-    void renderingError(const QString& error);
+    void renderingError(const std::string& error);
     
 private:
-    void renderSceneObject(SceneObjectPtr object);
-    void renderBoundingBox(SceneObjectPtr object);
+    void renderEntity(Entity* entity);
     
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
     std::shared_ptr<Camera> m_camera;
     std::shared_ptr<Renderer> m_renderer;
     std::shared_ptr<LightingSystem> m_lightingSystem;

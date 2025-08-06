@@ -10,10 +10,10 @@
 #include <memory>
 
 // Forward declarations
-class Scene;
+namespace rude { class Scene; }
 class Camera;
 class Renderer;
-class CameraController;
+class ICameraController;
 class InputController;
 class SelectionManager;
 class LightingSystem;
@@ -27,8 +27,8 @@ public:
     ~Viewport3D();
 
     // Scene and camera
-    void setScene(std::shared_ptr<Scene> scene);
-    std::shared_ptr<Scene> getScene() const { return m_scene; }
+    void setScene(std::shared_ptr<rude::Scene> scene);
+    std::shared_ptr<rude::Scene> getScene() const { return m_scene; }
     
     std::shared_ptr<Camera> getCamera() const { return m_camera; }
     
@@ -40,12 +40,12 @@ public:
     TransformMode getTransformMode() const { return m_transformMode; }
     
     // Controllers and systems
-    void setCameraController(std::shared_ptr<CameraController> controller);
+    void setCameraController(std::shared_ptr<ICameraController> controller);
     void setInputController(std::shared_ptr<InputController> controller);
     void setLightingSystem(std::shared_ptr<LightingSystem> lightingSystem);
     void setGridSystem(std::shared_ptr<GridSystem> gridSystem);
     
-    std::shared_ptr<CameraController> getCameraController() const { return m_cameraController; }
+    std::shared_ptr<ICameraController> getCameraController() const { return m_cameraController; }
     std::shared_ptr<InputController> getInputController() const { return m_inputController; }
     std::shared_ptr<LightingSystem> getLightingSystem() const { return m_lightingSystem; }
     std::shared_ptr<GridSystem> getGridSystem() const { return m_gridSystem; }
@@ -83,10 +83,10 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     
 private:
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
     std::shared_ptr<Camera> m_camera;
     std::shared_ptr<Renderer> m_renderer;
-    std::shared_ptr<CameraController> m_cameraController;
+    std::shared_ptr<ICameraController> m_cameraController;
     std::shared_ptr<InputController> m_inputController;
     std::shared_ptr<SelectionManager> m_selectionManager;
     std::shared_ptr<LightingSystem> m_lightingSystem;

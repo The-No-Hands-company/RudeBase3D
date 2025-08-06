@@ -12,7 +12,7 @@ class QMainWindow;
 class QSplitter;
 class QVBoxLayout;
 class QHBoxLayout;
-class Viewport3D;
+class ViewportManager;
 class SceneHierarchyPanel;
 class PropertiesPanel;
 class SceneManager;
@@ -38,7 +38,7 @@ public:
     void setupDockWidgets();
     
     // Component access
-    Viewport3D* getViewport() const { return m_viewport; }
+    ViewportManager* getViewportManager() const { return m_viewportManager; }
     SceneHierarchyPanel* getSceneHierarchy() const { return m_sceneHierarchy; }
     PropertiesPanel* getPropertiesPanel() const { return m_propertiesPanel; }
     
@@ -117,7 +117,7 @@ private:
     // Central widget and layout
     QSplitter* m_mainSplitter;
     QSplitter* m_rightSplitter;
-    Viewport3D* m_viewport;
+    ViewportManager* m_viewportManager;
     SceneHierarchyPanel* m_sceneHierarchy;
     PropertiesPanel* m_propertiesPanel;
     

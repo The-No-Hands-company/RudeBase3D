@@ -1,5 +1,6 @@
 #include "RenderSystem.h"
-#include "Scene.h"
+#include "core/scene.hpp"
+#include "core/entity.hpp"
 #include "Camera.h"
 #include "Renderer.h"
 #include "SceneObject.h"
@@ -8,7 +9,7 @@
 #include "GridSystem.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLContext>
-#include <QDebug>
+#include <spdlog/spdlog.h>
 
 RenderSystem::RenderSystem(QObject* parent)
     : QObject(parent)
@@ -31,8 +32,7 @@ bool RenderSystem::initialize()
         emit renderingError("Failed to initialize renderer");
         return false;
     }
-    
-    qDebug() << "RenderSystem initialized successfully";
+    spdlog::info("RenderSystem initialized successfully");
     return true;
 }
 
@@ -41,7 +41,7 @@ void RenderSystem::cleanup()
     // Systems will clean up themselves
 }
 
-void RenderSystem::setScene(std::shared_ptr<Scene> scene)
+void RenderSystem::setScene(std::shared_ptr<rude::Scene> scene)
 {
     m_scene = scene;
 }
@@ -114,8 +114,8 @@ void RenderSystem::render()
         renderScene();
     }
     
-    // Render transform gizmo for selected object
-    if (m_showTransformGizmo && m_scene && m_scene->getSelectedObject()) {
+    // Render transform gizmo for selected entity (TODO: implement entity selection system)
+    if (m_showTransformGizmo && m_scene) {
         renderTransformGizmo();
     }
     
@@ -138,46 +138,39 @@ void RenderSystem::renderScene()
 {
     if (!m_scene || !m_renderer) return;
     
-    // Render all objects in the scene
-    for (const auto& object : m_scene->getObjects()) {
-        if (!object->isVisible()) {
-            continue;
-        }
-        
-        renderSceneObject(object);
-        
-        // Render bounding box for selected object
-        if (object->isSelected()) {
-            renderBoundingBox(object);
-        }
-    }
+    // Render all entities in the scene
+    auto entities = m_scene->getAllEntities();
+    // TODO: Fix Entity type mismatch - header expects rude::Entity* but scene returns Entity*
+    // for (Entity* entity : entities) {
+    //     renderEntity(entity);
+    // }
 }
 
 void RenderSystem::renderTransformGizmo()
 {
     if (!m_scene || !m_renderer) return;
     
-    auto selectedObject = m_scene->getSelectedObject();
-    if (!selectedObject) return;
+    // TODO: Implement entity selection system and gizmo rendering for ECS
+    // For now, disable transform gizmo rendering until selection system is available
     
-    QVector3D objectPos = selectedObject->getTransform().getPosition();
+    /*
+    // Find selected entity
+    auto entities = m_scene->getAllEntities();
+    Entity* selectedEntity = nullptr;
+    for (auto* entity : entities) {
+        // TODO: Check if entity is selected when selection system is available
+        // if (entity->isSelected()) {
+        //     selectedEntity = entity;
+        //     break;
+        // }
+    }
+    if (!selectedEntity) return;
     
-    // Set model matrix to object position
-    QMatrix4x4 gizmoMatrix;
-    gizmoMatrix.translate(objectPos);
-    m_renderer->setModelMatrix(gizmoMatrix);
-    
-    // Render transform gizmo axes
-    float axisLength = 1.5f;
-    
-    // X axis (red)
-    m_renderer->renderLine(QVector3D(0, 0, 0), QVector3D(axisLength, 0, 0), QVector4D(1, 0, 0, 1));
-    
-    // Y axis (green)
-    m_renderer->renderLine(QVector3D(0, 0, 0), QVector3D(0, axisLength, 0), QVector4D(0, 1, 0, 1));
-    
-    // Z axis (blue)
-    m_renderer->renderLine(QVector3D(0, 0, 0), QVector3D(0, 0, axisLength), QVector4D(0, 0, 1, 1));
+    // TODO: Get entity position from transform component
+    // glm::vec3 entityPos = selectedEntity->getTransform().getPosition();
+    // glm::mat4 gizmoMatrix = glm::translate(glm::mat4(1.0f), entityPos);
+    // m_renderer->setModelMatrix(gizmoMatrix);
+    */
 }
 
 void RenderSystem::renderOverlays()
@@ -185,29 +178,24 @@ void RenderSystem::renderOverlays()
     // TODO: Implement overlay rendering (HUD elements, text, etc.)
 }
 
-void RenderSystem::renderSceneObject(SceneObjectPtr object)
+void RenderSystem::renderEntity(Entity* entity)
 {
-    if (!object || !m_renderer) return;
+    if (!entity || !m_renderer) return;
     
-    // Set model matrix
-    m_renderer->setModelMatrix(object->getTransform().getModelMatrix());
-    
-    // Set material
-    m_renderer->setMaterial(object->getMaterial());
-    
-    // Render mesh
-    m_renderer->renderMesh(object->getMesh(), m_renderMode);
-}
-
-void RenderSystem::renderBoundingBox(SceneObjectPtr object)
-{
-    if (!object || !m_renderer) return;
-    
-    QVector3D min = object->getBoundingBoxMin();
-    QVector3D max = object->getBoundingBoxMax();
-    
-    // Transform to world space
-    QMatrix4x4 modelMatrix = object->getTransform().getModelMatrix();
-    m_renderer->setModelMatrix(QMatrix4x4()); // Use identity for world space lines
-    m_renderer->renderAABB(min, max, QVector4D(1.0f, 1.0f, 0.0f, 1.0f));
+    // TODO: Implement entity rendering using component system
+    // For now, this is a placeholder
+    /*
+    // Get mesh component
+    auto meshComponent = entity->getComponent<MeshComponent>();
+    if (meshComponent && meshComponent->getMesh()) {
+        // Set transform matrix
+        auto transformComponent = entity->getComponent<TransformComponent>();
+        if (transformComponent) {
+            m_renderer->setModelMatrix(transformComponent->getMatrix());
+        }
+        
+        // Render mesh
+        m_renderer->renderMesh(meshComponent->getMesh());
+    }
+    */
 }

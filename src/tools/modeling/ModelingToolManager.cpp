@@ -1,6 +1,8 @@
 #include "ModelingToolManager.h"
 #include "GeometryConverter.h"
 #include <QDebug>
+#include "core/mesh_elements.hpp"
+#include "core/half_edge_mesh.hpp"
 
 ModelingToolManager::ModelingToolManager(QObject* parent)
     : QObject(parent) {
@@ -157,7 +159,7 @@ bool ModelingToolManager::executeBevel(float amount, int segments) {
     return false;
 }
 
-bool ModelingToolManager::executeKnifeCut(const QVector3D& startPoint, const QVector3D& endPoint) {
+bool ModelingToolManager::executeKnifeCut(const glm::vec3& startPoint, const glm::vec3& endPoint) {
     qDebug() << "ModelingToolManager: Knife tool not yet implemented";
     Q_UNUSED(startPoint);
     Q_UNUSED(endPoint);
@@ -378,12 +380,12 @@ bool ModelingToolManager::validateMeshForTool(ToolType tool) const {
     }
 }
 
-HalfEdgeMeshPtr ModelingToolManager::getCurrentMesh() const {
+rude::HalfEdgeMeshPtr ModelingToolManager::getCurrentMesh() const {
     if (!m_editContext) return nullptr;
     return m_editContext->getActiveHalfEdgeMesh();
 }
 
-void ModelingToolManager::commitMeshChanges(HalfEdgeMeshPtr modifiedMesh) {
+void ModelingToolManager::commitMeshChanges(rude::HalfEdgeMeshPtr modifiedMesh) {
     if (!m_editContext || !modifiedMesh) return;
     
     // The EditContext handles committing changes back to the scene object
