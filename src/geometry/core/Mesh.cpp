@@ -1,11 +1,11 @@
 #include "Mesh.h"
-#include "Vertex.h"
+
 #include <QOpenGLFunctions>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <algorithm>
-#include "../halfedge/HalfEdgeMesh.h"
+
 #include "core/mesh_elements.hpp"
 
 Mesh::Mesh()
@@ -195,62 +195,50 @@ void Mesh::calculateNormals()
     m_uploaded = false;
 }
 
-QVector3D Mesh::getBoundingBoxMin() const
+glm::vec3 Mesh::getBoundingBoxMin() const
 {
     if (m_vertices.empty()) {
-        return QVector3D(0, 0, 0);
+        return glm::vec3(0, 0, 0);
     }
-    
-    // Convert from glm::vec3 to QVector3D
-    glm::vec3 firstPos = m_vertices[0]->position;
-    QVector3D min(firstPos.x, firstPos.y, firstPos.z);
-    
+    glm::vec3 min = m_vertices[0]->position;
     for (const auto& vertex : m_vertices) {
         glm::vec3 pos = vertex->position;
-        min.setX(std::min(min.x(), pos.x));
-        min.setY(std::min(min.y(), pos.y));
-        min.setZ(std::min(min.z(), pos.z));
+        min.x = std::min(min.x, pos.x);
+        min.y = std::min(min.y, pos.y);
+        min.z = std::min(min.z, pos.z);
     }
     return min;
 }
 
-QVector3D Mesh::getBoundingBoxMax() const
+glm::vec3 Mesh::getBoundingBoxMax() const
 {
     if (m_vertices.empty()) {
-        return QVector3D(0, 0, 0);
+        return glm::vec3(0, 0, 0);
     }
-    
-    // Convert from glm::vec3 to QVector3D
-    glm::vec3 firstPos = m_vertices[0]->position;
-    QVector3D max(firstPos.x, firstPos.y, firstPos.z);
-    
+    glm::vec3 max = m_vertices[0]->position;
     for (const auto& vertex : m_vertices) {
         glm::vec3 pos = vertex->position;
-        max.setX(std::max(max.x(), pos.x));
-        max.setY(std::max(max.y(), pos.y));
-        max.setZ(std::max(max.z(), pos.z));
+        max.x = std::max(max.x, pos.x);
+        max.y = std::max(max.y, pos.y);
+        max.z = std::max(max.z, pos.z);
     }
     return max;
 }
 
-QVector3D Mesh::getBoundingBoxCenter() const
+glm::vec3 Mesh::getBoundingBoxCenter() const
 {
     return (getBoundingBoxMin() + getBoundingBoxMax()) * 0.5f;
 }
 
 float Mesh::getBoundingRadius() const
 {
-    QVector3D center = getBoundingBoxCenter();
+    glm::vec3 center = getBoundingBoxCenter();
     float maxDistSq = 0.0f;
-    
     for (const auto& vertex : m_vertices) {
-        // Convert glm::vec3 to QVector3D for calculation
         glm::vec3 pos = vertex->position;
-        QVector3D qPos(pos.x, pos.y, pos.z);
-        float distSq = (qPos - center).lengthSquared();
+        float distSq = glm::dot(pos - center, pos - center);
         maxDistSq = std::max(maxDistSq, distSq);
     }
-    
     return sqrt(maxDistSq);
 }
 
@@ -335,24 +323,7 @@ void Mesh::setData(const std::vector<glm::vec3>& positions, const std::vector<un
     setIndices(indices);
 }
 
-// Convenience overloads for our global Vertex class
-void Mesh::setVertices(const std::vector<Vertex>& vertices)
-{
-    m_vertices.clear();
-    m_vertices.reserve(vertices.size());
-    
-    for (const auto& vertex : vertices) {
-        m_vertices.push_back(vertex.toRudeVertexPtr());
-    }
-    
-    m_uploaded = false;
-}
 
-void Mesh::setData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices)
-{
-    setVertices(vertices);
-    setIndices(indices);
-}
 
 void Mesh::updateNormals()
 {

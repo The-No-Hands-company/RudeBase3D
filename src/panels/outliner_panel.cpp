@@ -1,6 +1,8 @@
 #include "panels/outliner_panel.hpp"
 #include "core/scene.hpp"
 #include "core/entity.hpp"
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
 #include <QVBoxLayout>
 
 OutlinerPanel::OutlinerPanel(QWidget* parent)
@@ -12,7 +14,7 @@ OutlinerPanel::OutlinerPanel(QWidget* parent)
     connect(treeWidget, &QTreeWidget::itemDoubleClicked, this, &OutlinerPanel::onItemDoubleClicked);
 }
 
-void OutlinerPanel::setScene(Scene* s) {
+void OutlinerPanel::setScene(rude::Scene* s) {
     scene = s;
     updateEntityList();
 }

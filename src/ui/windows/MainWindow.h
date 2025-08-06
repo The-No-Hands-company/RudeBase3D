@@ -23,6 +23,16 @@ class SceneManager;
 class RenderSystem;
 class AssetManager;
 class UIManager;
+
+namespace rude {
+    class Scene;
+    class SceneManager;
+    class PropertiesPanel;
+}
+
+namespace rude {
+    class PropertiesPanel;
+}
 class ExtrudeTool;
 class ModelingToolManager;
 class EditContext;
@@ -104,8 +114,8 @@ private slots:
 
 private:
     // Core components
-    std::shared_ptr<Scene> m_scene;
-    std::shared_ptr<SceneManager> m_sceneManager;
+    std::shared_ptr<rude::Scene> m_scene;
+    std::shared_ptr<rude::SceneManager> m_sceneManager;
     std::shared_ptr<RenderSystem> m_renderSystem;
     std::shared_ptr<AssetManager> m_assetManager;
     std::shared_ptr<UIManager> m_uiManager;

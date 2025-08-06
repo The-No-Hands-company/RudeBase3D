@@ -1,12 +1,19 @@
 #pragma once
 
-#include "Common.h"
-#include "HalfEdgeMesh.h"
-#include "Mesh.h"
+#include <glm/glm.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include <QString>
 #include <QTextStream>
+#include <QRegularExpression>
+#include <QVector3D>
+#include <QVector2D>
 #include <memory>
 #include <vector>
+#include <string>
+#include <iostream>
+#include "core/mesh_forward.hpp"
 
 /**
  * @brief OBJ File Format Handler
@@ -15,63 +22,74 @@
 class OBJFileHandler {
 public:
     struct ImportOptions {
-        bool mergeVertices = true;
-        bool generateNormals = true;
-        bool generateTexCoords = false;
-        float vertexMergeTolerance = 1e-6f;
+        bool mergeVertices;
+        bool generateNormals;
+        bool generateTexCoords;
+        float vertexMergeTolerance;
+        ImportOptions()
+            : mergeVertices(true)
+            , generateNormals(true)
+            , generateTexCoords(false)
+            , vertexMergeTolerance(1e-6f)
+        {}
     };
-    
+
     struct ExportOptions {
         bool exportNormals = true;
         bool exportTexCoords = true;
         bool exportGroups = false;
         int precision = 6;
     };
-    
+
     struct ImportResult {
         bool success = false;
-        QString errorMessage;
-        std::vector<MeshPtr> meshes;
-        std::vector<QString> meshNames;
+        std::string errorMessage;
+        std::vector<rude::MeshPtr> meshes;
+        std::vector<std::string> meshNames;
         int vertexCount = 0;
         int faceCount = 0;
     };
 
 public:
     // Static import/export methods
-    static ImportResult importFromFile(const QString& filePath, const ImportOptions& options = ImportOptions());
-    static bool exportToFile(const QString& filePath, MeshPtr mesh, const ExportOptions& options = ExportOptions());
-    static bool exportToFile(const QString& filePath, HalfEdgeMeshPtr mesh, const ExportOptions& options = ExportOptions());
-    static bool exportToFile(const QString& filePath, const std::vector<MeshPtr>& meshes, const ExportOptions& options = ExportOptions());
-    
+    static ImportResult importFromFile(const std::string& filePath, const ImportOptions& options = ImportOptions());
+    static bool exportToFile(const std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options = ExportOptions());
+    static bool exportToFile(const std::string& filePath, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options = ExportOptions());
+    static bool exportToFile(const std::string& filePath, const std::vector<rude::MeshPtr>& meshes, const ExportOptions& options = ExportOptions());
+
     // Stream-based operations
+    static ImportResult importFromStream(std::istream& stream, const ImportOptions& options = ImportOptions());
+    static bool exportToStream(std::ostream& stream, rude::MeshPtr mesh, const ExportOptions& options = ExportOptions());
+    static bool exportToStream(std::ostream& stream, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options = ExportOptions());
+
+    // Qt stream-based operations (for internal use)
     static ImportResult importFromStream(QTextStream& stream, const ImportOptions& options = ImportOptions());
-    static bool exportToStream(QTextStream& stream, MeshPtr mesh, const ExportOptions& options = ExportOptions());
-    static bool exportToStream(QTextStream& stream, HalfEdgeMeshPtr mesh, const ExportOptions& options = ExportOptions());
+    static bool exportToStream(QTextStream& stream, rude::MeshPtr mesh, const ExportOptions& options = ExportOptions());
+    static bool exportToStream(QTextStream& stream, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options = ExportOptions());
 
 private:
     // Internal parsing methods
-    static bool parseVertex(const QStringList& tokens, QVector3D& vertex);
-    static bool parseNormal(const QStringList& tokens, QVector3D& normal);
-    static bool parseTexCoord(const QStringList& tokens, QVector2D& texCoord);
-    static bool parseFace(const QStringList& tokens, std::vector<int>& vertexIndices, 
+    static bool parseVertex(const std::vector<std::string>& tokens, glm::vec3& vertex);
+    static bool parseNormal(const std::vector<std::string>& tokens, glm::vec3& normal);
+    static bool parseTexCoord(const std::vector<std::string>& tokens, glm::vec2& texCoord);
+    static bool parseFace(const std::vector<std::string>& tokens, std::vector<int>& vertexIndices,
                          std::vector<int>& texCoordIndices, std::vector<int>& normalIndices);
-    
+
     // Mesh building
-    static MeshPtr buildMesh(const std::vector<QVector3D>& vertices,
-                            const std::vector<QVector3D>& normals,
-                            const std::vector<QVector2D>& texCoords,
+    static rude::MeshPtr buildMesh(const std::vector<glm::vec3>& vertices,
+                            const std::vector<glm::vec3>& normals,
+                            const std::vector<glm::vec2>& texCoords,
                             const std::vector<std::vector<int>>& faces,
                             const std::vector<std::vector<int>>& texCoordFaces,
                             const std::vector<std::vector<int>>& normalFaces,
                             const ImportOptions& options);
-    
+
     // Vertex merging
-    static void mergeVertices(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, float tolerance);
-    
+    static void mergeVertices(std::vector<rude::Vertex>& vertices, std::vector<unsigned int>& indices, float tolerance);
+
     // Normal generation
-    static void generateNormals(std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
-    
+    static void generateNormals(std::vector<rude::Vertex>& vertices, const std::vector<unsigned int>& indices);
+
     // Utility methods
     static QString formatFloat(float value, int precision);
     static int parseIndex(const QString& indexStr, int maxIndex);
@@ -88,46 +106,41 @@ public:
         Binary,
         Auto // Detect automatically
     };
-    
+
     struct ImportOptions {
         Format format = Format::Auto;
         bool mergeVertices = true;
         float vertexMergeTolerance = 1e-6f;
     };
-    
+
     struct ExportOptions {
         Format format = Format::ASCII;
-        QString header = "Generated by RudeBase3D";
+        std::string header = "Generated by RudeBase3D";
     };
-    
+
     struct ImportResult {
         bool success = false;
-        QString errorMessage;
-        MeshPtr mesh;
+        std::string errorMessage;
+        rude::MeshPtr mesh;
         int triangleCount = 0;
         Format detectedFormat = Format::ASCII;
     };
 
 public:
     // Static import/export methods
-    static ImportResult importFromFile(const QString& filePath, const ImportOptions& options = ImportOptions());
-    static bool exportToFile(const QString& filePath, MeshPtr mesh, const ExportOptions& options = ExportOptions());
-    static bool exportToFile(const QString& filePath, HalfEdgeMeshPtr mesh, const ExportOptions& options = ExportOptions());
+    static ImportResult importFromFile(const std::string& filePath, const ImportOptions& options = ImportOptions());
+    static bool exportToFile(const std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options = ExportOptions());
+    static bool exportToFile(const std::string& filePath, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options = ExportOptions());
 
 private:
     // Format detection
-    static Format detectFormat(const QString& filePath);
-    
+    static Format detectFormat(const std::string& filePath);
     // ASCII STL methods
-    static ImportResult importASCII(QTextStream& stream, const ImportOptions& options);
-    static bool exportASCII(QTextStream& stream, MeshPtr mesh, const ExportOptions& options);
-    
+    // TODO: Implement ASCII STL import/export using std::istream/std::ostream
     // Binary STL methods
-    static ImportResult importBinary(const QString& filePath, const ImportOptions& options);
-    static bool exportBinary(const QString& filePath, MeshPtr mesh, const ExportOptions& options);
-    
+    // TODO: Implement binary STL import/export using std::ifstream/std::ofstream
     // Utility methods
-    static QVector3D parseVector3(const QStringList& tokens, int startIndex);
+    // TODO: Implement vector parsing using std::vector<std::string> and glm::vec3
 };
 
 /**
@@ -140,17 +153,17 @@ public:
         bool mergeVertices = false;
         float vertexMergeTolerance = 1e-6f;
     };
-    
+
     struct ExportOptions {
         bool binary = false;
         bool exportNormals = true;
         bool exportColors = true;
     };
-    
+
     struct ImportResult {
         bool success = false;
-        QString errorMessage;
-        MeshPtr mesh;
+        std::string errorMessage;
+        rude::MeshPtr mesh;
         int vertexCount = 0;
         int faceCount = 0;
         bool hasNormals = false;
@@ -159,20 +172,15 @@ public:
 
 public:
     // Static import/export methods
-    static ImportResult importFromFile(const QString& filePath, const ImportOptions& options = ImportOptions());
-    static bool exportToFile(const QString& filePath, MeshPtr mesh, const ExportOptions& options = ExportOptions());
-    static bool exportToFile(const QString& filePath, HalfEdgeMeshPtr mesh, const ExportOptions& options = ExportOptions());
+    static ImportResult importFromFile(const std::string& filePath, const ImportOptions& options = ImportOptions());
+    static bool exportToFile(const std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options = ExportOptions());
+    static bool exportToFile(const std::string& filePath, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options = ExportOptions());
 
 private:
     // Header parsing
-    static bool parseHeader(QTextStream& stream, int& vertexCount, int& faceCount, 
-                           bool& hasNormals, bool& hasColors, bool& isBinary);
-    
+    // TODO: Implement header parsing using std::istream and std::vector<std::string>
     // Data parsing
-    static bool parseVertices(QTextStream& stream, int count, bool hasNormals, bool hasColors, 
-                             std::vector<QVector3D>& positions, std::vector<QVector3D>& normals, 
-                             std::vector<QVector4D>& colors);
-    static bool parseFaces(QTextStream& stream, int count, std::vector<std::vector<int>>& faces);
+    // TODO: Implement vertex/face parsing using std::vector and glm types
 };
 
 /**
@@ -191,7 +199,7 @@ public:
     struct ImportResult {
         bool success = false;
         QString errorMessage;
-        std::vector<MeshPtr> meshes;
+        std::vector<rude::MeshPtr> meshes;
         std::vector<QString> meshNames;
         Format detectedFormat = Format::Unknown;
         QString filePath;
@@ -205,9 +213,9 @@ public:
     
     // Unified import/export
     static ImportResult importFile(const QString& filePath);
-    static bool exportFile(const QString& filePath, MeshPtr mesh);
-    static bool exportFile(const QString& filePath, HalfEdgeMeshPtr mesh);
-    static bool exportFile(const QString& filePath, const std::vector<MeshPtr>& meshes);
+    static bool exportFile(const QString& filePath, rude::MeshPtr mesh);
+    static bool exportFile(const QString& filePath, rude::HalfEdgeMeshPtr mesh);
+    static bool exportFile(const QString& filePath, const std::vector<rude::MeshPtr>& meshes);
     
     // Format-specific options
     static void setOBJImportOptions(const OBJFileHandler::ImportOptions& options);

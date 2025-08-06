@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Common.h"
-#include <QVector4D>
+#include <glm/glm.hpp>
+#include <glm/vec4.hpp>
 
 class Material {
 public:
@@ -9,14 +10,14 @@ public:
     ~Material() = default;
 
     // Color properties
-    void setDiffuseColor(const QVector4D& color) { m_diffuseColor = color; }
-    const QVector4D& getDiffuseColor() const { return m_diffuseColor; }
+    void setDiffuseColor(const glm::vec4& color) { m_diffuseColor = color; }
+    const glm::vec4& getDiffuseColor() const { return m_diffuseColor; }
     
-    void setSpecularColor(const QVector4D& color) { m_specularColor = color; }
-    const QVector4D& getSpecularColor() const { return m_specularColor; }
+    void setSpecularColor(const glm::vec4& color) { m_specularColor = color; }
+    const glm::vec4& getSpecularColor() const { return m_specularColor; }
     
-    void setAmbientColor(const QVector4D& color) { m_ambientColor = color; }
-    const QVector4D& getAmbientColor() const { return m_ambientColor; }
+    void setAmbientColor(const glm::vec4& color) { m_ambientColor = color; }
+    const glm::vec4& getAmbientColor() const { return m_ambientColor; }
     
     // Material properties
     void setShininess(float shininess) { m_shininess = shininess; }
@@ -29,8 +30,8 @@ public:
     float getRoughness() const { return m_roughness; }
     
     // Wireframe properties
-    void setWireframeColor(const QVector4D& color) { m_wireframeColor = color; }
-    const QVector4D& getWireframeColor() const { return m_wireframeColor; }
+    void setWireframeColor(const glm::vec4& color) { m_wireframeColor = color; }
+    const glm::vec4& getWireframeColor() const { return m_wireframeColor; }
     
     void setWireframeWidth(float width) { m_wireframeWidth = width; }
     float getWireframeWidth() const { return m_wireframeWidth; }
@@ -42,10 +43,10 @@ public:
     static MaterialPtr createGlass();
 
 private:
-    QVector4D m_diffuseColor;
-    QVector4D m_specularColor;
-    QVector4D m_ambientColor;
-    QVector4D m_wireframeColor;
+    glm::vec4 m_diffuseColor;
+    glm::vec4 m_specularColor;
+    glm::vec4 m_ambientColor;
+    glm::vec4 m_wireframeColor;
     
     float m_shininess;
     float m_metallic;

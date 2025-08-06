@@ -1,165 +1,135 @@
+
+#include "InputEvents.h"
 #include "BlenderCameraController.h"
 #include "scene/Camera.h"
 #include "scene/Scene.h"
-#include <QTimer>
-#include <QApplication>
-#include <QDebug>
-#include <QtMath>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <algorithm>
 
-BlenderCameraController::BlenderCameraController(QObject* parent)
-    : ICameraController(parent)
-    , m_currentMode(NavigationMode::None)
+BlenderCameraController::BlenderCameraController()
+    : ICameraController()
+    , m_currentAction(NavigationAction::None)
     , m_isNavigating(false)
-    , m_shiftPressed(false)
-    , m_ctrlPressed(false)
-    , m_altPressed(false)
     , m_orbitSensitivity(1.0f)
     , m_panSensitivity(1.0f)
     , m_zoomSensitivity(1.0f)
     , m_invertZoom(false)
     , m_smoothingEnabled(true)
-    , m_smoothingTimer(new QTimer(this))
     , m_smoothingFactor(0.15f)
 {
-    // Set up smoothing timer
-    m_smoothingTimer->setInterval(16); // ~60 FPS
-    connect(m_smoothingTimer, &QTimer::timeout, this, &BlenderCameraController::updateSmoothing);
+    // No QTimer, use manual time tracking for smoothing if needed
 }
 
 BlenderCameraController::~BlenderCameraController() = default;
 
-QString BlenderCameraController::getControllerDescription() const
+std::string BlenderCameraController::getControllerDescription() const
 {
     return "Blender Camera Controller";
 }
 
-bool BlenderCameraController::handleMousePress(QMouseEvent* event)
+bool BlenderCameraController::handleMousePress(const MouseEvent& event)
 {
     if (!m_camera) return false;
 
-    m_lastMousePos = event->pos();
-    m_mousePressPos = event->pos();
+    m_lastMousePos = event.pos;
+    m_mousePressPos = event.pos;
 
-    // Check for middle mouse button navigation
-    if (isMiddleMouseButton(event)) {
-        NavigationMode mode = NavigationMode::Orbit;
-        
-        if (m_shiftPressed) {
-            mode = NavigationMode::Pan;
-        } else if (m_ctrlPressed) {
-            mode = NavigationMode::Zoom;
+    // Use unified MouseButton and KeyboardModifier enums
+    if (event.button == MouseButton::Middle) {
+        NavigationAction action = NavigationAction::Orbit;
+        if ((event.modifiers & KeyboardModifier::Shift) != KeyboardModifier::None) {
+            action = NavigationAction::Pan;
+        } else if ((event.modifiers & KeyboardModifier::Control) != KeyboardModifier::None) {
+            action = NavigationAction::Zoom;
         }
-        
-        startNavigation(mode, event->pos());
+        startNavigation(action, event.pos);
         return true;
     }
-
     return false;
 }
 
-bool BlenderCameraController::handleMouseMove(QMouseEvent* event)
+bool BlenderCameraController::handleMouseMove(const MouseEvent& event)
 {
     if (!m_camera || !m_isNavigating) return false;
-
-    updateNavigation(event->pos());
-    m_lastMousePos = event->pos();
+    updateNavigation(event.pos);
+    m_lastMousePos = event.pos;
     return true;
 }
 
-bool BlenderCameraController::handleMouseRelease(QMouseEvent* event)
+bool BlenderCameraController::handleMouseRelease(const MouseEvent& event)
 {
     if (!m_camera) return false;
-
-    if (m_isNavigating && isMiddleMouseButton(event)) {
+    if (m_isNavigating && event.button == MouseButton::Middle) {
         endNavigation();
         return true;
     }
-
     return false;
 }
 
-bool BlenderCameraController::handleWheel(QWheelEvent* event)
+bool BlenderCameraController::handleWheel(const WheelEvent& event)
 {
     if (!m_camera) return false;
-
-    float delta = event->angleDelta().y() / 120.0f; // Standard wheel delta
+    float delta = event.delta / 120.0f;
     if (m_invertZoom) delta = -delta;
-    
     performZoom(delta * m_zoomSensitivity);
-    
     return true;
 }
 
-bool BlenderCameraController::handleKeyPress(QKeyEvent* event)
+bool BlenderCameraController::handleKeyPress(const KeyEvent& event)
 {
-    // Update modifier key states
-    m_shiftPressed = event->modifiers() & Qt::ShiftModifier;
-    m_ctrlPressed = event->modifiers() & Qt::ControlModifier;
-    m_altPressed = event->modifiers() & Qt::AltModifier;
-
     // Handle numpad view shortcuts
-    if (event->key() >= Qt::Key_0 && event->key() <= Qt::Key_9) {
-        if (event->modifiers() & Qt::KeypadModifier) {
-            setNumpadView(event->key());
-            return true;
-        }
+    if (event.key >= 0 && event.key <= 9) {
+        // If you need to check for Keypad, ensure KeyboardModifier has a Keypad value or remove this check
+        // if ((event.modifiers & KeyboardModifier::Keypad) != KeyboardModifier::None) {
+        setNumpadView(event.key);
+        return true;
     }
-
     // Handle other navigation keys
-    switch (event->key()) {
-        case Qt::Key_Home:
+    switch (event.key) {
+        case 1000: // Home
             frameScene(true);
             return true;
-        case Qt::Key_Period:
+        case 1001: // Period
             frameSelection(true);
             return true;
         default:
             break;
     }
-
     return false;
 }
 
-bool BlenderCameraController::handleKeyRelease(QKeyEvent* event)
+bool BlenderCameraController::handleKeyRelease(const KeyEvent& event)
 {
-    // Update modifier key states
-    m_shiftPressed = event->modifiers() & Qt::ShiftModifier;
-    m_ctrlPressed = event->modifiers() & Qt::ControlModifier;
-    m_altPressed = event->modifiers() & Qt::AltModifier;
-
+    // No need to track modifier state, handled via event.modifiers
     return false;
 }
-
 void BlenderCameraController::frameScene(bool animate)
 {
     if (!m_camera || !m_scene) return;
 
     // Calculate bounding box of all objects in scene
-    QVector3D minBounds, maxBounds;
+    glm::vec3 minBounds(-5, -5, -5), maxBounds(5, 5, 5);
     bool hasObjects = false;
-    
     // TODO: Implement scene bounding box calculation
     // For now, use a default framing
-    if (!hasObjects) {
-        minBounds = QVector3D(-5, -5, -5);
-        maxBounds = QVector3D(5, 5, 5);
-    }
 
-    QVector3D center = (minBounds + maxBounds) * 0.5f;
-    QVector3D size = maxBounds - minBounds;
-    float maxDimension = qMax(qMax(size.x(), size.y()), size.z());
-    
+    glm::vec3 center = (minBounds + maxBounds) * 0.5f;
+    glm::vec3 size = maxBounds - minBounds;
+    float maxDimension = std::max(std::max(size.x, size.y), size.z);
+
     // Position camera to view the entire scene
     float distance = maxDimension * 1.5f; // Add some padding
-    QVector3D newPosition = center + QVector3D(distance, distance * 0.7f, distance);
-    
+    glm::vec3 newPosition = center + glm::vec3(distance, distance * 0.7f, distance);
+
     if (animate && m_smoothingEnabled) {
         m_targetPosition = newPosition;
-        m_smoothingTimer->start();
+        // TODO: Implement cross-platform smoothing timer
     } else {
         m_camera->getTransform().setPosition(newPosition);
         m_camera->lookAt(center);
-        emit cameraChanged();
+        if (cameraChangedCallback) cameraChangedCallback();
     }
 }
 
@@ -174,16 +144,16 @@ void BlenderCameraController::resetCamera()
 {
     if (!m_camera) return;
 
-    QVector3D defaultPosition(10.0f, 8.0f, 10.0f);
-    QVector3D target(0, 0, 0);
+    glm::vec3 defaultPosition(10.0f, 8.0f, 10.0f);
+    glm::vec3 target(0, 0, 0);
     
     if (m_smoothingEnabled) {
         m_targetPosition = defaultPosition;
-        m_smoothingTimer->start();
+        // TODO: Implement cross-platform smoothing timer
     } else {
         m_camera->getTransform().setPosition(defaultPosition);
         m_camera->lookAt(target);
-        emit cameraChanged();
+        if (cameraChangedCallback) cameraChangedCallback();
     }
 }
 
@@ -210,63 +180,57 @@ void BlenderCameraController::setInvertZoom(bool invert)
 void BlenderCameraController::setSmoothing(bool enabled)
 {
     m_smoothingEnabled = enabled;
-    if (!enabled) {
-        m_smoothingTimer->stop();
-    }
+    // TODO: Implement cross-platform smoothing timer stop
 }
 
 void BlenderCameraController::updateSmoothing()
 {
     if (!m_camera || !m_smoothingEnabled) {
-        m_smoothingTimer->stop();
+        // TODO: Implement cross-platform smoothing timer stop
         return;
     }
 
-    QVector3D currentPosition = m_camera->getTransform().getPosition();
-    QVector3D deltaPosition = m_targetPosition - currentPosition;
+    glm::vec3 currentPosition = m_camera->getTransform().getPosition();
+    glm::vec3 deltaPosition = m_targetPosition - currentPosition;
     
     // Check if we're close enough to stop smoothing
-    if (deltaPosition.length() < 0.01f) {
+    if (glm::length(deltaPosition) < 0.01f) {
         m_camera->getTransform().setPosition(m_targetPosition);
-        m_smoothingTimer->stop();
-        emit cameraChanged();
+        // TODO: Implement cross-platform smoothing timer stop
+        if (cameraChangedCallback) cameraChangedCallback();
         return;
     }
 
     // Smooth interpolation
-    QVector3D newPosition = currentPosition + deltaPosition * m_smoothingFactor;
+    glm::vec3 newPosition = currentPosition + deltaPosition * m_smoothingFactor;
     m_camera->getTransform().setPosition(newPosition);
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
-void BlenderCameraController::startNavigation(NavigationMode mode, const QPoint& mousePos)
+void BlenderCameraController::startNavigation(NavigationAction action, const glm::ivec2& mousePos)
 {
-    m_currentMode = mode;
+    m_currentAction = action;
     m_isNavigating = true;
     m_lastMousePos = mousePos;
     m_mousePressPos = mousePos;
-    
     // Stop any ongoing smoothing
-    if (m_smoothingTimer->isActive()) {
-        m_smoothingTimer->stop();
-    }
+    // TODO: Implement cross-platform smoothing timer stop if active
 }
 
-void BlenderCameraController::updateNavigation(const QPoint& mousePos)
+void BlenderCameraController::updateNavigation(const glm::ivec2& mousePos)
 {
     if (!m_isNavigating || !m_camera) return;
 
-    QVector2D delta = getMouseDelta(mousePos);
-    
-    switch (m_currentMode) {
-        case NavigationMode::Orbit:
+    glm::vec2 delta = getMouseDelta(mousePos);
+    switch (m_currentAction) {
+        case NavigationAction::Orbit:
             performOrbit(delta);
             break;
-        case NavigationMode::Pan:
+        case NavigationAction::Pan:
             performPan(delta);
             break;
-        case NavigationMode::Zoom:
-            performZoom(delta.y() * 0.1f); // Convert vertical movement to zoom
+        case NavigationAction::Zoom:
+            performZoom(delta.y * m_zoomSensitivity);
             break;
         default:
             break;
@@ -275,62 +239,55 @@ void BlenderCameraController::updateNavigation(const QPoint& mousePos)
 
 void BlenderCameraController::endNavigation()
 {
-    m_currentMode = NavigationMode::None;
+    m_currentAction = NavigationAction::None;
     m_isNavigating = false;
 }
 
-void BlenderCameraController::performOrbit(const QVector2D& delta)
+void BlenderCameraController::performOrbit(const glm::vec2& delta)
 {
     if (!m_camera) return;
 
-    // Get current camera transform
     Transform& transform = m_camera->getTransform();
-    QVector3D position = transform.getPosition();
-    QVector3D target = QVector3D(0, 0, 0); // TODO: Get actual orbit target
-    
-    // Calculate orbit
-    QVector3D toCamera = position - target;
-    float distance = toCamera.length();
-    
-    if (distance < 0.01f) return; // Prevent division by zero
-    
+    glm::vec3 position = transform.getPosition();
+    glm::vec3 target(0, 0, 0); // TODO: Get actual orbit target
+
+    glm::vec3 toCamera = position - target;
+    float distance = glm::length(toCamera);
+    if (distance < 0.01f) return;
+
     // Horizontal rotation (around Y-axis)
-    float yawDelta = -delta.x() * m_orbitSensitivity * 0.01f;
-    QMatrix4x4 yawRotation;
-    yawRotation.rotate(qRadiansToDegrees(yawDelta), QVector3D(0, 1, 0));
-    
+    float yawDelta = -delta.x * m_orbitSensitivity * 0.01f;
+    glm::mat4 yawRotation = glm::rotate(glm::mat4(1.0f), yawDelta, glm::vec3(0, 1, 0));
+
     // Vertical rotation (around camera's right vector)
-    QVector3D right = QVector3D::crossProduct(toCamera.normalized(), QVector3D(0, 1, 0)).normalized();
-    float pitchDelta = -delta.y() * m_orbitSensitivity * 0.01f;
-    QMatrix4x4 pitchRotation;
-    pitchRotation.rotate(qRadiansToDegrees(pitchDelta), right);
-    
-    // Apply rotations
-    QVector3D newToCamera = (yawRotation * pitchRotation).map(toCamera);
-    QVector3D newPosition = target + newToCamera;
-    
+    glm::vec3 right = glm::normalize(glm::cross(glm::normalize(toCamera), glm::vec3(0, 1, 0)));
+    float pitchDelta = -delta.y * m_orbitSensitivity * 0.01f;
+    glm::mat4 pitchRotation = glm::rotate(glm::mat4(1.0f), pitchDelta, right);
+
+    glm::vec3 newToCamera = glm::vec3(yawRotation * pitchRotation * glm::vec4(toCamera, 1.0f));
+    glm::vec3 newPosition = target + newToCamera;
+
     transform.setPosition(newPosition);
     m_camera->lookAt(target);
-    
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
-void BlenderCameraController::performPan(const QVector2D& delta)
+
+void BlenderCameraController::performPan(const glm::vec2& delta)
 {
     if (!m_camera) return;
 
     Transform& transform = m_camera->getTransform();
-    QVector3D position = transform.getPosition();
-    QVector3D forward = transform.getForward();
-    QVector3D right = transform.getRight();
-    QVector3D up = QVector3D::crossProduct(right, forward).normalized();
-    
-    // Calculate pan movement
+    glm::vec3 position = transform.getPosition();
+    glm::vec3 forward = transform.getForward();
+    glm::vec3 right = transform.getRight();
+    glm::vec3 up = glm::normalize(glm::cross(right, forward));
+
     float panSpeed = m_panSensitivity * 0.01f;
-    QVector3D panMovement = (-right * delta.x() + up * delta.y()) * panSpeed;
-    
+    glm::vec3 panMovement = (-right * delta.x + up * delta.y) * panSpeed;
+
     transform.setPosition(position + panMovement);
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
 void BlenderCameraController::performZoom(float delta)
@@ -338,108 +295,93 @@ void BlenderCameraController::performZoom(float delta)
     if (!m_camera) return;
 
     Transform& transform = m_camera->getTransform();
-    QVector3D position = transform.getPosition();
-    QVector3D forward = transform.getForward();
+    glm::vec3 position = transform.getPosition();
+    glm::vec3 forward = transform.getForward();
     
     // Calculate zoom movement
     float zoomSpeed = m_zoomSensitivity * 0.5f;
-    QVector3D zoomMovement = forward * delta * zoomSpeed;
+    glm::vec3 zoomMovement = forward * delta * zoomSpeed;
     
     transform.setPosition(position + zoomMovement);
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
 void BlenderCameraController::setNumpadView(int key)
 {
-    switch (key) {
-        case Qt::Key_1:
-            setFrontView();
-            break;
-        case Qt::Key_3:
-            setRightView();
-            break;
-        case Qt::Key_7:
-            setTopView();
-            break;
-        case Qt::Key_9:
-            setBackView();
-            break;
-        // Add more numpad views as needed
-        default:
-            break;
-    }
+    // TODO: Implement numpad view switching logic here
+    // Example: if (key == 1) setFrontView();
 }
 
 void BlenderCameraController::setFrontView()
 {
     if (!m_camera) return;
     
-    QVector3D position(0, 0, 10);
-    QVector3D target(0, 0, 0);
+    glm::vec3 position(0, 0, 10);
+    glm::vec3 target(0, 0, 0);
     
     m_camera->getTransform().setPosition(position);
     m_camera->lookAt(target);
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
 void BlenderCameraController::setBackView()
 {
     if (!m_camera) return;
     
-    QVector3D position(0, 0, -10);
-    QVector3D target(0, 0, 0);
+    glm::vec3 position(0, 0, -10);
+    glm::vec3 target(0, 0, 0);
     
     m_camera->getTransform().setPosition(position);
     m_camera->lookAt(target);
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
 void BlenderCameraController::setRightView()
 {
     if (!m_camera) return;
     
-    QVector3D position(10, 0, 0);
-    QVector3D target(0, 0, 0);
+    glm::vec3 position(10, 0, 0);
+    glm::vec3 target(0, 0, 0);
     
     m_camera->getTransform().setPosition(position);
     m_camera->lookAt(target);
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
 void BlenderCameraController::setLeftView()
 {
     if (!m_camera) return;
     
-    QVector3D position(-10, 0, 0);
-    QVector3D target(0, 0, 0);
+    glm::vec3 position(-10, 0, 0);
+    glm::vec3 target(0, 0, 0);
     
     m_camera->getTransform().setPosition(position);
     m_camera->lookAt(target);
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
 void BlenderCameraController::setTopView()
 {
     if (!m_camera) return;
     
-    QVector3D position(0, 10, 0);
-    QVector3D target(0, 0, 0);
+    glm::vec3 position(0, 10, 0);
+    glm::vec3 target(0, 0, 0);
     
     m_camera->getTransform().setPosition(position);
     m_camera->lookAt(target);
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
 void BlenderCameraController::setBottomView()
 {
     if (!m_camera) return;
     
-    QVector3D position(0, -10, 0);
-    QVector3D target(0, 0, 0);
+    glm::vec3 position(0, -10, 0);
+    glm::vec3 target(0, 0, 0);
     
     m_camera->getTransform().setPosition(position);
     m_camera->lookAt(target);
-    emit cameraChanged();
+    if (cameraChangedCallback) cameraChangedCallback();
 }
 
 void BlenderCameraController::setUserView()
@@ -448,15 +390,16 @@ void BlenderCameraController::setUserView()
     resetCamera();
 }
 
-bool BlenderCameraController::isMiddleMouseButton(QMouseEvent* event) const
+bool BlenderCameraController::isMiddleMouseButton(int button) const
 {
-    return event->button() == Qt::MiddleButton;
+    return button == 2;
 }
 
-QVector2D BlenderCameraController::getMouseDelta(const QPoint& currentPos) const
+
+glm::vec2 BlenderCameraController::getMouseDelta(const glm::ivec2& currentPos) const
 {
-    QPoint delta = currentPos - m_lastMousePos;
-    return QVector2D(delta.x(), delta.y());
+    glm::ivec2 delta = currentPos - m_lastMousePos;
+    return glm::vec2(delta.x, delta.y);
 }
 
 void BlenderCameraController::updateSmoothCamera()

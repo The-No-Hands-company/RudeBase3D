@@ -26,7 +26,7 @@ public:
     CoreSystem& operator=(CoreSystem&&) = delete;
 
     // Manager accessors
-    SceneManager* getSceneManager() const { return m_sceneManager.get(); }
+    rude::SceneManager* getSceneManager() const { return m_sceneManager.get(); }
     rude::SelectionManager* getSelectionManager() const { return m_selectionManager.get(); }
     rude::ecs::ECSManager* getECSManager() const { return m_ecsManager.get(); }
 
@@ -45,7 +45,7 @@ private:
     ~CoreSystem();
 
     // Core system managers
-    std::unique_ptr<SceneManager> m_sceneManager;
+    std::unique_ptr<rude::SceneManager> m_sceneManager;
     std::unique_ptr<rude::SelectionManager> m_selectionManager;
     std::unique_ptr<rude::ecs::ECSManager> m_ecsManager;
     

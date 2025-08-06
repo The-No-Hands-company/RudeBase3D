@@ -18,9 +18,6 @@ class Vertex {
 public:
     // Constructors
     Vertex();
-    Vertex(const QVector3D& pos);
-    Vertex(const QVector3D& pos, const QVector3D& norm);
-    Vertex(const QVector3D& pos, const QVector3D& norm, const QVector2D& tex);
     Vertex(const glm::vec3& pos);
     Vertex(const glm::vec3& pos, const glm::vec3& norm);
     Vertex(const glm::vec3& pos, const glm::vec3& norm, const glm::vec2& tex);
@@ -33,9 +30,9 @@ public:
     ~Vertex() = default;
 
     // Qt-style accessors (for compatibility with existing code)
-    QVector3D position;
-    QVector3D normal;
-    QVector2D texCoord;
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 texCoord;
 
     // GLM-style getters (for performance-critical code)
     glm::vec3 getPositionGLM() const;
@@ -52,8 +49,7 @@ public:
     std::shared_ptr<rude::Vertex> toRudeVertexPtr() const;
 
     // Static factory methods
-    static Vertex fromGLM(const glm::vec3& pos, const glm::vec3& norm = glm::vec3(0.0f), const glm::vec2& tex = glm::vec2(0.0f));
-    static Vertex fromQt(const QVector3D& pos, const QVector3D& norm = QVector3D(0.0f, 1.0f, 0.0f), const QVector2D& tex = QVector2D(0.0f, 0.0f));
+    static Vertex fromGLM(const glm::vec3& pos, const glm::vec3& norm = glm::vec3(0.0f, 1.0f, 0.0f), const glm::vec2& tex = glm::vec2(0.0f, 0.0f));
 
     // Utility methods
     void normalize();
@@ -68,11 +64,7 @@ public:
     Vertex operator*(float scalar) const;
 
 private:
-    // Helper conversion functions
-    static QVector3D glmToQt(const glm::vec3& v);
-    static QVector2D glmToQt(const glm::vec2& v);
-    static glm::vec3 qtToGlm(const QVector3D& v);
-    static glm::vec2 qtToGlm(const QVector2D& v);
+    // No Qt conversion functions needed; all logic is now GLM-based.
 };
 
 // Type alias for convenience

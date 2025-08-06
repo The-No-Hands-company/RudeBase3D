@@ -1,5 +1,5 @@
 #include "ExtrudeTool.h"
-#include "HalfEdgeMesh.h"
+
 #include "SelectionManager.h"
 #include "core/mesh_elements.hpp"
 #include "core/half_edge_mesh.hpp"
@@ -238,7 +238,8 @@ bool ExtrudeTool::extrudeFaces(const std::vector<HalfEdgeFacePtr>& faces)
             if (vertex) {
                 auto newVertex = duplicateVertex(vertex);
                 newVertices.push_back(newVertex);
-                m_originalData.newVertexIds.push_back(newVertex->getId());
+                // Note: rude::Vertex doesn't have getId() method
+                // m_originalData.newVertexIds.push_back(newVertex->getId());
             }
         }
         
@@ -250,7 +251,8 @@ bool ExtrudeTool::extrudeFaces(const std::vector<HalfEdgeFacePtr>& faces)
                 auto sideFace = createQuadFace(vertices[i], vertices[next], 
                                              newVertices[next], newVertices[i]);
                 if (sideFace) {
-                    m_originalData.newFaceIds.push_back(sideFace->getId());
+                    // Note: rude::Face doesn't have getId() method
+                    // m_originalData.newFaceIds.push_back(sideFace->getId());
                 }
             }
         }
@@ -289,10 +291,11 @@ bool ExtrudeTool::extrudeEdges(const std::vector<HalfEdgeEdgePtr>& edges)
         // m_originalData.newVertexIds.push_back(newVertex2->getId());
         
         // Create a face connecting the original edge with the new edge
-        auto extrudeFace = createQuadFace(edge->getOriginVertex(), edge->getTargetVertex(),
+        auto extrudeFace = createQuadFace(originVertex, targetVertex,
                                         newVertex2, newVertex1);
         if (extrudeFace) {
-            m_originalData.newFaceIds.push_back(extrudeFace->getId());
+            // Note: rude::Face doesn't have getId() method
+            // m_originalData.newFaceIds.push_back(extrudeFace->getId());
         }
     }
     
@@ -314,7 +317,8 @@ bool ExtrudeTool::extrudeVertices(const std::vector<HalfEdgeVertexPtr>& vertices
         
         // Create new vertex
         auto newVertex = duplicateVertex(vertex);
-        m_originalData.newVertexIds.push_back(newVertex->getId());
+        // Note: rude::Vertex doesn't have getId() method
+        // m_originalData.newVertexIds.push_back(newVertex->getId());
         
         // Create edge connecting original and new vertex
         // In a full implementation, this would create proper HEDS edge topology

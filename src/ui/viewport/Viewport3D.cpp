@@ -1,5 +1,5 @@
 #include "Viewport3D.h"
-#include "Scene.h"
+#include "core/scene.hpp"
 #include "SceneObject.h"
 #include "Camera.h"
 #include "Renderer.h"
@@ -13,6 +13,7 @@
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <QDebug>
+#include <glm/gtc/matrix_transform.hpp>
 
 Viewport3D::Viewport3D(QWidget* parent)
     : QOpenGLWidget(parent)
@@ -34,7 +35,7 @@ Viewport3D::~Viewport3D()
     doneCurrent();
 }
 
-void Viewport3D::setScene(std::shared_ptr<Scene> scene)
+void Viewport3D::setScene(std::shared_ptr<rude::Scene> scene)
 {
     m_scene = scene;
     
@@ -43,9 +44,10 @@ void Viewport3D::setScene(std::shared_ptr<Scene> scene)
         m_cameraController->setScene(scene);
     }
     
-    if (m_scene) {
-        connect(m_scene.get(), &Scene::selectionChanged, this, &Viewport3D::objectSelected);
-    }
+    // TODO: Implement selection changed signal for rude::Scene
+    // if (m_scene) {
+    //     connect(m_scene.get(), &rude::Scene::selectionChanged, this, &Viewport3D::objectSelected);
+    // }
     
     update();
 }
@@ -148,12 +150,13 @@ void Viewport3D::paintGL()
     }
     
     // Set camera position for lighting calculations
-    QVector3D cameraPos = m_camera->getTransform().getPosition();
-    m_renderer->setViewPosition(cameraPos);
+    const glm::vec3& cameraGlmPos = m_camera->getTransform().getPosition();
+    QVector3D cameraPos(cameraGlmPos.x, cameraGlmPos.y, cameraGlmPos.z);
+    m_renderer->setViewPosition(cameraGlmPos);
     
     // Apply lighting from LightingSystem
     if (m_lightingSystem) {
-        m_lightingSystem->applyLighting(m_renderer, cameraPos);
+        m_lightingSystem->applyLighting(m_renderer, cameraGlmPos);
     }
     
     // Render grid using GridSystem
@@ -169,10 +172,12 @@ void Viewport3D::paintGL()
     // Render selection visualization
     renderSelection();
     
+    // TODO: Implement selection management for rude::Scene
+    // The rude::Scene API doesn't have getSelectedObject() method
     // Render transform gizmo for selected object
-    if (m_showTransformGizmo && m_scene && m_scene->getSelectedObject()) {
-        renderTransformGizmo();
-    }
+    // if (m_showTransformGizmo && m_scene && m_scene->getSelectedObject()) {
+    //     renderTransformGizmo();
+    // }
     
     m_renderer->endFrame();
 }
@@ -181,8 +186,17 @@ void Viewport3D::mousePressEvent(QMouseEvent* event)
 {
     qDebug() << "Viewport3D::mousePressEvent - Button:" << event->button() << "Modifiers:" << event->modifiers();
     if (m_inputController) {
-        m_inputController->handleMousePress(event);
-        qDebug() << "Input controller handled mouse press event";
+        // TODO: Fix BlenderCameraController integration
+        // Convert QMouseEvent to standard types for BlenderCameraController
+        // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
+        // if (blenderController) {
+        //     glm::ivec2 pos(event->pos().x(), event->pos().y());
+        //     int button = static_cast<int>(event->button());
+        //     blenderController->handleMousePress(pos, button);
+        // } else {
+        //     m_inputController->handleMousePress(event);
+        // }
+        qDebug() << "Input controller would handle mouse press event (disabled)";
     }
     setFocus();
 }
@@ -190,7 +204,14 @@ void Viewport3D::mousePressEvent(QMouseEvent* event)
 void Viewport3D::mouseMoveEvent(QMouseEvent* event)
 {
     if (m_inputController) {
-        m_inputController->handleMouseMove(event);
+        // TODO: Fix BlenderCameraController integration
+        // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
+        // if (blenderController) {
+        //     glm::ivec2 pos(event->pos().x(), event->pos().y());
+        //     blenderController->handleMouseMove(pos);
+        // } else {
+        //     m_inputController->handleMouseMove(event);
+        // }
         // Update is handled by InputController signals or CameraController changes
     }
 }
@@ -198,21 +219,44 @@ void Viewport3D::mouseMoveEvent(QMouseEvent* event)
 void Viewport3D::mouseReleaseEvent(QMouseEvent* event)
 {
     if (m_inputController) {
-        m_inputController->handleMouseRelease(event);
+        // TODO: Fix BlenderCameraController integration
+        // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
+        // if (blenderController) {
+        //     glm::ivec2 pos(event->pos().x(), event->pos().y());
+        //     int button = static_cast<int>(event->button());
+        //     blenderController->handleMouseRelease(pos, button);
+        // } else {
+        //     m_inputController->handleMouseRelease(event);
+        // }
     }
 }
 
 void Viewport3D::wheelEvent(QWheelEvent* event)
 {
     if (m_inputController) {
-        m_inputController->handleWheel(event);
+        // TODO: Fix BlenderCameraController integration
+        // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
+        // if (blenderController) {
+        //     float delta = static_cast<float>(event->angleDelta().y());
+        //     blenderController->handleWheel(delta);
+        // } else {
+        //     m_inputController->handleWheel(event);
+        // }
     }
 }
 
 void Viewport3D::keyPressEvent(QKeyEvent* event)
 {
     if (m_inputController) {
-        m_inputController->handleKeyPress(event);
+        // TODO: Fix BlenderCameraController integration
+        // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
+        // if (blenderController) {
+        //     int key = event->key();
+        //     int modifiers = static_cast<int>(event->modifiers());
+        //     blenderController->handleKeyPress(key, modifiers);
+        // } else {
+        //     m_inputController->handleKeyPress(event);
+        // }
     }
 }
 
@@ -229,36 +273,56 @@ void Viewport3D::renderScene()
         return;
     }
     
-    // Render all objects in the scene
-    for (const auto& object : m_scene->getObjects()) {
-        if (!object->isVisible()) {
+    // TODO: Implement scene rendering for rude::Scene API
+    // The rude::Scene API doesn't have getObjects() method
+    // Available methods: getEntities(), getAllEntities(), getRootEntities()
+    
+    // Render all entities in the scene
+    auto entities = m_scene->getAllEntities();
+    for (auto entity : entities) {
+        if (!entity) {
             continue;
         }
+        // TODO: Check visibility when Entity has isVisible() method
+        // if (!entity->isVisible()) {
+        //     continue;
+        // }
         
+        // TODO: Implement entity rendering for rude::Entity API
+        // The rude::Entity API is different from SceneObject API
+        // Need to implement proper rendering methods for Entity
+        /*
         // Set model matrix
-        m_renderer->setModelMatrix(object->getTransform().getModelMatrix());
+        m_renderer->setModelMatrix(entity->getTransform().getModelMatrix());
         
         // Set material
-        m_renderer->setMaterial(object->getMaterial());
+        m_renderer->setMaterial(entity->getMaterial());
         
         // Render mesh
-        m_renderer->renderMesh(object->getMesh(), m_renderMode);
+        m_renderer->renderMesh(entity->getMesh(), m_renderMode);
         
         // Render bounding box for selected object
-        if (object->isSelected()) {
-            QVector3D min = object->getBoundingBoxMin();
-            QVector3D max = object->getBoundingBoxMax();
+        if (entity->isSelected()) {
+            QVector3D min = entity->getBoundingBoxMin();
+            QVector3D max = entity->getBoundingBoxMax();
             
             // Transform to world space
-            QMatrix4x4 modelMatrix = object->getTransform().getModelMatrix();
-            m_renderer->setModelMatrix(QMatrix4x4()); // Use identity for world space lines
-            m_renderer->renderAABB(min, max, QVector4D(1.0f, 1.0f, 0.0f, 1.0f));
+            glm::mat4 modelMatrix = entity->getTransform().getModelMatrix();
+            m_renderer->setModelMatrix(glm::mat4(1.0f)); // Use identity for world space lines
+            // TODO: Convert QVector3D to glm::vec3 for renderAABB call
+            // m_renderer->renderAABB(min, max, glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
         }
+        */
     }
 }
 
 void Viewport3D::renderTransformGizmo()
 {
+    // TODO: Implement transform gizmo for rude::Scene API
+    // The rude::Scene API doesn't have getSelectedObject() method
+    return;
+    
+    /*
     if (!m_scene) {
         return;
     }
@@ -268,24 +332,25 @@ void Viewport3D::renderTransformGizmo()
         return;
     }
     
-    QVector3D objectPos = selectedObject->getTransform().getPosition();
+    const glm::vec3& objectGlmPos = selectedObject->getTransform().getPosition();
+    QVector3D objectPos(objectGlmPos.x, objectGlmPos.y, objectGlmPos.z);
     
     // Set model matrix to object position
-    QMatrix4x4 gizmoMatrix;
-    gizmoMatrix.translate(objectPos);
+    glm::mat4 gizmoMatrix = glm::translate(glm::mat4(1.0f), objectGlmPos);
     m_renderer->setModelMatrix(gizmoMatrix);
     
     // Render transform gizmo axes
     float axisLength = 1.5f;
     
     // X axis (red)
-    m_renderer->renderLine(QVector3D(0, 0, 0), QVector3D(axisLength, 0, 0), QVector4D(1, 0, 0, 1));
+    m_renderer->renderLine(glm::vec3(0, 0, 0), glm::vec3(axisLength, 0, 0), glm::vec4(1, 0, 0, 1));
     
     // Y axis (green)
-    m_renderer->renderLine(QVector3D(0, 0, 0), QVector3D(0, axisLength, 0), QVector4D(0, 1, 0, 1));
+    m_renderer->renderLine(glm::vec3(0, 0, 0), glm::vec3(0, axisLength, 0), glm::vec4(0, 1, 0, 1));
     
     // Z axis (blue)
-    m_renderer->renderLine(QVector3D(0, 0, 0), QVector3D(0, 0, axisLength), QVector4D(0, 0, 1, 1));
+    m_renderer->renderLine(glm::vec3(0, 0, 0), glm::vec3(0, 0, axisLength), glm::vec4(0, 0, 1, 1));
+    */
 }
 
 void Viewport3D::setCameraController(std::shared_ptr<ICameraController> controller)
@@ -295,16 +360,17 @@ void Viewport3D::setCameraController(std::shared_ptr<ICameraController> controll
     if (m_cameraController) {
         // Set up camera controller
         m_cameraController->setCamera(m_camera);
-        
-        // Connect camera controller signals
-        connect(m_cameraController.get(), &ICameraController::cameraChanged, this, [this]() {
-            qDebug() << "Viewport3D::cameraChanged signal received - triggering update()";
-            update();
-        });
-        
+        // TODO: Fix BlenderCameraController integration
+        // Set cross-platform camera changed callback for BlenderCameraController
+        // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
+        // if (blenderController) {
+        //     blenderController->cameraChangedCallback = [this]() {
+        //         qDebug() << "Viewport3D::cameraChanged callback received - triggering update()";
+        //         update();
+        //     };
+        // }
         // Initialize camera to industry-standard isometric view using camera controller
         m_cameraController->resetCamera();
-        
         qDebug() << "Camera controller set up and reset to default position";
     }
 }
@@ -364,6 +430,10 @@ void Viewport3D::renderSelection()
         return;
     }
     
+    // TODO: Implement selection rendering for rude::Scene API
+    // The rude::Scene API doesn't have getSelectedObject() method
+    // Need to implement selection management in Scene or use SelectionManager
+    /*
     // Get the selected object and its mesh
     auto selectedObject = m_scene->getSelectedObject();
     if (!selectedObject) {
@@ -379,11 +449,15 @@ void Viewport3D::renderSelection()
     m_renderer->setModelMatrix(selectedObject->getTransform().getModelMatrix());
     m_renderer->enableDepthTest(false); // Render on top
     m_renderer->setLineWidth(3.0f); // Thick lines for visibility
+    */
+    
+    // Temporary return until selection system is implemented
+    return;
     
     // Selection colors
-    const QVector4D vertexColor(1.0f, 0.5f, 0.0f, 1.0f);  // Orange for vertices
-    const QVector4D edgeColor(0.0f, 1.0f, 0.0f, 1.0f);    // Green for edges  
-    const QVector4D faceColor(0.0f, 0.5f, 1.0f, 0.8f);    // Blue for faces
+    const glm::vec4 vertexColor(1.0f, 0.5f, 0.0f, 1.0f);  // Orange for vertices
+    const glm::vec4 edgeColor(0.0f, 1.0f, 0.0f, 1.0f);    // Green for edges  
+    const glm::vec4 faceColor(0.0f, 0.5f, 1.0f, 0.8f);    // Blue for faces
     
     SelectionType selectionType = m_selectionManager->getSelectionType();
     
@@ -392,13 +466,13 @@ void Viewport3D::renderSelection()
         auto selectedVertices = m_selectionManager->getSelectedVertices();
         for (auto vertex : selectedVertices) {
             if (vertex) {
-                QVector3D pos = vertex->getPosition();
+                glm::vec3 pos(vertex->position.x, vertex->position.y, vertex->position.z);
                 float size = 0.05f; // Vertex highlight size
                 
                 // Draw a small cross/point to highlight the vertex
-                m_renderer->renderLine(pos + QVector3D(-size, 0, 0), pos + QVector3D(size, 0, 0), vertexColor);
-                m_renderer->renderLine(pos + QVector3D(0, -size, 0), pos + QVector3D(0, size, 0), vertexColor);
-                m_renderer->renderLine(pos + QVector3D(0, 0, -size), pos + QVector3D(0, 0, size), vertexColor);
+                m_renderer->renderLine(pos + glm::vec3(-size, 0, 0), pos + glm::vec3(size, 0, 0), vertexColor);
+                m_renderer->renderLine(pos + glm::vec3(0, -size, 0), pos + glm::vec3(0, size, 0), vertexColor);
+                m_renderer->renderLine(pos + glm::vec3(0, 0, -size), pos + glm::vec3(0, 0, size), vertexColor);
             }
         }
     }
@@ -407,11 +481,17 @@ void Viewport3D::renderSelection()
     else if (selectionType == SelectionType::Edge) {
         auto selectedEdges = m_selectionManager->getSelectedEdges();
         for (auto edge : selectedEdges) {
+            // TODO: Fix edge rendering for rude:: API
+            // Original implementation used getOriginVertex() and getTwin() which don't exist
+            Q_UNUSED(edge);
+            qDebug() << "Viewport3D: Edge selection rendering not yet implemented for rude:: API";
+            /*
             if (edge && edge->getOriginVertex() && edge->getTwin() && edge->getTwin()->getOriginVertex()) {
                 QVector3D start = edge->getOriginVertex()->getPosition();
                 QVector3D end = edge->getTwin()->getOriginVertex()->getPosition();
                 m_renderer->renderLine(start, end, edgeColor);
             }
+            */
         }
     }
     
@@ -419,6 +499,11 @@ void Viewport3D::renderSelection()
     else if (selectionType == SelectionType::Face) {
         auto selectedFaces = m_selectionManager->getSelectedFaces();
         for (auto face : selectedFaces) {
+            // TODO: Fix face rendering for rude:: API
+            // Original implementation used getOuterEdge() which doesn't exist
+            Q_UNUSED(face);
+            qDebug() << "Viewport3D: Face selection rendering not yet implemented for rude:: API";
+            /*
             if (face && face->getOuterEdge()) {
                 // Draw the face outline
                 auto currentEdge = face->getOuterEdge();
@@ -437,6 +522,7 @@ void Viewport3D::renderSelection()
                     m_renderer->renderLine(faceVertices[i], faceVertices[nextIndex], faceColor);
                 }
             }
+            */
         }
     }
     

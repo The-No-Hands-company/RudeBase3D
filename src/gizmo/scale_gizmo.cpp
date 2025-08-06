@@ -65,8 +65,7 @@ bool ScaleGizmo::handleMouseMoved(const event::MouseMoveEvent& e, const Camera& 
         glm::vec3 axisDir = getAxisDirection(m_activeAxis);
         
         // Project mouse movement onto the axis
-        QVector3D forward = camera.getForward();
-        glm::vec3 planeNormal = glm::vec3(forward.x(), forward.y(), forward.z());
+        glm::vec3 planeNormal = camera.getForward();
         glm::vec3 linePoint = m_target->getPosition();
         
         float nd = glm::dot(rayDir, planeNormal);

@@ -11,7 +11,7 @@
 #include <vector>
 
 // Forward declaration
-class Vertex;
+
 
 class Mesh : protected QOpenGLFunctions_3_3_Core {
 public:
@@ -20,6 +20,7 @@ public:
 
     // Mesh data
     void setVertices(const std::vector<rude::VertexPtr>& vertices);
+    void setVertices(const std::vector<rude::Vertex>& vertices);
     void setIndices(const std::vector<unsigned int>& indices);
     
     const std::vector<rude::VertexPtr>& getVertices() const { return m_vertices; }
@@ -35,9 +36,9 @@ public:
     // Mesh manipulation
     void calculateNormals();
     void calculateTangents();
-    QVector3D getBoundingBoxMin() const;
-    QVector3D getBoundingBoxMax() const;
-    QVector3D getBoundingBoxCenter() const;
+    glm::vec3 getBoundingBoxMin() const;
+    glm::vec3 getBoundingBoxMax() const;
+    glm::vec3 getBoundingBoxCenter() const;
     float getBoundingRadius() const;
     
     // Half-edge mesh interface
@@ -49,9 +50,7 @@ public:
     void setData(const std::vector<glm::vec3>& positions, const std::vector<unsigned int>& indices, 
                  const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords);
     
-    // Convenience overloads for our global Vertex class
-    void setVertices(const std::vector<Vertex>& vertices);
-    void setData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
+
     
     // Mesh operations
     bool extrudeFace(const rude::FacePtr& face, float distance = 1.0f);

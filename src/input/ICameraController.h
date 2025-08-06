@@ -1,19 +1,20 @@
 #pragma once
 
 #include "Common.h"
-#include <QObject>
-#include <QVector3D>
-#include <QMatrix4x4>
-#include <QVector2D>
-#include <QSize>
-#include <QtCore/QDateTime>
+#include <map>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <string>
 #include <memory>
 
 class QMouseEvent;
 class QWheelEvent;
 class QKeyEvent;
+#include "InputEvents.h"
 class Camera;
-class Scene;
+// Forward declaration for rude::Scene
+namespace rude { class Scene; }
 
 /**
  * @brief Abstract interface for camera control strategies
@@ -22,83 +23,64 @@ class Scene;
  * following the Strategy pattern. Each implementation provides a different
  * user interaction model (Maya, Blender, CAD, etc.).
  */
-class ICameraController : public QObject
-{
-    Q_OBJECT
-    
+class ICameraController {
 public:
-    explicit ICameraController(QObject* parent = nullptr) : QObject(parent) {}
     virtual ~ICameraController() = default;
-    
-    // Core interface
     virtual void setCamera(std::shared_ptr<Camera> camera) = 0;
-    virtual void setScene(std::shared_ptr<Scene> scene) = 0;
-    
+    virtual void setScene(std::shared_ptr<rude::Scene> scene) = 0;
     // Input handling - return true if event was handled
-    virtual bool handleMousePress(QMouseEvent* event) = 0;
-    virtual bool handleMouseMove(QMouseEvent* event) = 0;
-    virtual bool handleMouseRelease(QMouseEvent* event) = 0;
-    virtual bool handleWheel(QWheelEvent* event) = 0;
-    virtual bool handleKeyPress(QKeyEvent* event) = 0;
-    virtual bool handleKeyRelease(QKeyEvent* event) = 0;
-    
+    virtual bool handleMousePress(const MouseEvent& event) = 0;
+    virtual bool handleMouseMove(const MouseEvent& event) = 0;
+    virtual bool handleMouseRelease(const MouseEvent& event) = 0;
+    virtual bool handleWheel(const WheelEvent& event) = 0;
+    virtual bool handleKeyPress(const KeyEvent& event) = 0;
+    virtual bool handleKeyRelease(const KeyEvent& event) = 0;
     // Camera operations
     virtual void resetCamera() = 0;
     virtual void frameScene(bool animate = true) = 0;
     virtual void frameSelection(bool animate = true) = 0;
     virtual void updateAspectRatio(float aspectRatio) = 0;
-    
     // Camera state queries
-    virtual QVector3D getWorldPosition() const = 0;
-    virtual QMatrix4x4 getViewMatrix() const = 0;
-    virtual QMatrix4x4 getProjectionMatrix() const = 0;
-    virtual QVector3D screenToWorldRay(const QVector2D& screenPos, const QSize& viewportSize) const = 0;
-    
+    virtual glm::vec3 getWorldPosition() const = 0;
+    virtual glm::mat4 getViewMatrix() const = 0;
+    virtual glm::mat4 getProjectionMatrix() const = 0;
+    virtual glm::vec3 screenToWorldRay(const glm::vec2& screenPos, const glm::ivec2& viewportSize) const = 0;
     // Settings
     virtual void setMovementSpeed(float speed) = 0;
     virtual void setRotationSpeed(float speed) = 0;
     virtual void setPanSpeed(float speed) = 0;
     virtual void setZoomSpeed(float speed) = 0;
     virtual void setInvertY(bool invert) = 0;
-    
     virtual float getMovementSpeed() const = 0;
     virtual float getRotationSpeed() const = 0;
     virtual float getPanSpeed() const = 0;
     virtual float getZoomSpeed() const = 0;
     virtual bool isYInverted() const = 0;
-    
     // Controller identification
-    virtual QString getControllerName() const = 0;
-    virtual QString getControllerDescription() const = 0;
-    
-signals:
-    void cameraChanged();
-    void pivotChanged(const QVector3D& pivot);
-    void viewChanged();
-    
+    virtual std::string getControllerName() const = 0;
+    virtual std::string getControllerDescription() const = 0;
 protected:
     std::shared_ptr<Camera> m_camera;
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
 };
 
 /**
  * @brief Camera bookmark system for saving/restoring view states
  */
-class CameraBookmark
-{
+class CameraBookmark {
 public:
-    QVector3D position;
-    QVector3D target;
-    QVector3D up;
+    glm::vec3 position;
+    glm::vec3 target;
+    glm::vec3 up;
     float fov;
-    QString name;
-    QDateTime timestamp;
-    
+    std::string name;
+    uint64_t timestamp; // Use UNIX timestamp or std::chrono for cross-platform
+
     CameraBookmark() = default;
-    CameraBookmark(const QVector3D& pos, const QVector3D& tgt, const QVector3D& upVec, 
-                   float fieldOfView, const QString& bookmarkName = QString())
+    CameraBookmark(const glm::vec3& pos, const glm::vec3& tgt, const glm::vec3& upVec,
+                  float fieldOfView, const std::string& bookmarkName = "")
         : position(pos), target(tgt), up(upVec), fov(fieldOfView), name(bookmarkName)
-        , timestamp(QDateTime::currentDateTime()) {}
+        , timestamp(static_cast<uint64_t>(time(nullptr))) {}
 };
 
 /**
@@ -108,66 +90,57 @@ public:
  * professional camera features that should be consistent across all
  * camera controller implementations.
  */
-class CameraStateManager : public QObject
-{
-    Q_OBJECT
-    
+class CameraStateManager {
 public:
-    explicit CameraStateManager(QObject* parent = nullptr);
-    
+    CameraStateManager();
+
     // Bookmark management
-    void saveBookmark(int slot, const QString& name = QString());
+    void saveBookmark(int slot, const std::string& name = "");
     void restoreBookmark(int slot, bool animate = true);
     bool hasBookmark(int slot) const;
     CameraBookmark getBookmark(int slot) const;
     void clearBookmark(int slot);
     void clearAllBookmarks();
-    
+
     // View history
     void pushCurrentView();
     void goBackInHistory();
     void goForwardInHistory();
     bool canGoBack() const;
     bool canGoForward() const;
-    
+
     // Focus management
-    void setOrbitPivot(const QVector3D& pivot);
-    QVector3D getOrbitPivot() const;
+    void setOrbitPivot(const glm::vec3& pivot);
+    glm::vec3 getOrbitPivot() const;
     void setAutoOrbitPivot(bool enabled);
     bool isAutoOrbitPivotEnabled() const;
-    
+
     // Smart framing
     void setFramingMargin(float margin) { m_framingMargin = margin; }
     float getFramingMargin() const { return m_framingMargin; }
-    
+
     // Camera state
     void setCamera(std::shared_ptr<Camera> camera);
     void updateFromCamera();
-    
-signals:
-    void bookmarkSaved(int slot, const QString& name);
-    void bookmarkRestored(int slot);
-    void pivotChanged(const QVector3D& pivot);
-    void historyChanged();
-    
+
 private:
     std::shared_ptr<Camera> m_camera;
-    
+
     // Bookmarks (slots 0-9)
-    QMap<int, CameraBookmark> m_bookmarks;
-    
+    std::map<int, CameraBookmark> m_bookmarks;
+
     // View history
-    QList<CameraBookmark> m_viewHistory;
+    std::vector<CameraBookmark> m_viewHistory;
     int m_historyIndex;
     static const int MAX_HISTORY_SIZE = 50;
-    
+
     // Orbit pivot
-    QVector3D m_orbitPivot;
+    glm::vec3 m_orbitPivot;
     bool m_autoOrbitPivot;
-    
+
     // Settings
     float m_framingMargin;
-    
+
     void addToHistory(const CameraBookmark& bookmark);
     CameraBookmark createBookmarkFromCamera() const;
     void applyCameraBookmark(const CameraBookmark& bookmark, bool animate);
@@ -176,8 +149,7 @@ private:
 /**
  * @brief Factory for creating camera controllers
  */
-class CameraControllerFactory
-{
+class CameraControllerFactory {
 public:
     enum class ControllerType {
         Maya,
@@ -186,8 +158,8 @@ public:
         Game,
         Custom
     };
-    
-    static std::unique_ptr<ICameraController> createController(ControllerType type, QObject* parent = nullptr);
-    static QStringList getAvailableControllers();
-    static QString getControllerDescription(ControllerType type);
+
+    static std::unique_ptr<ICameraController> createController(ControllerType type);
+    static std::vector<std::string> getAvailableControllers();
+    static std::string getControllerDescription(ControllerType type);
 };

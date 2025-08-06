@@ -8,6 +8,7 @@
 #include "core/math/Transform.h"
 #include "core/half_edge_mesh.hpp"
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <algorithm>
 #include <limits>
@@ -72,23 +73,24 @@ std::vector<SelectionData> ComponentPicker::pickComponentsInRegion(float x1, flo
     auto mesh = targetEntity->getMesh();
     if (!mesh) return selections;
     
-    auto& halfEdgeMesh = mesh->getHalfEdgeMesh();
+    auto halfEdgeMesh = mesh->toHalfEdgeMesh();
+    if (!halfEdgeMesh) return selections;
     Transform& transform = targetEntity->getTransform();
-    glm::mat4 modelMatrix = rude::qMatrixToGlm(transform.getModelMatrix());
-    
+    glm::mat4 modelMatrix = transform.getModelMatrix();
+
     // Ensure region coordinates are properly ordered
     float minX = std::min(x1, x2);
     float maxX = std::max(x1, x2);
     float minY = std::min(y1, y2);
     float maxY = std::max(y1, y2);
-    
+
     switch (targetType) {
         case ComponentType::Vertex: {
-            for (auto it = halfEdgeMesh.vertices_begin(); it != halfEdgeMesh.vertices_end(); ++it) {
+            for (auto it = halfEdgeMesh->vertices_begin(); it != halfEdgeMesh->vertices_end(); ++it) {
                 auto vertex = *it;
-                glm::vec3 worldPos = modelMatrix * glm::vec4(vertex->position, 1.0f);
+                glm::vec3 worldPos = modelMatrix * glm::vec4(vertex->getPosition(), 1.0f);
                 glm::vec3 screenPos = worldToScreen(worldPos, viewportWidth, viewportHeight);
-                
+
                 if (screenPos.x >= minX && screenPos.x <= maxX &&
                     screenPos.y >= minY && screenPos.y <= maxY) {
                     SelectionData selection;
@@ -99,21 +101,24 @@ std::vector<SelectionData> ComponentPicker::pickComponentsInRegion(float x1, flo
             }
             break;
         }
-        
+
         case ComponentType::Edge: {
-            for (auto it = halfEdgeMesh.edges_begin(); it != halfEdgeMesh.edges_end(); ++it) {
+            for (auto it = halfEdgeMesh->edges_begin(); it != halfEdgeMesh->edges_end(); ++it) {
                 auto edge = *it;
-                if (!edge->halfEdge) continue;
-                
-                auto he1 = edge->halfEdge;
-                auto he2 = he1->twin;
-                
-                glm::vec3 worldPos1 = modelMatrix * glm::vec4(he1->vertex->position, 1.0f);
-                glm::vec3 worldPos2 = modelMatrix * glm::vec4(he2->vertex->position, 1.0f);
-                
+                if (!edge->getHalfEdge()) continue;
+
+                auto he1 = edge->getHalfEdge();
+                auto he2 = he1->getTwin();
+
+                glm::vec3 worldPos1 = modelMatrix * glm::vec4(he1->getVertex()->getPosition(), 1.0f);
+                glm::vec3 worldPos2 = glm::vec3(0.0f);
+                if (he2 && he2->getVertex()) {
+                    worldPos2 = modelMatrix * glm::vec4(he2->getVertex()->getPosition(), 1.0f);
+                }
+
                 glm::vec3 screenPos1 = worldToScreen(worldPos1, viewportWidth, viewportHeight);
                 glm::vec3 screenPos2 = worldToScreen(worldPos2, viewportWidth, viewportHeight);
-                
+
                 // Check if edge intersects with selection region
                 if ((screenPos1.x >= minX && screenPos1.x <= maxX && screenPos1.y >= minY && screenPos1.y <= maxY) ||
                     (screenPos2.x >= minX && screenPos2.x <= maxX && screenPos2.y >= minY && screenPos2.y <= maxY)) {
@@ -125,29 +130,29 @@ std::vector<SelectionData> ComponentPicker::pickComponentsInRegion(float x1, flo
             }
             break;
         }
-        
+
         case ComponentType::Face: {
-            for (auto it = halfEdgeMesh.faces_begin(); it != halfEdgeMesh.faces_end(); ++it) {
+            for (auto it = halfEdgeMesh->faces_begin(); it != halfEdgeMesh->faces_end(); ++it) {
                 auto face = *it;
                 if (!face->getHalfEdge()) continue;
-                
+
                 // Check if face center is in selection region
                 auto he = face->getHalfEdge();
                 glm::vec3 center(0.0f);
                 int vertexCount = 0;
-                
+
                 auto current = he;
                 do {
-                    center += current->getVertex()->position;
+                    center += current->getVertex()->getPosition();
                     vertexCount++;
                     current = current->getNext();
                 } while (current != he);
-                
+
                 if (vertexCount > 0) {
                     center /= static_cast<float>(vertexCount);
                     glm::vec3 worldPos = modelMatrix * glm::vec4(center, 1.0f);
                     glm::vec3 screenPos = worldToScreen(worldPos, viewportWidth, viewportHeight);
-                    
+
                     if (screenPos.x >= minX && screenPos.x <= maxX &&
                         screenPos.y >= minY && screenPos.y <= maxY) {
                         SelectionData selection;
@@ -159,11 +164,11 @@ std::vector<SelectionData> ComponentPicker::pickComponentsInRegion(float x1, flo
             }
             break;
         }
-        
+
         default:
             break;
     }
-    
+
     return selections;
 }
 
@@ -180,8 +185,8 @@ glm::vec3 ComponentPicker::getRayDirection(float mouseX, float mouseY, int viewp
     float y = 1.0f - (2.0f * mouseY) / viewportHeight;
     
     // Get the inverse projection and view matrices
-    glm::mat4 invProjection = glm::inverse(rude::qMatrixToGlm(m_camera->getProjectionMatrix()));
-    glm::mat4 invView = glm::inverse(rude::qMatrixToGlm(m_camera->getViewMatrix()));
+    glm::mat4 invProjection = glm::inverse(m_camera->getProjectionMatrix());
+    glm::mat4 invView = glm::inverse(m_camera->getViewMatrix());
     
     // Convert to world space
     glm::vec4 rayClip = glm::vec4(x, y, -1.0f, 1.0f);
@@ -197,18 +202,18 @@ SelectionData ComponentPicker::pickVertex(const glm::vec3& rayOrigin, const glm:
     
     auto mesh = entity->getMesh();
     if (!mesh) return result;
-    
-    auto& halfEdgeMesh = mesh->getHalfEdgeMesh();
+    auto halfEdgeMesh = mesh->toHalfEdgeMesh();
+    if (!halfEdgeMesh) return result;
     Transform& transform = entity->getTransform();
-    glm::mat4 modelMatrix = rude::qMatrixToGlm(transform.getModelMatrix());
+    glm::mat4 modelMatrix = transform.getModelMatrix();
     
     float closestDistance = std::numeric_limits<float>::max();
     VertexPtr closestVertex = nullptr;
     
-    for (auto it = halfEdgeMesh.vertices_begin(); it != halfEdgeMesh.vertices_end(); ++it) {
+    for (auto it = halfEdgeMesh->vertices_begin(); it != halfEdgeMesh->vertices_end(); ++it) {
         auto vertex = *it;
-        glm::vec3 worldPos = modelMatrix * glm::vec4(vertex->position, 1.0f);
-        
+        glm::vec3 worldPos = modelMatrix * glm::vec4(vertex->getPosition(), 1.0f);
+
         float distance = pointToRayDistance(worldPos, rayOrigin, rayDirection);
         if (distance < closestDistance && distance < m_pickingTolerance / 100.0f) { // Convert pixel tolerance to world units approximately
             closestDistance = distance;
@@ -229,24 +234,27 @@ SelectionData ComponentPicker::pickEdge(const glm::vec3& rayOrigin, const glm::v
     
     auto mesh = entity->getMesh();
     if (!mesh) return result;
-    
-    auto& halfEdgeMesh = mesh->getHalfEdgeMesh();
+    auto halfEdgeMesh = mesh->toHalfEdgeMesh();
+    if (!halfEdgeMesh) return result;
     Transform& transform = entity->getTransform();
-    glm::mat4 modelMatrix = rude::qMatrixToGlm(transform.getModelMatrix());
+    glm::mat4 modelMatrix = transform.getModelMatrix();
     
     float closestDistance = std::numeric_limits<float>::max();
     EdgePtr closestEdge = nullptr;
     
-    for (auto it = halfEdgeMesh.edges_begin(); it != halfEdgeMesh.edges_end(); ++it) {
+    for (auto it = halfEdgeMesh->edges_begin(); it != halfEdgeMesh->edges_end(); ++it) {
         auto edge = *it;
-        if (!edge->halfEdge) continue;
-        
-        auto he1 = edge->halfEdge;
-        auto he2 = he1->twin;
-        
-        glm::vec3 worldPos1 = modelMatrix * glm::vec4(he1->vertex->position, 1.0f);
-        glm::vec3 worldPos2 = modelMatrix * glm::vec4(he2->vertex->position, 1.0f);
-        
+        if (!edge->getHalfEdge()) continue;
+
+        auto he1 = edge->getHalfEdge();
+        auto he2 = he1->getTwin();
+
+        glm::vec3 worldPos1 = modelMatrix * glm::vec4(he1->getVertex()->getPosition(), 1.0f);
+        glm::vec3 worldPos2 = glm::vec3(0.0f);
+        if (he2 && he2->getVertex()) {
+            worldPos2 = modelMatrix * glm::vec4(he2->getVertex()->getPosition(), 1.0f);
+        }
+
         float distance = lineSegmentToRayDistance(worldPos1, worldPos2, rayOrigin, rayDirection);
         if (distance < closestDistance && distance < m_pickingTolerance / 100.0f) {
             closestDistance = distance;
@@ -267,28 +275,28 @@ SelectionData ComponentPicker::pickFace(const glm::vec3& rayOrigin, const glm::v
     
     auto mesh = entity->getMesh();
     if (!mesh) return result;
-    
-    auto& halfEdgeMesh = mesh->getHalfEdgeMesh();
+    auto halfEdgeMesh = mesh->toHalfEdgeMesh();
+    if (!halfEdgeMesh) return result;
     Transform& transform = entity->getTransform();
-    glm::mat4 modelMatrix = rude::qMatrixToGlm(transform.getModelMatrix());
+    glm::mat4 modelMatrix = transform.getModelMatrix();
     
     float closestT = std::numeric_limits<float>::max();
-    FacePtr closestFace = nullptr;
+    rude::FacePtr closestFace = nullptr;
     
-    for (auto it = halfEdgeMesh.faces_begin(); it != halfEdgeMesh.faces_end(); ++it) {
+    for (auto it = halfEdgeMesh->faces_begin(); it != halfEdgeMesh->faces_end(); ++it) {
         auto face = *it;
         if (!face->getHalfEdge()) continue;
-        
+
         // Get face vertices
         std::vector<glm::vec3> vertices;
         auto he = face->getHalfEdge();
         auto current = he;
         do {
-            glm::vec3 worldPos = modelMatrix * glm::vec4(current->getVertex()->position, 1.0f);
+            glm::vec3 worldPos = modelMatrix * glm::vec4(current->getVertex()->getPosition(), 1.0f);
             vertices.push_back(worldPos);
             current = current->getNext();
         } while (current != he);
-        
+
         // For triangular faces, do direct ray-triangle intersection
         if (vertices.size() == 3) {
             float t;
@@ -403,8 +411,8 @@ bool ComponentPicker::rayTriangleIntersect(const glm::vec3& rayOrigin, const glm
 glm::vec3 ComponentPicker::worldToScreen(const glm::vec3& worldPos, int viewportWidth, int viewportHeight) const {
     if (!m_camera) return glm::vec3(0.0f);
     
-    glm::mat4 view = rude::qMatrixToGlm(m_camera->getViewMatrix());
-    glm::mat4 proj = rude::qMatrixToGlm(m_camera->getProjectionMatrix());
+    glm::mat4 view = m_camera->getViewMatrix();
+    glm::mat4 proj = m_camera->getProjectionMatrix();
     
     glm::vec4 clipSpace = proj * view * glm::vec4(worldPos, 1.0f);
     if (clipSpace.w == 0.0f) return glm::vec3(0.0f);

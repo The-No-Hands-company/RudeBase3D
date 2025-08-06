@@ -3,16 +3,16 @@
 #include "core/scene.hpp"
 #include <algorithm>
 #include <map>
-#include <QDebug>
+#include <spdlog/spdlog.h>
 
 namespace rude {
 
-SelectionManager::SelectionManager() : QObject() {
+rude::SelectionManager::SelectionManager() : QObject() {
     // Initialize with empty selection
     m_currentSelectionType = ComponentType::None;
 }
 
-void SelectionManager::setScene(Scene* scene) {
+void rude::SelectionManager::setScene(rude::Scene* scene) {
     if (m_scene == scene) return;
     
     // Clear any existing selection
@@ -77,12 +77,12 @@ void SelectionManager::selectMultiple(const std::vector<SelectionData>& elements
 }
 
 void SelectionManager::selectByRay(const glm::vec3& rayOrigin, const glm::vec3& rayDir, ComponentType type) {
-    qDebug() << "SelectionManager: Ray selection not implemented yet";
+    spdlog::info("SelectionManager: Ray selection not implemented yet");
     // This would implement ray-picking for the specified component type
 }
 
 void SelectionManager::selectByRect(const QRect& rect, const glm::mat4& viewProj, ComponentType type) {
-    qDebug() << "SelectionManager: Rectangle selection not implemented yet";
+    spdlog::info("SelectionManager: Rectangle selection not implemented yet");
     // This would implement rectangle selection for the specified component type
 }
 
@@ -93,17 +93,17 @@ void SelectionManager::selectAll() {
     switch (m_currentSelectionType) {
         case ComponentType::Vertex: {
             // Select all vertices in all meshes
-            qDebug() << "SelectionManager: Select all vertices not implemented yet";
+            spdlog::info("SelectionManager: Select all vertices not implemented yet");
             break;
         }
         case ComponentType::Edge: {
             // Select all edges in all meshes
-            qDebug() << "SelectionManager: Select all edges not implemented yet";
+            spdlog::info("SelectionManager: Select all edges not implemented yet");
             break;
         }
         case ComponentType::Face: {
             // Select all faces in all meshes
-            qDebug() << "SelectionManager: Select all faces not implemented yet";
+            spdlog::info("SelectionManager: Select all faces not implemented yet");
             break;
         }
         case ComponentType::Entity: {
@@ -122,7 +122,7 @@ void SelectionManager::selectAll() {
 void SelectionManager::invertSelection() {
     if (!m_scene) return;
     
-    qDebug() << "SelectionManager: Invert selection not fully implemented yet";
+    spdlog::info("SelectionManager: Invert selection not fully implemented yet");
 
     switch (m_currentSelectionType) {
         case ComponentType::Entity: {
@@ -143,7 +143,7 @@ void SelectionManager::invertSelection() {
             break;
         }
         default:
-            qDebug() << "SelectionManager: Invert selection not implemented for this component type";
+            spdlog::info("SelectionManager: Invert selection not implemented for this component type");
             break;
     }
 }
@@ -194,8 +194,7 @@ bool SelectionManager::hasMixedSelection() const {
 void SelectionManager::convertSelection(ComponentType targetType) {
     if (m_currentSelectionType == targetType || !hasSelection()) return;
     
-    qDebug() << "SelectionManager: Converting selection from" << static_cast<int>(m_currentSelectionType)
-             << "to" << static_cast<int>(targetType);
+    spdlog::info("SelectionManager: Converting selection from {} to {}", static_cast<int>(m_currentSelectionType), static_cast<int>(targetType));
     
     // Store current selection
     std::set<VertexPtr> oldVertices = m_selectedVertices;
@@ -277,7 +276,7 @@ void SelectionManager::convertSelection(ComponentType targetType) {
 }
 
 void SelectionManager::expandSelection() {
-    qDebug() << "SelectionManager: Expand selection not fully implemented yet";
+    spdlog::info("SelectionManager: Expand selection not fully implemented yet");
     
     switch (m_currentSelectionType) {
         case ComponentType::Vertex: {

@@ -21,7 +21,8 @@ rude::PrimitiveType Entity::getPrimitiveType() const {
     return primitiveType;
 }
 
-std::shared_ptr<Mesh> Entity::getMesh() const {
+// Return the mesh pointer (rude::MeshPtr)
+rude::MeshPtr Entity::getMesh() const {
     return mesh;
 }
 
@@ -31,14 +32,14 @@ std::pair<glm::vec3, glm::vec3> Entity::getAABB() const {
 
 glm::mat4 Entity::getWorldTransform() const {
     if (parent) {
-        return parent->getWorldTransform() * rude::qMatrixToGlm(transform.getModelMatrix());
+        return parent->getWorldTransform() * transform.getModelMatrix();
     } else {
-        return rude::qMatrixToGlm(transform.getModelMatrix());
+        return transform.getModelMatrix();
     }
 }
 
 void Entity::draw(const glm::mat4& view, const glm::mat4& proj, const glm::mat4& parentTransform) const {
-    glm::mat4 world = parentTransform * rude::qMatrixToGlm(transform.getModelMatrix());
+    glm::mat4 world = parentTransform * transform.getModelMatrix();
     // TODO: Use 'world' for rendering this entity's mesh
     // Example: mesh->draw(world, view, proj);
     // Draw children recursively

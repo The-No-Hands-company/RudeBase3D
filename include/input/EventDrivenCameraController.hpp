@@ -8,7 +8,7 @@
 #include <memory>
 
 class Camera;
-class Scene;
+namespace rude { class Scene; }
 
 namespace input {
 
@@ -38,7 +38,7 @@ public:
 
     // Setup
     void setCamera(std::shared_ptr<Camera> camera);
-    void setScene(std::shared_ptr<Scene> scene);
+    void setScene(std::shared_ptr<rude::Scene> scene);
 
     // Event handlers
     void onMousePress(event::Event& event);
@@ -66,34 +66,34 @@ signals:
 
 private:
     // Helper methods
-    void startNavigation(NavigationMode mode, const QPoint& mousePos);
-    void updateNavigation(const QPoint& mousePos);
+    void startNavigation(NavigationMode mode, const glm::ivec2& mousePos);
+    void updateNavigation(const glm::ivec2& mousePos);
     void endNavigation();
 
-    void performOrbit(const QVector2D& delta);
-    void performPan(const QVector2D& delta);
+    void performOrbit(const glm::vec2& delta);
+    void performPan(const glm::vec2& delta);
     void performDolly(float delta);
 
     bool isMayaOrbitAction(const event::MouseEvent& mouseEvent) const;
     bool isMayaPanAction(const event::MouseEvent& mouseEvent) const;
     bool isMayaDollyAction(const event::MouseEvent& mouseEvent) const;
 
-    QVector2D getMouseDelta(const QPoint& currentPos) const;
+    glm::vec2 getMouseDelta(const glm::ivec2& currentPos) const;
     void updateOrbitPivot();
 
 private:
     event::EventDispatcher& m_dispatcher;
     std::shared_ptr<Camera> m_camera;
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
 
     // Navigation state
     NavigationMode m_currentMode = NavigationMode::None;
-    QPoint m_lastMousePos;
-    QPoint m_mousePressPos;
+    glm::ivec2 m_lastMousePos;
+    glm::ivec2 m_mousePressPos;
     bool m_isNavigating = false;
 
     // Orbit settings
-    QVector3D m_orbitPivot = QVector3D(0, 0, 0);
+    glm::vec3 m_orbitPivot = glm::vec3(0, 0, 0);
     float m_orbitDistance = 10.0f;
 
     // Sensitivity settings

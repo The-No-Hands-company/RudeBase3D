@@ -1,8 +1,8 @@
 #include "core/mesh.hpp"
 #include "core/qt_glm_utils.hpp"
-#include "geometry/halfedge/HalfEdgeMesh.h"
+
 #include "Common.h"
-#include <QDebug>
+#include <spdlog/spdlog.h>
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <cmath>
@@ -23,7 +23,7 @@ Mesh::~Mesh()
 void Mesh::extrudeFace(int faceIndex, float distance)
 {
     if (faceIndex < 0 || faceIndex >= static_cast<int>(m_indices.size() / 3)) {
-        qWarning() << "Invalid face index for extrusion:" << faceIndex;
+        spdlog::warn("Invalid face index for extrusion: {}", faceIndex);
         return;
     }
 
@@ -32,7 +32,7 @@ void Mesh::extrudeFace(int faceIndex, float distance)
     // 2. Perform the extrusion operation using HalfEdgeUtils::extrudeFaces
     // 3. Convert back to a regular mesh
     
-    qDebug() << "Extruding face" << faceIndex << "with distance" << distance;
+    spdlog::info("Extruding face {} with distance {}", faceIndex, distance);
     
     // Get face normal
     unsigned int i0 = m_indices[faceIndex * 3];
@@ -57,11 +57,11 @@ void Mesh::extrudeFace(int faceIndex, float distance)
 void Mesh::bevelEdge(int edgeIndex, float width, float depth)
 {
     if (edgeIndex < 0 || edgeIndex >= static_cast<int>(m_indices.size())) {
-        qWarning() << "Invalid edge index for beveling:" << edgeIndex;
+        spdlog::warn("Invalid edge index for beveling: {}", edgeIndex);
         return;
     }
     
-    qDebug() << "Beveling edge" << edgeIndex << "with width" << width << "and depth" << depth;
+    spdlog::info("Beveling edge {} with width {} and depth {}", edgeIndex, width, depth);
     
     // Stub implementation: In a full implementation, you would:
     // 1. Convert to half-edge mesh
@@ -70,7 +70,7 @@ void Mesh::bevelEdge(int edgeIndex, float width, float depth)
     // 4. Convert back to a regular mesh
     
     // For now, we'll just log it and avoid changing the mesh
-    qDebug() << "Bevel edge operation not fully implemented yet";
+    spdlog::info("Bevel edge operation not fully implemented yet");
     
     m_uploaded = false;
 }
@@ -78,11 +78,11 @@ void Mesh::bevelEdge(int edgeIndex, float width, float depth)
 void Mesh::subdivideFace(int faceIndex, int divisions)
 {
     if (faceIndex < 0 || faceIndex >= static_cast<int>(m_indices.size() / 3)) {
-        qWarning() << "Invalid face index for subdivision:" << faceIndex;
+        spdlog::warn("Invalid face index for subdivision: {}", faceIndex);
         return;
     }
     
-    qDebug() << "Subdividing face" << faceIndex << "with" << divisions << "divisions";
+    spdlog::info("Subdividing face {} with {} divisions", faceIndex, divisions);
     
     // Stub implementation: In a full implementation, you would:
     // 1. Convert to half-edge mesh
@@ -91,7 +91,7 @@ void Mesh::subdivideFace(int faceIndex, int divisions)
     // 4. Convert back to a regular mesh
     
     // For now, we'll just log it and avoid changing the mesh
-    qDebug() << "Subdivide face operation not fully implemented yet";
+    spdlog::info("Subdivide face operation not fully implemented yet");
     
     m_uploaded = false;
 }
@@ -147,11 +147,10 @@ void Mesh::setData(const std::vector<rude::Vertex>& vertices, const std::vector<
     m_indices = indices;
     
     if (vertices.empty()) {
-        qWarning() << "Setting empty vertex data";
+        spdlog::warn("Setting empty vertex data");
     }
-    
     if (indices.empty()) {
-        qWarning() << "Setting empty index data";
+        spdlog::warn("Setting empty index data");
     }
     
     // Calculate normals if they're not provided

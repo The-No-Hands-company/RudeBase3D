@@ -1,12 +1,14 @@
 #pragma once
 
-#include "Common.h"
+#include "core/mesh_forward.hpp"
 #include "GeometryTypes.h"
 #include "GeometryConverter.h"
 #include <memory>
 #include <variant>
 #include <unordered_map>
 #include <string>
+#include <vector>
+#include <glm/glm.hpp>
 
 /**
  * @brief Geometry Representation Type
@@ -27,8 +29,8 @@ enum class GeometryRepresentation {
  * Holds any supported geometry type
  */
 using GeometryVariant = std::variant<
-    MeshPtr,
-    HalfEdgeMeshPtr,
+    rude::MeshPtr,
+    rude::HalfEdgeMeshPtr,
     NURBSSurfacePtr,
     SubdivisionMeshPtr,
     VoxelGridPtr,
@@ -60,16 +62,16 @@ public:
     }
     
     // Cache management for different representations
-    MeshPtr getFaceVertexMesh(bool forceUpdate = false);
-    HalfEdgeMeshPtr getHalfEdgeMesh(bool forceUpdate = false);
+    rude::MeshPtr getFaceVertexMesh(bool forceUpdate = false);
+    rude::HalfEdgeMeshPtr getHalfEdgeMesh(bool forceUpdate = false);
     NURBSSurfacePtr getNURBSSurface(bool forceUpdate = false);
     SubdivisionMeshPtr getSubdivisionMesh(bool forceUpdate = false);
     VoxelGridPtr getVoxelGrid(float voxelSize = 0.1f, bool forceUpdate = false);
     PointCloudPtr getPointCloud(int samplesPerFace = 10, bool forceUpdate = false);
     ImplicitSurfacePtr getImplicitSurface(float bandwidth = 2.0f, bool forceUpdate = false);
-    
+
     // Rendering optimization
-    MeshPtr getRenderMesh(int subdivisionLevel = -1);
+    rude::MeshPtr getRenderMesh(int subdivisionLevel = -1);
     BVHTreePtr getBVH(bool forceUpdate = false);
     
     // Update primary representation
@@ -135,8 +137,8 @@ public:
 
     // Geometry creation
     std::shared_ptr<HybridGeometry> createGeometry(GeometryVariant geometry);
-    std::shared_ptr<HybridGeometry> createFromMesh(MeshPtr mesh);
-    std::shared_ptr<HybridGeometry> createFromHalfEdge(HalfEdgeMeshPtr halfEdge);
+    std::shared_ptr<HybridGeometry> createFromMesh(rude::MeshPtr mesh);
+    std::shared_ptr<HybridGeometry> createFromHalfEdge(rude::HalfEdgeMeshPtr halfEdge);
     std::shared_ptr<HybridGeometry> createFromNURBS(NURBSSurfacePtr nurbs);
     std::shared_ptr<HybridGeometry> createFromPointCloud(PointCloudPtr pointCloud);
     
@@ -234,8 +236,8 @@ public:
     struct GeometryAnalysis {
         float volume = 0.0f;
         float surfaceArea = 0.0f;
-        QVector3D centroid;
-        QVector3D boundingBoxMin, boundingBoxMax;
+        glm::vec3 centroid = glm::vec3(0.0f);
+        glm::vec3 boundingBoxMin = glm::vec3(0.0f), boundingBoxMax = glm::vec3(0.0f);
         bool isManifold = false;
         bool isWatertight = false;
         int genusApproximation = 0;

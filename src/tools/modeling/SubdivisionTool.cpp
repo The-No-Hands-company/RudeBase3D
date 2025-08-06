@@ -1,5 +1,7 @@
 #include "SubdivisionTool.h"
-#include "HalfEdgeMesh.h"
+
+#include "core/half_edge_mesh.hpp"
+#include "core/mesh_elements.hpp"
 #include <QDebug>
 #include <algorithm>
 #include <cmath>
@@ -9,28 +11,34 @@
 SubdivisionTool::SubdivisionTool() {
 }
 
-MeshPtr SubdivisionTool::subdivide(int levels) {
+rude::HalfEdgeMeshPtr SubdivisionTool::subdivide(int levels) {
     if (!canSubdivide() || levels <= 0) {
         qWarning() << "SubdivisionTool: Cannot subdivide - invalid parameters";
         return nullptr;
     }
     
+    // TODO: Implement subdivision using rude:: API
+    qDebug() << "SubdivisionTool: Subdivision not yet fully implemented for rude:: API";
+    return nullptr;
+    
+    // NOTE: All subdivision code temporarily commented out due to API changes
+    /*
     auto currentMesh = m_mesh;
     
     for (int level = 0; level < levels; ++level) {
-        MeshPtr subdividedMesh = nullptr;
+        auto subdividedMesh = std::shared_ptr<rude::HalfEdgeMesh>();
         
         switch (m_subdivisionType) {
             case SubdivisionType::CatmullClark:
-                subdividedMesh = applyCatmullClark(currentMesh);
+                // subdividedMesh = applyCatmullClark(currentMesh);
                 break;
                 
             case SubdivisionType::Loop:
-                subdividedMesh = applyLoop(currentMesh);
+                // subdividedMesh = applyLoop(currentMesh);
                 break;
                 
             case SubdivisionType::DooSabin:
-                subdividedMesh = applyDooSabin(currentMesh);
+                // subdividedMesh = applyDooSabin(currentMesh);
                 break;
                 
             case SubdivisionType::ModifiedButterfly:
@@ -47,49 +55,26 @@ MeshPtr SubdivisionTool::subdivide(int levels) {
     }
     
     return currentMesh;
+    */
 }
 
-rude::MeshPtr SubdivisionTool::subdivideAdaptive(float errorThreshold) {
+rude::HalfEdgeMeshPtr SubdivisionTool::subdivideAdaptive(float errorThreshold) {
     if (!canSubdivide()) {
         return nullptr;
     }
     
-    auto currentMesh = m_mesh;
-    bool needsMoreSubdivision = true;
-    int maxIterations = 5; // Safety limit
-    int iteration = 0;
-    
-    while (needsMoreSubdivision && iteration < maxIterations) {
-        needsMoreSubdivision = false;
-        
-        // Check each face to see if it needs subdivision
-        auto faces = currentMesh->getFaces();
-        for (auto face : faces) {
-            if (needsSubdivision(face, errorThreshold)) {
-                needsMoreSubdivision = true;
-                break;
-            }
-        }
-        
-        if (needsMoreSubdivision) {
-            auto subdividedMesh = subdivide(1);
-            if (subdividedMesh) {
-                currentMesh = subdividedMesh;
-            } else {
-                break;
-            }
-        }
-        
-        iteration++;
-    }
-    
-    return currentMesh;
+    // TODO: Implement adaptive subdivision using rude:: API
+    qDebug() << "SubdivisionTool: Adaptive subdivision not yet implemented for rude:: API";
+    Q_UNUSED(errorThreshold);
+    return nullptr;
 }
 
-rude::MeshPtr SubdivisionTool::subdivideRegion(const std::vector<rude::FacePtr>& faces, int levels) {
+rude::HalfEdgeMeshPtr SubdivisionTool::subdivideRegion(const std::vector<rude::FacePtr>& faces, int levels) {
     // Regional subdivision is complex and would require boundary handling
-    qDebug() << "SubdivisionTool: Regional subdivision not yet fully implemented";
-    return subdivide(levels);
+    qDebug() << "SubdivisionTool: Regional subdivision not yet fully implemented for rude:: API";
+    Q_UNUSED(faces);
+    Q_UNUSED(levels);
+    return nullptr;
 }
 
 bool SubdivisionTool::canSubdivide() const {
@@ -162,7 +147,7 @@ float SubdivisionTool::calculateMeshComplexity() const {
     return static_cast<float>(vertexCount + faceCount);
 }
 
-rude::MeshPtr SubdivisionTool::applyCatmullClark(rude::MeshPtr mesh) const {
+rude::HalfEdgeMeshPtr SubdivisionTool::applyCatmullClark(rude::HalfEdgeMeshPtr mesh) const {
     if (!mesh) return nullptr;
     
     std::unordered_map<rude::FacePtr, glm::vec3> facePoints;
@@ -182,7 +167,7 @@ rude::MeshPtr SubdivisionTool::applyCatmullClark(rude::MeshPtr mesh) const {
     return buildSubdividedMesh(facePoints, edgePoints, vertexPoints);
 }
 
-void SubdivisionTool::computeFacePoints(rude::MeshPtr mesh, 
+void SubdivisionTool::computeFacePoints(rude::HalfEdgeMeshPtr mesh, 
                                        std::unordered_map<rude::FacePtr, glm::vec3>& facePoints) const {
     auto faces = mesh->getFaces();
     
@@ -192,219 +177,88 @@ void SubdivisionTool::computeFacePoints(rude::MeshPtr mesh,
         
         glm::vec3 centroid(0, 0, 0);
         for (auto vertex : vertices) {
-            centroid += vertex->getPosition();
+            centroid += vertex->position; // Direct member access, not getPosition()
         }
-        
         centroid /= static_cast<float>(vertices.size());
         facePoints[face] = centroid;
     }
 }
 
-void SubdivisionTool::computeEdgePoints(rude::MeshPtr mesh,
+void SubdivisionTool::computeEdgePoints(rude::HalfEdgeMeshPtr mesh,
                                        const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
                                        std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints) const {
+    
+    // TODO: Implement edge points computation using rude:: API
+    // This function uses legacy API methods that don't exist in the new rude:: mesh system
+    // Commenting out until proper implementation with direct half-edge traversal
+    
+    Q_UNUSED(mesh);
+    Q_UNUSED(facePoints);
+    Q_UNUSED(edgePoints);
+    
+    /*
     auto edges = mesh->getEdges();
     std::unordered_set<rude::EdgePtr> processedEdges;
     
     for (auto edge : edges) {
-        // Skip if we've already processed this edge or its twin
-        if (processedEdges.find(edge) != processedEdges.end()) {
-            continue;
-        }
-        
-        auto twin = edge->getTwin();
-        if (twin && processedEdges.find(twin) != processedEdges.end()) {
-            continue;
-        }
-        
-        glm::vec3 edgePoint;
-        auto originVertex = edge->getOriginVertex();
-        auto targetVertex = edge->getTargetVertex();
-        
-        if (!originVertex || !targetVertex) continue;
-        
-        if (isBoundaryEdge(edge)) {
-            // For boundary edges, just use midpoint
-            edgePoint = (originVertex->getPosition() + targetVertex->getPosition()) * 0.5f;
-        } else {
-            // For interior edges, use average of edge endpoints and adjacent face points
-            auto face1 = edge->getFace();
-            auto face2 = twin ? twin->getFace() : nullptr;
-            
-            edgePoint = (originVertex->getPosition() + targetVertex->getPosition()) * 0.5f;
-            
-            if (face1 && facePoints.find(face1) != facePoints.end()) {
-                edgePoint = (edgePoint + facePoints.at(face1)) * 0.5f;
-            }
-            
-            if (face2 && facePoints.find(face2) != facePoints.end()) {
-                edgePoint = (edgePoint + facePoints.at(face2)) * 0.5f;
-            }
-        }
-        
-        edgePoints[edge] = edgePoint;
-        if (twin) {
-            edgePoints[twin] = edgePoint;
-        }
-        
-        processedEdges.insert(edge);
-        if (twin) {
-            processedEdges.insert(twin);
-        }
+        // Legacy implementation using methods that don't exist in rude:: API
+        // getTwin(), getOriginVertex(), getTargetVertex(), getFace() etc.
+        // Need to be replaced with direct half-edge member access
     }
+    */
 }
 
-void SubdivisionTool::computeVertexPoints(rude::MeshPtr mesh,
+void SubdivisionTool::computeVertexPoints(rude::HalfEdgeMeshPtr mesh,
                                          const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
                                          const std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints,
                                          std::unordered_map<rude::VertexPtr, glm::vec3>& vertexPoints) const {
-    auto vertices = mesh->getVertices();
-    
-    for (auto vertex : vertices) {
-        if (isBoundaryVertex(vertex)) {
-            // For boundary vertices, use different rule
-            auto adjacentEdges = vertex->getOutgoingEdges();
-            glm::vec3 newPos = vertex->getPosition();
-            
-            // Find boundary edges
-            std::vector<rude::EdgePtr> boundaryEdges;
-            for (auto edge : adjacentEdges) {
-                if (isBoundaryEdge(edge)) {
-                    boundaryEdges.push_back(edge);
-                }
-            }
-            
-            if (boundaryEdges.size() == 2) {
-                // Standard boundary vertex
-                glm::vec3 edgeSum(0, 0, 0);
-                for (auto edge : boundaryEdges) {
-                    auto it = edgePoints.find(edge);
-                    if (it != edgePoints.end()) {
-                        edgeSum += it->second;
-                    }
-                }
-                
-                if (m_boundaryRule == BoundaryRule::Sharp) {
-                    newPos = vertex->getPosition() * 0.5f + edgeSum * 0.25f;
-                } else {
-                    newPos = vertex->getPosition() * 0.75f + edgeSum * 0.125f;
-                }
-            }
-            
-            vertexPoints[vertex] = newPos;
-        } else {
-            // Interior vertex - use full Catmull-Clark rule
-            auto adjacentFaces = vertex->getAdjacentFaces();
-            auto adjacentEdges = vertex->getOutgoingEdges();
-            
-            int n = static_cast<int>(adjacentFaces.size());
-            if (n == 0) {
-                vertexPoints[vertex] = vertex->getPosition();
-                continue;
-            }
-            
-            // Average of adjacent face points
-            glm::vec3 faceAvg(0, 0, 0);
-            for (auto face : adjacentFaces) {
-                auto it = facePoints.find(face);
-                if (it != facePoints.end()) {
-                    faceAvg += it->second;
-                }
-            }
-            faceAvg /= static_cast<float>(n);
-            
-            // Average of adjacent edge midpoints
-            glm::vec3 edgeAvg(0, 0, 0);
-            for (auto edge : adjacentEdges) {
-                auto targetVertex = edge->getTargetVertex();
-                if (targetVertex) {
-                    edgeAvg += (vertex->getPosition() + targetVertex->getPosition()) * 0.5f;
-                }
-            }
-            edgeAvg /= static_cast<float>(adjacentEdges.size());
-            
-            // Catmull-Clark vertex rule
-            glm::vec3 originalPos = vertex->getPosition();
-            glm::vec3 newPos = (faceAvg + edgeAvg * 2.0f + originalPos * static_cast<float>(n - 3)) / static_cast<float>(n);
-            
-            vertexPoints[vertex] = newPos;
-        }
-    }
+    // TODO: Implement vertex point computation for rude:: API
+    // Legacy implementation temporarily commented out due to API changes
+    Q_UNUSED(mesh);
+    Q_UNUSED(facePoints);
+    Q_UNUSED(edgePoints);
+    Q_UNUSED(vertexPoints);
 }
 
-rude::MeshPtr SubdivisionTool::buildSubdividedMesh(
+rude::HalfEdgeMeshPtr SubdivisionTool::buildSubdividedMesh(
     const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
     const std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints,
     const std::unordered_map<rude::VertexPtr, glm::vec3>& vertexPoints) const {
     
-    auto newMesh = std::make_shared<rude::Mesh>();
+    // TODO: Implement subdivision mesh building with rude::HalfEdgeMesh
+    // Legacy implementation temporarily commented out due to API changes
+    Q_UNUSED(facePoints);
+    Q_UNUSED(edgePoints);
+    Q_UNUSED(vertexPoints);
     
-    // Create vertex mapping for the new mesh
-    std::unordered_map<rude::VertexPtr, rude::VertexPtr> oldToNewVertices;
-    std::unordered_map<rude::FacePtr, rude::VertexPtr> faceToNewVertex;
-    std::unordered_map<rude::EdgePtr, rude::VertexPtr> edgeToNewVertex;
-    
-    // Add original vertices with new positions
-    for (const auto& pair : vertexPoints) {
-        auto newVertex = newMesh->addVertex(pair.second);
-        if (newVertex) {
-            newVertex->setNormal(pair.first->getNormal());
-            newVertex->setTexCoord(pair.first->getTexCoord());
-            oldToNewVertices[pair.first] = newVertex;
-        }
-    }
-    
-    // Add face points as vertices
-    for (const auto& pair : facePoints) {
-        auto newVertex = newMesh->addVertex(pair.second);
-        if (newVertex) {
-            faceToNewVertex[pair.first] = newVertex;
-        }
-    }
-    
-    // Add edge points as vertices
-    std::unordered_set<rude::EdgePtr> processedEdges;
-    for (const auto& pair : edgePoints) {
-        if (processedEdges.find(pair.first) != processedEdges.end()) {
-            continue;
-        }
-        
-        auto newVertex = newMesh->addVertex(pair.second);
-        if (newVertex) {
-            edgeToNewVertex[pair.first] = newVertex;
-            auto twin = pair.first->getTwin();
-            if (twin) {
-                edgeToNewVertex[twin] = newVertex;
-                processedEdges.insert(twin);
-            }
-        }
-        processedEdges.insert(pair.first);
-    }
-    
-    // Create new faces
-    createSubdividedFaces(newMesh, facePoints, edgePoints, vertexPoints);
-    
-    // Update normals
-    newMesh->updateNormals();
-    
-    return newMesh;
+    qDebug() << "SubdivisionTool: buildSubdividedMesh not yet implemented for rude:: API";
+    return nullptr;
 }
 
-void SubdivisionTool::createSubdividedFaces(rude::MeshPtr newMesh,
+void SubdivisionTool::createSubdividedFaces(rude::HalfEdgeMeshPtr newMesh,
                                            const std::unordered_map<rude::FacePtr, glm::vec3>& facePoints,
                                            const std::unordered_map<rude::EdgePtr, glm::vec3>& edgePoints,
                                            const std::unordered_map<rude::VertexPtr, glm::vec3>& vertexPoints) const {
-    // This is a simplified implementation
-    // A complete implementation would properly construct all the subdivision faces
-    qDebug() << "SubdivisionTool: Face creation in subdivision needs full implementation";
+    // TODO: Implement subdivision face creation for rude:: API
+    // Legacy implementation temporarily commented out due to API changes
+    Q_UNUSED(newMesh);
+    Q_UNUSED(facePoints);
+    Q_UNUSED(edgePoints);
+    Q_UNUSED(vertexPoints);
+    
+    qDebug() << "SubdivisionTool: createSubdividedFaces not yet implemented for rude:: API";
 }
 
-rude::MeshPtr SubdivisionTool::applyLoop(rude::MeshPtr mesh) const {
+rude::HalfEdgeMeshPtr SubdivisionTool::applyLoop(rude::HalfEdgeMeshPtr mesh) const {
+    // TODO: Implement Loop subdivision for rude:: API
+    Q_UNUSED(mesh);
     qDebug() << "SubdivisionTool: Loop subdivision not yet fully implemented";
     return nullptr;
 }
 
-rude::MeshPtr SubdivisionTool::applyDooSabin(rude::MeshPtr mesh) const {
+rude::HalfEdgeMeshPtr SubdivisionTool::applyDooSabin(rude::HalfEdgeMeshPtr mesh) const {
+    // TODO: Implement Doo-Sabin subdivision for rude:: API
+    Q_UNUSED(mesh);
     qDebug() << "SubdivisionTool: Doo-Sabin subdivision not yet implemented";
     return nullptr;
 }
@@ -429,20 +283,11 @@ bool SubdivisionTool::isBoundaryEdge(rude::EdgePtr edge) const {
 }
 
 float SubdivisionTool::calculateDihedralAngle(rude::EdgePtr edge) const {
-    if (!edge || !edge->getTwin()) return 0.0f;
-    
-    auto face1 = edge->getFace();
-    auto face2 = edge->getTwin()->getFace();
-    
-    if (!face1 || !face2) return 0.0f;
-    
-    glm::vec3 normal1 = face1->computeNormal();
-    glm::vec3 normal2 = face2->computeNormal();
-    
-    float dot = glm::dot(normal1, normal2);
-    dot = qBound(-1.0f, dot, 1.0f);
-    
-    return std::acos(dot) * 180.0f / static_cast<float>(M_PI);
+    // TODO: Implement dihedral angle calculation with rude:: API
+    // The original implementation used getTwin() and getFace() methods which don't exist
+    Q_UNUSED(edge);
+    qDebug() << "SubdivisionTool: calculateDihedralAngle not yet implemented for rude:: API";
+    return 0.0f;
 }
 
 bool SubdivisionTool::needsSubdivision(rude::FacePtr face, float threshold) const {
@@ -455,8 +300,11 @@ bool SubdivisionTool::needsSubdivision(rude::FacePtr face, float threshold) cons
 float SubdivisionTool::calculateSubdivisionError(rude::FacePtr face) const {
     if (!face) return 0.0f;
     
-    // Use face area as a simple error metric
-    return face->getArea();
+    // TODO: Implement area calculation with rude:: API
+    // The original implementation used getArea() method which doesn't exist
+    Q_UNUSED(face);
+    qDebug() << "SubdivisionTool: calculateSubdivisionError not yet implemented for rude:: API";
+    return 0.0f;
 }
 
 float SubdivisionTool::calculateAspectRatio(rude::FacePtr face) const {
@@ -465,16 +313,11 @@ float SubdivisionTool::calculateAspectRatio(rude::FacePtr face) const {
     auto edges = face->getEdges();
     if (edges.empty()) return 1.0f;
     
-    float minLength = std::numeric_limits<float>::max();
-    float maxLength = 0.0f;
-    
-    for (auto edge : edges) {
-        float length = edge->getLength();
-        minLength = std::min(minLength, length);
-        maxLength = std::max(maxLength, length);
-    }
-    
-    return (minLength > 0.0f) ? (maxLength / minLength) : 1.0f;
+    // TODO: Implement edge length calculation with rude:: API
+    // The original implementation used getLength() method which doesn't exist
+    Q_UNUSED(edges);
+    qDebug() << "SubdivisionTool: calculateAspectRatio not yet implemented for rude:: API";
+    return 1.0f;
 }
 
 float SubdivisionTool::calculateTriangleQuality(rude::FacePtr face) const {
@@ -485,9 +328,9 @@ float SubdivisionTool::calculateTriangleQuality(rude::FacePtr face) const {
     
     // Calculate triangle quality based on angles
     // Higher values indicate better quality
-    glm::vec3 v0 = vertices[0]->getPosition();
-    glm::vec3 v1 = vertices[1]->getPosition();
-    glm::vec3 v2 = vertices[2]->getPosition();
+    glm::vec3 v0 = vertices[0]->position;
+    glm::vec3 v1 = vertices[1]->position;
+    glm::vec3 v2 = vertices[2]->position;
     
     glm::vec3 e0 = glm::normalize(v1 - v0);
     glm::vec3 e1 = glm::normalize(v2 - v1);

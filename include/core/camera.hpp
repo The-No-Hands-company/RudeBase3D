@@ -1,8 +1,8 @@
 #pragma once
 
-#include <QMatrix4x4>
-#include <QVector3D>
-#include <QQuaternion>
+#include <glm/glm.hpp>
+#include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
 #include "core/math/Transform.h"
 
 /**
@@ -32,31 +32,31 @@ public:
     bool isOrthographic() const { return m_isOrthographic; }
     
     // Matrix getters
-    const QMatrix4x4& getViewMatrix() const { return m_viewMatrix; }
-    const QMatrix4x4& getProjectionMatrix() const { return m_projectionMatrix; }
-    QMatrix4x4 getViewProjectionMatrix() const { return m_projectionMatrix * m_viewMatrix; }
+    const glm::mat4& getViewMatrix() const { return m_viewMatrix; }
+    const glm::mat4& getProjectionMatrix() const { return m_projectionMatrix; }
+    glm::mat4 getViewProjectionMatrix() const { return m_projectionMatrix * m_viewMatrix; }
     
     // Camera movement
-    void lookAt(const QVector3D& eye, const QVector3D& center, const QVector3D& up);
-    void orbit(float deltaX, float deltaY, const QVector3D& pivot);
+    void lookAt(const glm::vec3& eye, const glm::vec3& center, const glm::vec3& up);
+    void orbit(float deltaX, float deltaY, const glm::vec3& pivot);
     void pan(float deltaX, float deltaY);
     void zoom(float delta);
     
     // Get camera vectors
-    QVector3D getPosition() const { return m_transform.getPosition(); }
-    QVector3D getForward() const { return m_transform.getForward(); }
-    QVector3D getUp() const { return m_transform.getUp(); }
-    QVector3D getRight() const { return m_transform.getRight(); }
+    glm::vec3 getPosition() const { return m_transform.getPosition(); }
+    glm::vec3 getForward() const { return m_transform.getForward(); }
+    glm::vec3 getUp() const { return m_transform.getUp(); }
+    glm::vec3 getRight() const { return m_transform.getRight(); }
     
     // Helper methods for picking/raycasting
-    QVector3D screenToWorldPoint(float screenX, float screenY, float depth) const;
-    QVector3D screenToWorldDirection(float screenX, float screenY) const;
-    QVector3D getViewportSize() const { return QVector3D(m_viewportWidth, m_viewportHeight, 0); }
+    glm::vec3 screenToWorldPoint(float screenX, float screenY, float depth) const;
+    glm::vec3 screenToWorldDirection(float screenX, float screenY) const;
+    glm::vec3 getViewportSize() const { return glm::vec3(m_viewportWidth, m_viewportHeight, 0); }
     int getViewportWidth() const { return m_viewportWidth; }
     int getViewportHeight() const { return m_viewportHeight; }
     
     // For compatibility with older code
-    const QMatrix4x4& getProjMatrix() const { return getProjectionMatrix(); }
+    const glm::mat4& getProjMatrix() const { return getProjectionMatrix(); }
     void setViewportSize(int width, int height) { m_viewportWidth = width; m_viewportHeight = height; updateAspectRatio(); }
     
     // Update matrices
@@ -77,8 +77,8 @@ private:
     float m_left, m_right, m_bottom, m_top;
     
     // Cached matrices
-    QMatrix4x4 m_viewMatrix;
-    QMatrix4x4 m_projectionMatrix;
+    glm::mat4 m_viewMatrix;
+    glm::mat4 m_projectionMatrix;
     
     // Viewport dimensions
     int m_viewportWidth;

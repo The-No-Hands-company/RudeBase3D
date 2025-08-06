@@ -3,35 +3,35 @@
 #include "core/selection_manager.hpp"
 #include "core/primitive_manager.hpp"
 #include "ecs/ECSManager.h"
-#include <QDebug>
+#include <spdlog/spdlog.h>
 
 CoreSystem::CoreSystem() {
-    qDebug() << "CoreSystem initializing...";
+    spdlog::info("CoreSystem initializing...");
 }
 
 CoreSystem::~CoreSystem() {
-    qDebug() << "CoreSystem shutting down...";
+    spdlog::info("CoreSystem shutting down...");
 }
 
 void CoreSystem::initialize() {
-    qDebug() << "CoreSystem::initialize() - Setting up core systems";
+    spdlog::info("CoreSystem::initialize() - Setting up core systems");
     
     // Create ECS manager first as other systems may depend on it
     m_ecsManager = std::make_unique<rude::ecs::ECSManager>();
     if (!m_ecsManager->initialize()) {
-        qCritical() << "Failed to initialize ECS Manager!";
+        spdlog::critical("Failed to initialize ECS Manager!");
         return;
     }
-    qDebug() << "ECS Manager initialized successfully";
+    spdlog::info("ECS Manager initialized successfully");
     
     // Create scene manager
-    m_sceneManager = std::make_unique<SceneManager>();
+    m_sceneManager = std::make_unique<rude::SceneManager>();
     
     // Create selection manager
     m_selectionManager = std::make_unique<rude::SelectionManager>();
     
     // Create a scene and set it in the scene manager
-    auto scene = std::make_shared<Scene>();
+    auto scene = std::make_shared<rude::Scene>();
     m_sceneManager->setScene(scene);
     
     // Connect selection manager to scene
@@ -40,15 +40,15 @@ void CoreSystem::initialize() {
         // This enables selection manager to listen for scene changes
         m_selectionManager->setSceneManager(m_sceneManager.get());
         
-        qDebug() << "Connected SelectionManager to SceneManager";
+    spdlog::info("Connected SelectionManager to SceneManager");
     }
     
-    qDebug() << "Core systems initialized successfully";
-    qDebug() << "CoreSystem::initialize() - Core systems ready";
+    spdlog::info("Core systems initialized successfully");
+    spdlog::info("CoreSystem::initialize() - Core systems ready");
     
     // Print ECS statistics
-    qDebug() << "ECS Statistics:";
-    qDebug() << QString::fromStdString(m_ecsManager->getStatistics());
+    spdlog::info("ECS Statistics:");
+    spdlog::info("{}", m_ecsManager->getStatistics());
 }
 
 void CoreSystem::update(float deltaTime) {
@@ -62,7 +62,7 @@ void CoreSystem::update(float deltaTime) {
 }
 
 void CoreSystem::shutdown() {
-    qDebug() << "CoreSystem::shutdown() - Shutting down core systems";
+    spdlog::info("CoreSystem::shutdown() - Shutting down core systems");
     
     // Clear selection first to avoid dangling references
     if (m_selectionManager) {
@@ -84,5 +84,5 @@ void CoreSystem::shutdown() {
     m_selectionManager.reset();
     m_sceneManager.reset();
     
-    qDebug() << "Core systems shut down successfully";
+    spdlog::info("Core systems shut down successfully");
 }

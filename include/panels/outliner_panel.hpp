@@ -1,14 +1,17 @@
 #pragma once
 #include <QDockWidget>
 #include <QTreeWidget>
-class Scene;
+
+namespace rude {
+    class Scene;
+}
 class Entity;
 
 class OutlinerPanel : public QDockWidget {
     Q_OBJECT
 public:
     explicit OutlinerPanel(QWidget* parent = nullptr);
-    void setScene(Scene* scene);
+    void setScene(rude::Scene* scene);
     void setSelectedEntity(Entity* entity);
     void updateEntityList();
 signals:
@@ -19,5 +22,5 @@ private slots:
     void onItemDoubleClicked(QTreeWidgetItem* item, int column);
 private:
     QTreeWidget* treeWidget;
-    Scene* scene = nullptr;
+    rude::Scene* scene = nullptr;
 }; 

@@ -89,21 +89,21 @@ void GridSystem::setVisible(bool visible)
     emit visibilityChanged(visible);
 }
 
-void GridSystem::setMainAxisColor(const QVector4D& color)
+void GridSystem::setMainAxisColor(const glm::vec4& color)
 {
     m_mainAxisColor = color;
     m_currentStyle = GridStyle::Custom;
     emit gridChanged();
 }
 
-void GridSystem::setGridLineColor(const QVector4D& color)
+void GridSystem::setGridLineColor(const glm::vec4& color)
 {
     m_gridLineColor = color;
     m_currentStyle = GridStyle::Custom;
     emit gridChanged();
 }
 
-void GridSystem::setSubdivisionColor(const QVector4D& color)
+void GridSystem::setSubdivisionColor(const glm::vec4& color)
 {
     m_subdivisionColor = color;
     m_currentStyle = GridStyle::Custom;
@@ -134,15 +134,15 @@ void GridSystem::setDepthFading(bool enabled)
     emit gridChanged();
 }
 
-void GridSystem::setGridPlane(const QVector3D& normal, float offset)
+void GridSystem::setGridPlane(const glm::vec3& normal, float offset)
 {
-    m_gridPlane = normal.normalized();
+    m_gridPlane = glm::normalize(normal);
     m_gridOffset = offset;
     m_meshNeedsUpdate = true;
     emit gridChanged();
 }
 
-void GridSystem::render(std::shared_ptr<Renderer> renderer, const QMatrix4x4& viewMatrix, const QMatrix4x4& projMatrix)
+void GridSystem::render(std::shared_ptr<Renderer> renderer, const glm::mat4& viewMatrix, const glm::mat4& projMatrix)
 {
     if (!m_visible || !renderer) {
         return;
@@ -153,7 +153,7 @@ void GridSystem::render(std::shared_ptr<Renderer> renderer, const QMatrix4x4& vi
     // CRITICAL: Set up matrices before rendering
     renderer->setViewMatrix(viewMatrix);
     renderer->setProjectionMatrix(projMatrix);
-    renderer->setModelMatrix(QMatrix4x4()); // Identity for world coordinates
+    renderer->setModelMatrix(glm::mat4(1.0f)); // Identity for world coordinates
     
     // Set up basic rendering state for grid rendering
     renderer->enableDepthTest(false); // Grid always renders behind objects
@@ -163,34 +163,34 @@ void GridSystem::render(std::shared_ptr<Renderer> renderer, const QMatrix4x4& vi
     qDebug() << "Rendering world axes...";
     
     // X axis (BRIGHT RED) - spans entire world
-    renderer->renderLine(QVector3D(-1000.0f, 0.0f, 0.0f), QVector3D(1000.0f, 0.0f, 0.0f), QVector4D(1.0f, 0.0f, 0.0f, 1.0f));
+    renderer->renderLine(glm::vec3(-1000.0f, 0.0f, 0.0f), glm::vec3(1000.0f, 0.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
     
     // Y axis (BRIGHT GREEN) - spans entire world  
-    renderer->renderLine(QVector3D(0.0f, -1000.0f, 0.0f), QVector3D(0.0f, 1000.0f, 0.0f), QVector4D(0.0f, 1.0f, 0.0f, 1.0f));
+    renderer->renderLine(glm::vec3(0.0f, -1000.0f, 0.0f), glm::vec3(0.0f, 1000.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
     
     // Z axis (BRIGHT BLUE) - spans entire world
-    renderer->renderLine(QVector3D(0.0f, 0.0f, -1000.0f), QVector3D(0.0f, 0.0f, 1000.0f), QVector4D(0.0f, 0.0f, 1.0f, 1.0f));
+    renderer->renderLine(glm::vec3(0.0f, 0.0f, -1000.0f), glm::vec3(0.0f, 0.0f, 1000.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
     
     // Draw a test cross right at the origin for reference
     float crossSize = 5.0f;
-    renderer->renderLine(QVector3D(-crossSize, 0.0f, 0.0f), QVector3D(crossSize, 0.0f, 0.0f), QVector4D(1.0f, 1.0f, 0.0f, 1.0f));
-    renderer->renderLine(QVector3D(0.0f, -crossSize, 0.0f), QVector3D(0.0f, crossSize, 0.0f), QVector4D(1.0f, 1.0f, 0.0f, 1.0f));
-    renderer->renderLine(QVector3D(0.0f, 0.0f, -crossSize), QVector3D(0.0f, 0.0f, crossSize), QVector4D(1.0f, 1.0f, 0.0f, 1.0f));
+    renderer->renderLine(glm::vec3(-crossSize, 0.0f, 0.0f), glm::vec3(crossSize, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
+    renderer->renderLine(glm::vec3(0.0f, -crossSize, 0.0f), glm::vec3(0.0f, crossSize, 0.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
+    renderer->renderLine(glm::vec3(0.0f, 0.0f, -crossSize), glm::vec3(0.0f, 0.0f, crossSize), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
     
     // Draw grid lines on XZ plane (ground plane)
     qDebug() << "Rendering grid lines...";
     float gridExtent = 100.0f;
     float gridSpacing = 5.0f;
-    QVector4D gridColor(0.5f, 0.5f, 0.5f, 1.0f); // Gray grid lines
+    glm::vec4 gridColor(0.5f, 0.5f, 0.5f, 1.0f); // Gray grid lines
     
     // Grid lines parallel to X axis (running along Z)
     for (float z = -gridExtent; z <= gridExtent; z += gridSpacing) {
-        renderer->renderLine(QVector3D(-gridExtent, 0.0f, z), QVector3D(gridExtent, 0.0f, z), gridColor);
+        renderer->renderLine(glm::vec3(-gridExtent, 0.0f, z), glm::vec3(gridExtent, 0.0f, z), gridColor);
     }
     
     // Grid lines parallel to Z axis (running along X)
     for (float x = -gridExtent; x <= gridExtent; x += gridSpacing) {
-        renderer->renderLine(QVector3D(x, 0.0f, -gridExtent), QVector3D(x, 0.0f, gridExtent), gridColor);
+        renderer->renderLine(glm::vec3(x, 0.0f, -gridExtent), glm::vec3(x, 0.0f, gridExtent), gridColor);
     }
     
     qDebug() << "GridSystem::render() - Grid rendering complete";
@@ -242,9 +242,9 @@ void GridSystem::applyGridStyle()
 void GridSystem::setupMayaStyle()
 {
     // Maya-style: Much brighter for testing
-    m_mainAxisColor = QVector4D(1.0f, 1.0f, 1.0f, 1.0f);      // Very bright main axes
-    m_gridLineColor = QVector4D(0.8f, 0.8f, 0.8f, 0.9f);      // Very bright grid lines
-    m_subdivisionColor = QVector4D(0.6f, 0.6f, 0.6f, 0.8f);   // Bright subdivisions
+    m_mainAxisColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);      // Very bright main axes
+    m_gridLineColor = glm::vec4(0.8f, 0.8f, 0.8f, 0.9f);      // Very bright grid lines
+    m_subdivisionColor = glm::vec4(0.6f, 0.6f, 0.6f, 0.8f);   // Bright subdivisions
     m_lineWidth = 2.0f;  // Thicker lines for visibility
     m_depthFading = false;  // Disable fading for testing
 }
@@ -252,9 +252,9 @@ void GridSystem::setupMayaStyle()
 void GridSystem::setupBlenderStyle()
 {
     // Blender-style: Bright main axes, clear grid
-    m_mainAxisColor = QVector4D(1.0f, 1.0f, 1.0f, 1.0f);      // Bright white axes
-    m_gridLineColor = QVector4D(0.5f, 0.5f, 0.5f, 0.8f);      // Clear grid lines
-    m_subdivisionColor = QVector4D(0.3f, 0.3f, 0.3f, 0.6f);   // Visible subdivisions
+    m_mainAxisColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);      // Bright white axes
+    m_gridLineColor = glm::vec4(0.5f, 0.5f, 0.5f, 0.8f);      // Clear grid lines
+    m_subdivisionColor = glm::vec4(0.3f, 0.3f, 0.3f, 0.6f);   // Visible subdivisions
     m_lineWidth = 1.2f;
     m_depthFading = true;
 }
@@ -262,9 +262,9 @@ void GridSystem::setupBlenderStyle()
 void GridSystem::setupStudioStyle()
 {
     // Studio-style: Minimal, professional
-    m_mainAxisColor = QVector4D(0.7f, 0.7f, 0.7f, 0.8f);      // Subdued axes
-    m_gridLineColor = QVector4D(0.3f, 0.3f, 0.3f, 0.6f);      // Minimal grid
-    m_subdivisionColor = QVector4D(0.2f, 0.2f, 0.2f, 0.4f);   // Barely visible
+    m_mainAxisColor = glm::vec4(0.7f, 0.7f, 0.7f, 0.8f);      // Subdued axes
+    m_gridLineColor = glm::vec4(0.3f, 0.3f, 0.3f, 0.6f);      // Minimal grid
+    m_subdivisionColor = glm::vec4(0.2f, 0.2f, 0.2f, 0.4f);   // Barely visible
     m_lineWidth = 0.8f;
     m_depthFading = true;
 }
@@ -272,9 +272,9 @@ void GridSystem::setupStudioStyle()
 void GridSystem::setupTechnicalStyle()
 {
     // Technical/CAD-style: High contrast, precise
-    m_mainAxisColor = QVector4D(1.0f, 0.0f, 0.0f, 1.0f);      // Red X, will need separate Z color
-    m_gridLineColor = QVector4D(0.6f, 0.6f, 0.6f, 0.9f);      // High contrast grid
-    m_subdivisionColor = QVector4D(0.4f, 0.4f, 0.4f, 0.7f);   // Clear subdivisions
+    m_mainAxisColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);      // Red X, will need separate Z color
+    m_gridLineColor = glm::vec4(0.6f, 0.6f, 0.6f, 0.9f);      // High contrast grid
+    m_subdivisionColor = glm::vec4(0.4f, 0.4f, 0.4f, 0.7f);   // Clear subdivisions
     m_lineWidth = 1.0f;
     m_depthFading = false; // Always visible in technical mode
 }

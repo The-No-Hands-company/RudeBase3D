@@ -1,5 +1,4 @@
 #include "Camera.h"
-#include "core/qt_glm_utils.hpp"
 #include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -17,9 +16,8 @@ Camera::Camera()
 {
     // Set professional isometric-style default camera position
     // Position camera at 45-degree angle for good 3D overview
-    m_transform.setPosition(QVector3D(7.0f, 5.0f, 7.0f));
-    m_transform.lookAt(QVector3D(0.0f, 0.0f, 0.0f));
-    
+    m_transform.setPosition(glm::vec3(7.0f, 5.0f, 7.0f));
+    m_transform.lookAt(glm::vec3(0.0f, 0.0f, 0.0f));
     updateProjectionMatrix();
 }
 
@@ -45,106 +43,112 @@ void Camera::setOrthographic(float left, float right, float bottom, float top, f
     updateProjectionMatrix();
 }
 
-void Camera::lookAt(const QVector3D& target, const QVector3D& up)
+void Camera::lookAt(const glm::vec3& target, const glm::vec3& up)
 {
-    QVector3D position = m_transform.getPosition();
-    QVector3D forward = (target - position).normalized();
-    QVector3D right = QVector3D::crossProduct(forward, up).normalized();
-    QVector3D actualUp = QVector3D::crossProduct(right, forward);
-    
-    // Create rotation matrix
-    QMatrix4x4 rotationMatrix;
-    rotationMatrix.setRow(0, QVector4D(right, 0.0f));
-    rotationMatrix.setRow(1, QVector4D(actualUp, 0.0f));
-    rotationMatrix.setRow(2, QVector4D(-forward, 0.0f));
-    rotationMatrix.setRow(3, QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
-    
-    QQuaternion rotation = QQuaternion::fromRotationMatrix(rotationMatrix.normalMatrix());
-    m_transform.setRotation(rotation);
+    glm::vec3 position = m_transform.getPosition();
+    glm::vec3 forward = glm::normalize(target - position);
+    glm::vec3 right = glm::normalize(glm::cross(forward, up));
+    glm::vec3 actualUp = glm::cross(right, forward);
+    // Build rotation matrix from basis vectors
+    glm::mat3 rotationMatrix(
+        right,
+        actualUp,
+        -forward
+    );
+    m_transform.setRotation(rotationMatrix);
 }
 
-void Camera::orbit(const QVector3D& center, float deltaYaw, float deltaPitch)
+void Camera::orbit(const glm::vec3& center, float deltaYaw, float deltaPitch)
 {
-    QVector3D position = m_transform.getPosition();
-    QVector3D offset = position - center;
-    
-    // Convert to spherical coordinates
-    float radius = offset.length();
-    float yaw = atan2(offset.x(), offset.z());
-    float pitch = asin(offset.y() / radius);
-    
-    // Apply deltas (convert degrees to radians)
-    yaw += deltaYaw * PI / 180.0f;
-    pitch += deltaPitch * PI / 180.0f;
-    
-    // Clamp pitch to avoid gimbal lock
-    pitch = std::max(-PI/2.0f + 0.01f, std::min(PI/2.0f - 0.01f, pitch));
-    
-    // Convert back to Cartesian coordinates (corrected formula)
-    QVector3D newOffset;
-    newOffset.setX(radius * cos(pitch) * sin(yaw));
-    newOffset.setY(radius * sin(pitch));
-    newOffset.setZ(radius * cos(pitch) * cos(yaw));
-    
-    // Set new position and look at target
+    glm::vec3 position = m_transform.getPosition();
+    glm::vec3 offset = position - center;
+    float radius = glm::length(offset);
+    float yaw = atan2(offset.x, offset.z);
+    float pitch = asin(offset.y / radius);
+    yaw += glm::radians(deltaYaw);
+    pitch += glm::radians(deltaPitch);
+    pitch = std::max(-glm::half_pi<float>() + 0.01f, std::min(glm::half_pi<float>() - 0.01f, pitch));
+    glm::vec3 newOffset;
+    newOffset.x = radius * cos(pitch) * sin(yaw);
+    newOffset.y = radius * sin(pitch);
+    newOffset.z = radius * cos(pitch) * cos(yaw);
     m_transform.setPosition(center + newOffset);
     lookAt(center);
 }
 
-void Camera::pan(const QVector3D& delta)
+void Camera::pan(const glm::vec3& delta)
 {
-    QVector3D right = m_transform.getRight();
-    QVector3D up = m_transform.getUp();
-    
-    QVector3D translation = right * delta.x() + up * delta.y();
+    glm::vec3 right = m_transform.getRight();
+    glm::vec3 up = m_transform.getUp();
+    glm::vec3 translation = right * delta.x + up * delta.y;
     m_transform.translate(translation);
 }
 
 void Camera::zoom(float delta)
 {
-    QVector3D forward = m_transform.getForward();
+    glm::vec3 forward = m_transform.getForward();
     m_transform.translate(forward * delta);
 }
 
 void Camera::moveForward(float distance)
 {
-    QVector3D forward = m_transform.getForward();
+    glm::vec3 forward = m_transform.getForward();
     m_transform.translate(forward * distance);
 }
 
 void Camera::moveRight(float distance)
 {
-    QVector3D right = m_transform.getRight();
+    glm::vec3 right = m_transform.getRight();
     m_transform.translate(right * distance);
 }
 
 void Camera::moveUp(float distance)
 {
-    QVector3D up = m_transform.getUp();
+    glm::vec3 up = m_transform.getUp();
     m_transform.translate(up * distance);
 }
 
 void Camera::updateProjectionMatrix()
 {
-    m_projectionMatrix.setToIdentity();
-    
     if (m_isPerspective) {
-        m_projectionMatrix.perspective(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
+        m_projectionMatrix = glm::perspective(glm::radians(m_fov), m_aspectRatio, m_nearPlane, m_farPlane);
     } else {
-        m_projectionMatrix.ortho(m_left, m_right, m_bottom, m_top, m_nearPlane, m_farPlane);
+        m_projectionMatrix = glm::ortho(m_left, m_right, m_bottom, m_top, m_nearPlane, m_farPlane);
     }
+}
+
+glm::mat4 Camera::getViewMatrix() const {
+    return glm::inverse(m_transform.getModelMatrix());
+}
+
+glm::mat4 Camera::getProjectionMatrix() const {
+    return m_projectionMatrix;
+}
+
+glm::vec3 Camera::screenToWorldRay(const glm::vec2& screenPos, const glm::vec2& screenSize) const {
+    // Convert screen coordinates to normalized device coordinates
+    glm::vec2 ndc = (screenPos / screenSize) * 2.0f - 1.0f;
+    ndc.y = -ndc.y; // Flip Y coordinate
+    
+    // Create ray in view space
+    glm::vec4 rayClip = glm::vec4(ndc.x, ndc.y, -1.0f, 1.0f);
+    glm::vec4 rayEye = glm::inverse(m_projectionMatrix) * rayClip;
+    rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
+    
+    // Transform to world space
+    glm::vec3 rayWorld = glm::vec3(glm::inverse(getViewMatrix()) * rayEye);
+    return glm::normalize(rayWorld);
 }
 
 // GLM method implementations
 glm::mat4 Camera::getViewMatrixGLM() const {
-    return rude::qMatrixToGlm(getViewMatrix());
+    return getViewMatrix();
 }
 
 glm::mat4 Camera::getProjectionMatrixGLM() const {
-    return rude::qMatrixToGlm(m_projectionMatrix);
+    return m_projectionMatrix;
 }
 
 glm::vec3 Camera::getPosition() const {
-    QVector3D pos = m_transform.getPosition();
-    return glm::vec3(pos.x(), pos.y(), pos.z());
+    return m_transform.getPosition();
 }

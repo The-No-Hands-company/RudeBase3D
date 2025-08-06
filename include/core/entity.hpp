@@ -8,13 +8,13 @@
 #include <QMatrix4x4>
 #include "core/math/Transform.h"
 #include "core/qt_glm_utils.hpp"
-// Forward declarations
+
+#include "core/mesh_forward.hpp"
 
 namespace rude {
-    enum class PrimitiveType { None, Cube, Sphere, Plane, Cylinder, Cone, Torus, Icosphere };
+    enum class PrimitiveType { Unknown, None, Cube, Sphere, Plane, Cylinder, Cone, Torus, Icosphere };
+    class Mesh;
 }
-
-class Mesh; // Forward declaration
 
 class Entity {
 public:
@@ -23,33 +23,34 @@ public:
     const std::string& getName() const;
     Transform& getTransform();
     rude::PrimitiveType getPrimitiveType() const;
-    std::shared_ptr<Mesh> getMesh() const;
+    rude::MeshPtr getMesh() const;
     std::pair<glm::vec3, glm::vec3> getAABB() const; // Returns (min, max)
+
+    // Modern API: getType (string representation of primitive type or custom type)
+    std::string getType() const;
 
     // Transform convenience methods
     glm::vec3 getPosition() const { 
-        QVector3D pos = transform.getPosition();
-        return glm::vec3(pos.x(), pos.y(), pos.z());
+        return transform.getPosition();
     }
     void setPosition(const glm::vec3& pos) { 
-        transform.setPosition(QVector3D(pos.x, pos.y, pos.z)); 
+        transform.setPosition(pos);
     }
     glm::quat getRotation() const { 
-        QQuaternion rot = transform.getRotation();
-        return glm::quat(rot.scalar(), rot.x(), rot.y(), rot.z());
+        // TODO: Refactor rotation to glm::quat in Transform
+        return glm::quat(1, 0, 0, 0); // Placeholder
     }
     void setRotation(const glm::quat& rot) { 
-        transform.setRotation(QQuaternion(rot.w, rot.x, rot.y, rot.z)); 
+        // TODO: Refactor rotation to glm::quat in Transform
     }
     glm::vec3 getWorldPosition() const {
         return getPosition(); // For now, just return local position; update if world space is different
     }
     glm::vec3 getScale() const { 
-        QVector3D scale = transform.getScale();
-        return glm::vec3(scale.x(), scale.y(), scale.z());
+        return transform.getScale();
     }
     void setScale(const glm::vec3& scale) { 
-        transform.setScale(QVector3D(scale.x, scale.y, scale.z)); 
+        transform.setScale(scale);
     }
 
     // Drawing method
@@ -64,9 +65,9 @@ public:
     void setParent(Entity* newParent);
 
     // Mesh assignment utility
-    void setMesh(const std::shared_ptr<Mesh>& newMesh) { mesh = newMesh; }
+    void setMesh(const rude::MeshPtr& newMesh) { mesh = newMesh; }
 
-    std::shared_ptr<Mesh> mesh; // Make mesh public for now
+    rude::MeshPtr mesh; // Make mesh public for now
 
 private:
     int id;

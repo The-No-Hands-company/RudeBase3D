@@ -1,5 +1,6 @@
-#pragma once
 
+
+#pragma once
 #include <QObject>
 #include <memory>
 #include "core/scene_manager.hpp"
@@ -22,62 +23,58 @@
 class ApplicationController : public QObject
 {
     Q_OBJECT
-
 public:
     explicit ApplicationController(QObject* parent = nullptr);
     ~ApplicationController();
 
     // Initialization
     void initialize();
-    void setScene(std::shared_ptr<Scene> scene);
+    void setScene(std::shared_ptr<rude::Scene> scene);
 
     // Manager access (for specific use cases)
-    SceneManager* getSceneManager() const { return m_sceneManager.get(); }
+    rude::SceneManager* getSceneManager() const { return m_sceneManager.get(); }
     PrimitiveManager* getPrimitiveManager() const { return m_primitiveManager.get(); }
     rude::SelectionManager* getSelectionManager() const { return m_selectionManager.get(); }
     rude::MeshOperationManager* getMeshOperationManager() const { return m_meshOperationManager.get(); }
 
     // High-level operations that coordinate multiple managers
-    Entity* createPrimitive(const QString& primitiveType, const QString& name = QString());
-    bool executeOperation(const QString& operationName);
+    Entity* createPrimitive(const std::string& primitiveType, const std::string& name = "");
+    bool executeOperation(const std::string& operationName);
     void selectEntity(Entity* entity);
     void clearSelection();
 
     // File operations
     bool newScene();
-    bool saveScene(const QString& filePath);
-    bool loadScene(const QString& filePath);
-    bool importMesh(const QString& filePath);
+    bool saveScene(const std::string& filePath);
+    bool loadScene(const std::string& filePath);
+    bool importMesh(const std::string& filePath);
 
     // Access to current scene
-    std::shared_ptr<Scene> getScene() const { return m_scene; }
+    std::shared_ptr<rude::Scene> getScene() const { return m_scene; }
+
 
 signals:
-    // Forwarded signals from managers for UI to connect to
+    void sceneChanged();
     void entityCreated(Entity* entity);
     void entityDeleted(Entity* entity);
     void selectionChanged();
-    void operationExecuted(const QString& operation, bool success);
-    void sceneChanged();
 
-private slots:
-    // Internal coordination between managers
+public slots:
     void onEntityCreated(Entity* entity);
     void onEntityDeleted(Entity* entity);
     void onSelectionChanged();
 
-private:
+public:
     void setupManagerConnections();
 
+private:
     // Core managers
-    std::unique_ptr<SceneManager> m_sceneManager;
+    std::unique_ptr<rude::SceneManager> m_sceneManager;
     std::unique_ptr<PrimitiveManager> m_primitiveManager;
     std::unique_ptr<rude::SelectionManager> m_selectionManager;
     std::unique_ptr<rude::MeshOperationManager> m_meshOperationManager;
-    
     // Current scene
-    std::shared_ptr<Scene> m_scene;
-    
+    std::shared_ptr<rude::Scene> m_scene;
     // State
     bool m_initialized = false;
 };

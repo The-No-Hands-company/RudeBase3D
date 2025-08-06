@@ -7,7 +7,7 @@
 #include <limits>
 
 EntityPicker::EntityPicker() {}
-void EntityPicker::setScene(Scene* s) { scene = s; }
+void EntityPicker::setScene(rude::Scene* s) { scene = s; }
 void EntityPicker::setCamera(Camera* c) { camera = c; }
 Entity* EntityPicker::getSelectedEntity() const { return selectedEntity; }
 

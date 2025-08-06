@@ -1,9 +1,11 @@
 #pragma once
 
 #include "ICameraController.h"
-#include <QMouseEvent>
-#include <QWheelEvent>
-#include <QKeyEvent>
+#include <functional>
+#include "InputEvents.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 /**
  * @brief Blender-style camera controller
@@ -19,22 +21,25 @@
  */
 class BlenderCameraController : public ICameraController
 {
-    Q_OBJECT
+    // Cross-platform: no Q_OBJECT
+public:
+    // Cross-platform camera changed callback
+    std::function<void()> cameraChangedCallback;
 
 public:
-    explicit BlenderCameraController(QObject* parent = nullptr);
+    BlenderCameraController();
     ~BlenderCameraController() override;
 
     // ICameraController interface
-    QString getControllerDescription() const;
+    std::string getControllerDescription() const override;
 
     // Input handling
-    bool handleMousePress(QMouseEvent* event) override;
-    bool handleMouseMove(QMouseEvent* event) override;
-    bool handleMouseRelease(QMouseEvent* event) override;
-    bool handleWheel(QWheelEvent* event) override;
-    bool handleKeyPress(QKeyEvent* event) override;
-    bool handleKeyRelease(QKeyEvent* event) override;
+    bool handleMousePress(const MouseEvent& event) override;
+    bool handleMouseMove(const MouseEvent& event) override;
+    bool handleMouseRelease(const MouseEvent& event) override;
+    bool handleWheel(const WheelEvent& event) override;
+    bool handleKeyPress(const KeyEvent& event) override;
+    bool handleKeyRelease(const KeyEvent& event) override;
 
     // Camera operations
     void frameScene(bool animate = true) override;
@@ -48,51 +53,27 @@ public:
     void setInvertZoom(bool invert);
     void setSmoothing(bool enabled);
 
-private slots:
     void updateSmoothing();
 
 private:
-    // Navigation state
-    enum class NavigationMode {
-        None,
-        Orbit,      // MMB
-        Pan,        // Shift + MMB
-        Zoom        // Ctrl + MMB
-    };
-
-    NavigationMode m_currentMode;
-    QPoint m_lastMousePos;
-    QPoint m_mousePressPos;
+    NavigationAction m_currentAction;
+    glm::ivec2 m_lastMousePos;
+    glm::ivec2 m_mousePressPos;
     bool m_isNavigating;
-
-    // Modifier keys
-    bool m_shiftPressed;
-    bool m_ctrlPressed;
-    bool m_altPressed;
-
-    // Configuration
     float m_orbitSensitivity;
     float m_panSensitivity;
     float m_zoomSensitivity;
     bool m_invertZoom;
     bool m_smoothingEnabled;
-
-    // Smoothing
-    QTimer* m_smoothingTimer;
-    QVector3D m_targetPosition;
-    QQuaternion m_targetRotation;
+    glm::vec3 m_targetPosition;
+    glm::quat m_targetRotation;
     float m_smoothingFactor;
-
-    // Navigation methods
-    void startNavigation(NavigationMode mode, const QPoint& mousePos);
-    void updateNavigation(const QPoint& mousePos);
+    void startNavigation(NavigationAction action, const glm::ivec2& mousePos);
+    void updateNavigation(const glm::ivec2& mousePos);
     void endNavigation();
-
-    void performOrbit(const QVector2D& delta);
-    void performPan(const QVector2D& delta);
+    void performOrbit(const glm::vec2& delta);
+    void performPan(const glm::vec2& delta);
     void performZoom(float delta);
-
-    // Numpad view shortcuts
     void setNumpadView(int key);
     void setFrontView();
     void setBackView();
@@ -101,9 +82,7 @@ private:
     void setTopView();
     void setBottomView();
     void setUserView();
-
-    // Utility methods
-    bool isMiddleMouseButton(QMouseEvent* event) const;
-    QVector2D getMouseDelta(const QPoint& currentPos) const;
+    bool isMiddleMouseButton(int button) const;
+    glm::vec2 getMouseDelta(const glm::ivec2& currentPos) const;
     void updateSmoothCamera();
 };

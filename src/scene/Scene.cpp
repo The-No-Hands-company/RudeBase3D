@@ -57,13 +57,12 @@ SceneObjectPtr Scene::getObject(unsigned int objectId) const
     return (it != m_objects.end()) ? *it : nullptr;
 }
 
-SceneObjectPtr Scene::getObjectByName(const QString& name) const
+SceneObjectPtr Scene::getObjectByName(const std::string& name) const
 {
     auto it = std::find_if(m_objects.begin(), m_objects.end(),
                           [&name](const SceneObjectPtr& obj) {
                               return obj->getName() == name;
                           });
-    
     return (it != m_objects.end()) ? *it : nullptr;
 }
 
@@ -100,82 +99,80 @@ void Scene::clearSelection()
     setSelectedObject(nullptr);
 }
 
-SceneObjectPtr Scene::pickObject(const QVector3D& rayOrigin, const QVector3D& rayDirection) const
+SceneObjectPtr Scene::pickObject(const glm::vec3& rayOrigin, const glm::vec3& rayDirection) const
 {
     float closestDistance = std::numeric_limits<float>::max();
     SceneObjectPtr closestObject = nullptr;
-    
+
     for (const auto& object : m_objects) {
         if (!object->isVisible()) {
             continue;
         }
-        
-        QVector3D aabbMin = object->getBoundingBoxMin();
-        QVector3D aabbMax = object->getBoundingBoxMax();
-        
+
+        glm::vec3 aabbMin = object->getBoundingBoxMin();
+        glm::vec3 aabbMax = object->getBoundingBoxMax();
+
         if (rayIntersectsAABB(rayOrigin, rayDirection, aabbMin, aabbMax)) {
             // Calculate distance to object center
-            QVector3D objectCenter = object->getBoundingBoxCenter();
-            float distance = (objectCenter - rayOrigin).length();
-            
+            glm::vec3 objectCenter = object->getBoundingBoxCenter();
+            float distance = glm::length(objectCenter - rayOrigin);
+
             if (distance < closestDistance) {
                 closestDistance = distance;
                 closestObject = object;
             }
         }
     }
-    
+
     return closestObject;
 }
 
-QVector3D Scene::getSceneBoundingBoxMin() const
+glm::vec3 Scene::getSceneBoundingBoxMin() const
 {
     if (m_objects.empty()) {
-        return QVector3D(-1, -1, -1);
+        return glm::vec3(-1, -1, -1);
     }
-    
     try {
-        QVector3D sceneMin = m_objects[0]->getBoundingBoxMin();
+        glm::vec3 sceneMin = m_objects[0]->getBoundingBoxMin();
         for (const auto& object : m_objects) {
             if (!object) continue; // Skip null objects
-            QVector3D objectMin = object->getBoundingBoxMin();
-            sceneMin.setX(std::min(sceneMin.x(), objectMin.x()));
-            sceneMin.setY(std::min(sceneMin.y(), objectMin.y()));
-            sceneMin.setZ(std::min(sceneMin.z(), objectMin.z()));
+            glm::vec3 objectMin = object->getBoundingBoxMin();
+            sceneMin.x = std::min(sceneMin.x, objectMin.x);
+            sceneMin.y = std::min(sceneMin.y, objectMin.y);
+            sceneMin.z = std::min(sceneMin.z, objectMin.z);
         }
         return sceneMin;
     } catch (...) {
-        return QVector3D(-1, -1, -1);
+        return glm::vec3(-1, -1, -1);
     }
 }
 
-QVector3D Scene::getSceneBoundingBoxMax() const
+glm::vec3 Scene::getSceneBoundingBoxMax() const
 {
     if (m_objects.empty()) {
-        return QVector3D(1, 1, 1);
+        return glm::vec3(1, 1, 1);
     }
-    
     try {
-        QVector3D sceneMax = m_objects[0]->getBoundingBoxMax();
+        glm::vec3 sceneMax = m_objects[0]->getBoundingBoxMax();
         for (const auto& object : m_objects) {
             if (!object) continue; // Skip null objects
-            QVector3D objectMax = object->getBoundingBoxMax();
-            sceneMax.setX(std::max(sceneMax.x(), objectMax.x()));
-            sceneMax.setY(std::max(sceneMax.y(), objectMax.y()));
-            sceneMax.setZ(std::max(sceneMax.z(), objectMax.z()));
+            glm::vec3 objectMax = object->getBoundingBoxMax();
+            sceneMax.x = std::max(sceneMax.x, objectMax.x);
+            sceneMax.y = std::max(sceneMax.y, objectMax.y);
+            sceneMax.z = std::max(sceneMax.z, objectMax.z);
         }
         return sceneMax;
     } catch (...) {
-        return QVector3D(1, 1, 1);
+        return glm::vec3(1, 1, 1);
     }
 }
 
-QVector3D Scene::getSceneBoundingBoxCenter() const
+glm::vec3 Scene::getSceneBoundingBoxCenter() const
 {
     return (getSceneBoundingBoxMin() + getSceneBoundingBoxMax()) * 0.5f;
 }
 
-void Scene::render(const QMatrix4x4& viewMatrix, const QMatrix4x4& projectionMatrix, RenderMode mode)
+void Scene::render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, RenderMode mode)
 {
     for (const auto& object : m_objects) {
         if (object->isVisible()) {
@@ -184,42 +181,36 @@ void Scene::render(const QMatrix4x4& viewMatrix, const QMatrix4x4& projectionMat
     }
 }
 
-bool Scene::rayIntersectsAABB(const QVector3D& rayOrigin, const QVector3D& rayDirection,
-                             const QVector3D& aabbMin, const QVector3D& aabbMax) const
+bool Scene::rayIntersectsAABB(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
+                             const glm::vec3& aabbMin, const glm::vec3& aabbMax) const
 {
     // Ray-AABB intersection test using the slab method
-    QVector3D invDir = QVector3D(
-        1.0f / rayDirection.x(),
-        1.0f / rayDirection.y(),
-        1.0f / rayDirection.z()
+    glm::vec3 invDir = glm::vec3(
+        1.0f / rayDirection.x,
+        1.0f / rayDirection.y,
+        1.0f / rayDirection.z
     );
-    
-    QVector3D t1 = QVector3D(
-        (aabbMin.x() - rayOrigin.x()) * invDir.x(),
-        (aabbMin.y() - rayOrigin.y()) * invDir.y(),
-        (aabbMin.z() - rayOrigin.z()) * invDir.z()
+    glm::vec3 t1 = glm::vec3(
+        (aabbMin.x - rayOrigin.x) * invDir.x,
+        (aabbMin.y - rayOrigin.y) * invDir.y,
+        (aabbMin.z - rayOrigin.z) * invDir.z
     );
-    
-    QVector3D t2 = QVector3D(
-        (aabbMax.x() - rayOrigin.x()) * invDir.x(),
-        (aabbMax.y() - rayOrigin.y()) * invDir.y(),
-        (aabbMax.z() - rayOrigin.z()) * invDir.z()
+    glm::vec3 t2 = glm::vec3(
+        (aabbMax.x - rayOrigin.x) * invDir.x,
+        (aabbMax.y - rayOrigin.y) * invDir.y,
+        (aabbMax.z - rayOrigin.z) * invDir.z
     );
-    
-    QVector3D tmin = QVector3D(
-        std::min(t1.x(), t2.x()),
-        std::min(t1.y(), t2.y()),
-        std::min(t1.z(), t2.z())
+    glm::vec3 tmin = glm::vec3(
+        std::min(t1.x, t2.x),
+        std::min(t1.y, t2.y),
+        std::min(t1.z, t2.z)
     );
-    
-    QVector3D tmax = QVector3D(
-        std::max(t1.x(), t2.x()),
-        std::max(t1.y(), t2.y()),
-        std::max(t1.z(), t2.z())
+    glm::vec3 tmax = glm::vec3(
+        std::max(t1.x, t2.x),
+        std::max(t1.y, t2.y),
+        std::max(t1.z, t2.z)
     );
-    
-    float tnear = std::max({tmin.x(), tmin.y(), tmin.z()});
-    float tfar = std::min({tmax.x(), tmax.y(), tmax.z()});
-    
+    float tnear = std::max({tmin.x, tmin.y, tmin.z});
+    float tfar = std::min({tmax.x, tmax.y, tmax.z});
     return tnear <= tfar && tfar >= 0.0f;
 }

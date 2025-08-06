@@ -1,7 +1,10 @@
 #pragma once
 #include <QDockWidget>
 #include <QWidget>
+
 class Entity;
+
+namespace rude {
 
 class PropertiesPanel : public QDockWidget {
     Q_OBJECT
@@ -12,4 +15,6 @@ private:
     QWidget* contentWidget;
     Entity* currentEntity = nullptr;
     void updateProperties();
-}; 
+};
+
+} // namespace rude 

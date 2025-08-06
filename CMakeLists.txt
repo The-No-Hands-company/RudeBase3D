@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 3.28)
+
+cmake_minimum_required(VERSION 4.0)
 project(RudeBase3D VERSION 1.0.0 LANGUAGES CXX)
+
+# Ensure GLM experimental extensions are enabled globally
+add_definitions(-DGLM_ENABLE_EXPERIMENTAL)
 
 # Set C++23 standard
 set(CMAKE_CXX_STANDARD 23)
@@ -15,17 +19,11 @@ endif()
 
 # Find required Qt components
 message(STATUS "Looking for Qt6...")
-find_package(Qt6 COMPONENTS Core Widgets OpenGL OpenGLWidgets)
-if(NOT Qt6_FOUND)
-    message(FATAL_ERROR "Qt6 not found! Please set CMAKE_PREFIX_PATH or Qt6_DIR to your Qt installation.\n"
-                        "Examples:\n"
-                        "  Windows: -DCMAKE_PREFIX_PATH=\"D:/Qt/6.6.1/msvc2022_64\"\n"
-                        "  Linux:   -DCMAKE_PREFIX_PATH=\"/opt/Qt/6.6.1/gcc_64\"\n"
-                        "  macOS:   -DCMAKE_PREFIX_PATH=\"/Users/$(whoami)/Qt/6.6.1/macos\"\n"
-                        "Or set Qt6_DIR directly:\n"
-                        "  -DQt6_DIR=\"/path/to/Qt/6.6.1/lib/cmake/Qt6\"")
-endif()
-message(STATUS "Found Qt6: ${Qt6_VERSION} at ${Qt6_DIR}")
+find_package(Qt6 COMPONENTS Core Widgets Gui OpenGL OpenGLWidgets)
+
+
+# ...existing code...
+
 
 # Find OpenGL
 find_package(OpenGL REQUIRED)
@@ -49,6 +47,33 @@ if(NOT glm_FOUND)
         set(GLM_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm")
         set(GLM_FOUND TRUE)
     endif()
+endif()
+
+# Find GLEW
+find_path(GLEW_INCLUDE_DIRS GL/glew.h
+    HINTS
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glew/include
+    DOC "GLEW include directory"
+)
+
+find_library(GLEW_LIBRARIES
+    NAMES glew32 glew GLEW
+    HINTS
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glew/lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glew/lib/Release/x64
+    DOC "GLEW library"
+)
+
+if(GLEW_INCLUDE_DIRS AND GLEW_LIBRARIES)
+    message(STATUS "Found GLEW: ${GLEW_LIBRARIES}")
+    set(GLEW_FOUND TRUE)
+else()
+    message(STATUS "Using GLEW from third_party/glew")
+    set(GLEW_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/glew/include")
+    # Try to build GLEW from source if library not found
+    add_subdirectory(third_party/glew)
+    set(GLEW_LIBRARIES glew)
+    set(GLEW_FOUND TRUE)
 endif()
 
 # Set output directories
@@ -82,8 +107,34 @@ add_subdirectory(src/toolbars)
 add_subdirectory(src/event)
 add_subdirectory(src/input)
 
+
 # Create executable
 add_executable(RudeBase3D ${SOURCES} ${HEADERS})
+
+# Ensure Qt6 include directories are available to all targets (after target is created)
+if(Qt6_FOUND)
+    # Use Qt6::Core, Qt6::Gui, etc. targets to propagate include directories and definitions
+    # This is the modern CMake way and works with Qt6's CMake integration
+    get_target_property(QT_CORE_INCLUDES Qt6::Core INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(QT_GUI_INCLUDES Qt6::Gui INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(QT_WIDGETS_INCLUDES Qt6::Widgets INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(QT_OPENGL_INCLUDES Qt6::OpenGL INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(QT_OPENGLWIDGETS_INCLUDES Qt6::OpenGLWidgets INTERFACE_INCLUDE_DIRECTORIES)
+    target_include_directories(RudeBase3D PRIVATE
+        ${QT_CORE_INCLUDES}
+        ${QT_GUI_INCLUDES}
+        ${QT_WIDGETS_INCLUDES}
+        ${QT_OPENGL_INCLUDES}
+        ${QT_OPENGLWIDGETS_INCLUDES}
+    )
+else()
+    message(FATAL_ERROR "Qt6 not found! Please set CMAKE_PREFIX_PATH or Qt6_DIR to your Qt installation.\n"
+                        "Examples:\n"
+                        "  Windows: -DCMAKE_PREFIX_PATH=\"D:/Qt/6.9.1/msvc2022_64\"\n"
+                        "Or set Qt6_DIR directly:\n"
+                        "  -DQt6_DIR=\"D:/Qt/6.9.1/msvc2022_64/lib/cmake/Qt6\"")
+endif()
+message(STATUS "Found Qt6: ${Qt6_VERSION} at ${Qt6_DIR}")
 
 # Include directories for organized structure
 target_include_directories(RudeBase3D PRIVATE 
@@ -130,6 +181,9 @@ target_include_directories(RudeBase3D PRIVATE
     third_party/glm
     third_party/fmt/include
     third_party/imgui
+    third_party/open3d/cpp
+    third_party/eigen
+    third_party/glew/include
 )
 
 # Add GLM include directory if found
@@ -154,9 +208,11 @@ target_compile_features(RudeBase3D PRIVATE cxx_std_23)
 target_link_libraries(RudeBase3D 
     Qt6::Core 
     Qt6::Widgets 
+    Qt6::Gui
     Qt6::OpenGL 
     Qt6::OpenGLWidgets
     OpenGL::GL
+    ${GLEW_LIBRARIES}
     core
     ecs
     gizmo
@@ -180,6 +236,7 @@ if(MSVC)
         _CRT_SECURE_NO_WARNINGS
         NOMINMAX               # Prevent min/max macro conflicts
         WIN32_LEAN_AND_MEAN    # Reduce Windows header bloat
+        _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING # Suppress MSVC deprecation warning for stdext::checked_array_iterator
     )
     
     # Enable modern C++23 features and optimizations

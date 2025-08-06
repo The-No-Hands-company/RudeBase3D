@@ -10,7 +10,7 @@
 #include <memory>
 
 // Forward declarations
-class Scene;
+namespace rude { class Scene; }
 class Camera;
 class Renderer;
 class ICameraController;
@@ -27,8 +27,8 @@ public:
     ~Viewport3D();
 
     // Scene and camera
-    void setScene(std::shared_ptr<Scene> scene);
-    std::shared_ptr<Scene> getScene() const { return m_scene; }
+    void setScene(std::shared_ptr<rude::Scene> scene);
+    std::shared_ptr<rude::Scene> getScene() const { return m_scene; }
     
     std::shared_ptr<Camera> getCamera() const { return m_camera; }
     
@@ -83,7 +83,7 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     
 private:
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
     std::shared_ptr<Camera> m_camera;
     std::shared_ptr<Renderer> m_renderer;
     std::shared_ptr<ICameraController> m_cameraController;

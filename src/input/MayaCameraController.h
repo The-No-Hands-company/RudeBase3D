@@ -1,13 +1,14 @@
 #pragma once
 
 #include "ICameraController.h"
-#include <QPoint>
-#include <QTimer>
-#include <QSet>
+#include <glm/glm.hpp>
+#include <set>
+#include <functional>
+#include "InputEvents.h"
 
-class QMouseEvent;
-class QWheelEvent;
-class QKeyEvent;
+// Forward declaration for rude::Scene
+namespace rude { class Scene; }
+class SelectionManager;
 
 /**
  * @brief Professional Maya-style camera controller
@@ -20,72 +21,71 @@ class QKeyEvent;
  * - F = Frame selected/all
  * - Ctrl+Alt+LMB = Rotate around view center
  */
-class MayaCameraController : public ICameraController
-{
-    Q_OBJECT
-    
+class MayaCameraController : public ICameraController {
 public:
-    explicit MayaCameraController(QObject* parent = nullptr);
+    // Cross-platform camera changed callback
+    std::function<void()> cameraChangedCallback;
+public:
+    MayaCameraController();
     ~MayaCameraController() override;
-    
     // ICameraController interface
     void setCamera(std::shared_ptr<Camera> camera) override;
-    void setScene(std::shared_ptr<Scene> scene) override;
-    
-    bool handleMousePress(QMouseEvent* event) override;
-    bool handleMouseMove(QMouseEvent* event) override;
-    bool handleMouseRelease(QMouseEvent* event) override;
-    bool handleWheel(QWheelEvent* event) override;
-    bool handleKeyPress(QKeyEvent* event) override;
-    bool handleKeyRelease(QKeyEvent* event) override;
-    
+    void setScene(std::shared_ptr<rude::Scene> scene) override;
+    void setSelectionManager(std::shared_ptr<SelectionManager> selectionManager);
+
+    bool handleMousePress(const MouseEvent& event) override;
+    bool handleMouseMove(const MouseEvent& event) override;
+    bool handleMouseRelease(const MouseEvent& event) override;
+    bool handleWheel(const WheelEvent& event) override;
+    bool handleKeyPress(const KeyEvent& event) override;
+    bool handleKeyRelease(const KeyEvent& event) override;
+
     void resetCamera() override;
     void frameScene(bool animate = true) override;
     void frameSelection(bool animate = true) override;
     void updateAspectRatio(float aspectRatio) override;
-    
-    QVector3D getWorldPosition() const override;
-    QMatrix4x4 getViewMatrix() const override;
-    QMatrix4x4 getProjectionMatrix() const override;
-    QVector3D screenToWorldRay(const QVector2D& screenPos, const QSize& viewportSize) const override;
-    
+
+    glm::vec3 getWorldPosition() const override;
+    glm::mat4 getViewMatrix() const override;
+    glm::mat4 getProjectionMatrix() const override;
+    glm::vec3 screenToWorldRay(const glm::vec2& screenPos, const glm::ivec2& viewportSize) const override;
+
     void setMovementSpeed(float speed) override { m_movementSpeed = speed; }
     void setRotationSpeed(float speed) override { m_rotationSpeed = speed; }
     void setPanSpeed(float speed) override { m_panSpeed = speed; }
     void setZoomSpeed(float speed) override { m_zoomSpeed = speed; }
     void setInvertY(bool invert) override { m_invertY = invert; }
-    
+
     float getMovementSpeed() const override { return m_movementSpeed; }
     float getRotationSpeed() const override { return m_rotationSpeed; }
     float getPanSpeed() const override { return m_panSpeed; }
     float getZoomSpeed() const override { return m_zoomSpeed; }
     bool isYInverted() const override { return m_invertY; }
-    
-    QString getControllerName() const override { return "Maya"; }
-    QString getControllerDescription() const override;
-    
+
+    std::string getControllerName() const override { return "Maya"; }
+    std::string getControllerDescription() const override;
+
     // Maya-specific features
-    void setOrbitPivot(const QVector3D& pivot);
-    QVector3D getOrbitPivot() const { return m_orbitPivot; }
+    void setOrbitPivot(const glm::vec3& pivot);
+    glm::vec3 getOrbitPivot() const { return m_orbitPivot; }
     void setSmartPivot(bool enabled) { m_smartPivot = enabled; }
     bool isSmartPivotEnabled() const { return m_smartPivot; }
-    
+
     // View operations
-    void tumbleStart(const QPoint& startPos);
-    void tumbleUpdate(const QPoint& currentPos);
+    void tumbleStart(const glm::ivec2& startPos);
+    void tumbleUpdate(const glm::ivec2& currentPos);
     void tumbleEnd();
-    
-    void trackStart(const QPoint& startPos);
-    void trackUpdate(const QPoint& currentPos);
+
+    void trackStart(const glm::ivec2& startPos);
+    void trackUpdate(const glm::ivec2& currentPos);
     void trackEnd();
-    
-    void dollyStart(const QPoint& startPos);
-    void dollyUpdate(const QPoint& currentPos);
+
+    void dollyStart(const glm::ivec2& startPos);
+    void dollyUpdate(const glm::ivec2& currentPos);
     void dollyEnd();
-    
-private slots:
+
     void updateAnimation();
-    
+
 private:
     enum class InteractionMode {
         None,
@@ -94,53 +94,57 @@ private:
         Dolly,     // Alt + RMB
         ViewRotate // Ctrl + Alt + LMB
     };
-    
+
     // Camera state
-    QVector3D m_orbitPivot;
+    glm::vec3 m_orbitPivot;
     float m_orbitDistance;
     bool m_smartPivot;
-    
+
     // Interaction state
     InteractionMode m_currentMode;
-    QPoint m_lastMousePos;
-    QPoint m_interactionStartPos;
-    QSet<int> m_pressedKeys;
-    Qt::KeyboardModifiers m_currentModifiers;
-    
+    glm::ivec2 m_lastMousePos;
+    glm::ivec2 m_interactionStartPos;
+    std::set<int> m_pressedKeys;
+    KeyboardModifier m_currentModifiers;
+
     // Settings
     float m_movementSpeed;
     float m_rotationSpeed;
     float m_panSpeed;
     float m_zoomSpeed;
     bool m_invertY;
-    
+
     // Animation system
-    QTimer* m_animationTimer;
+    // Animation system
     bool m_isAnimating;
-    QVector3D m_animStartPos;
-    QVector3D m_animTargetPos;
-    QVector3D m_animStartPivot;
-    QVector3D m_animTargetPivot;
+    glm::vec3 m_animStartPos;
+    glm::vec3 m_animTargetPos;
+    glm::vec3 m_animStartPivot;
+    glm::vec3 m_animTargetPivot;
     float m_animationTime;
     float m_animationDuration;
-    
+    float m_animationInterval; // in seconds
+
     // Helper methods
     bool isAltPressed() const;
     bool isCtrlPressed() const;
     bool isShiftPressed() const;
-    
+
     void updateOrbitDistance();
-    void updateSmartPivot(const QPoint& screenPos);
-    QVector3D calculateSceneCenter() const;
-    QVector3D calculateSelectionCenter() const;
-    float calculateFramingDistance(const QVector3D& target, float objectSize) const;
-    
-    void startAnimation(const QVector3D& targetPos, const QVector3D& targetPivot);
+    void updateSmartPivot(const glm::ivec2& screenPos);
+    glm::vec3 calculateSceneCenter() const;
+    glm::vec3 calculateSelectionCenter() const;
+    float calculateFramingDistance(const glm::vec3& target, float objectSize) const;
+
+    void startAnimation(const glm::vec3& targetPos, const glm::vec3& targetPivot);
     void stopAnimation();
-    
+
     // Camera manipulation
     void orbitAroundPivot(float deltaYaw, float deltaPitch);
-    void panCamera(const QVector3D& worldDelta);
+    void panCamera(const glm::vec3& worldDelta);
     void dollyCamera(float deltaDistance);
-    void moveToPosition(const QVector3D& position, const QVector3D& target, bool animate = true);
+    void moveToPosition(const glm::vec3& position, const glm::vec3& target, bool animate = true);
+
+    std::shared_ptr<SelectionManager> m_selectionManager;
+    std::shared_ptr<rude::Scene> m_scene;
 };

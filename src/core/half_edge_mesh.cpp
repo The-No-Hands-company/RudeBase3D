@@ -596,4 +596,25 @@ void HalfEdgeMesh::updateVertexNormals() {
     }
 }
 
+// Getter functions for collections
+std::vector<std::shared_ptr<Vertex>> HalfEdgeMesh::getVertices() const {
+    return m_vertices;
+}
+
+std::vector<std::shared_ptr<Edge>> HalfEdgeMesh::getEdges() const {
+    return m_edges;
+}
+
+std::vector<std::shared_ptr<Face>> HalfEdgeMesh::getFaces() const {
+    return m_faces;
+}
+
+bool HalfEdgeMesh::isEmpty() const {
+    return m_vertices.empty() && m_edges.empty() && m_faces.empty();
+}
+
+void HalfEdgeMesh::updateNormals() {
+    updateVertexNormals();
+}
+
 } // namespace rude

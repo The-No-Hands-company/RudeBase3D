@@ -1,25 +1,16 @@
+
 #include "SelectionManager.h"
-#include "HalfEdgeMesh.h"
+
 #include "core/mesh_elements.hpp"
 #include "core/half_edge_mesh.hpp"
-#include <QDebug>
 #include <algorithm>
 #include <cmath>
+#include <spdlog/spdlog.h>
 
 SelectionManager::SelectionManager()
     : m_selectionType(SelectionType::Vertex)
     , m_boxSelecting(false)
 {
-}
-
-void SelectionManager::setMesh(HalfEdgeMeshPtr mesh)
-{
-    // Clear previous selection when changing mesh
-    if (m_mesh) {
-        clearSelection();
-    }
-    
-    m_mesh = mesh;
 }
 
 void SelectionManager::clearSelection()
@@ -28,39 +19,14 @@ void SelectionManager::clearSelection()
     
     // Clear selection on all vertices
     // Note: rude:: mesh elements don't have setSelected() method, selection is managed externally
-    /* TODO: Implement external selection tracking if needed
-    for (auto vertex : m_mesh->getVertices()) {
-        if (vertex) {
-            vertex->setSelected(false);
-        }
-    }
-    */
+    // TODO: Implement external selection tracking if needed
     
-    // Clear our internal selection tracking
+    // Clear internal selection sets
     m_selectedVertices.clear();
-    m_selectedEdges.clear();
+    m_selectedEdges.clear(); 
     m_selectedFaces.clear();
     
-    // Clear selection on all edges
-    /* TODO: Implement external selection tracking if needed
-    for (auto edge : m_mesh->getEdges()) {
-        if (edge) {
-            edge->setSelected(false);
-        }
-    }
-    
-    // Clear selection on all faces
-    for (auto face : m_mesh->getFaces()) {
-        if (face) {
-            face->setSelected(false);
-        }
-    }
-    */
-    
-    // Clear internal selection sets (already done above, removing duplicates)
-    m_selectedVertices.clear();
-    m_selectedEdges.clear();
-    m_selectedFaces.clear();
+    spdlog::debug("Selection updated: {} elements selected", getSelectionCount());
     
     updateSelectionVisualization();
 }
@@ -68,7 +34,7 @@ void SelectionManager::clearSelection()
 void SelectionManager::selectAll()
 {
     if (!m_mesh) return;
-    
+
     switch (m_selectionType) {
         case SelectionType::Vertex:
             for (auto vertex : m_mesh->getVertices()) {
@@ -77,7 +43,7 @@ void SelectionManager::selectAll()
                 }
             }
             break;
-            
+
         case SelectionType::Edge:
             for (auto edge : m_mesh->getEdges()) {
                 if (edge) {
@@ -85,7 +51,7 @@ void SelectionManager::selectAll()
                 }
             }
             break;
-            
+
         case SelectionType::Face:
             for (auto face : m_mesh->getFaces()) {
                 if (face) {
@@ -93,11 +59,11 @@ void SelectionManager::selectAll()
                 }
             }
             break;
-            
+
         default:
             break;
     }
-    
+
     updateSelectionVisualization();
 }
 
@@ -109,7 +75,9 @@ void SelectionManager::invertSelection()
         case SelectionType::Vertex:
             for (auto vertex : m_mesh->getVertices()) {
                 if (vertex) {
-                    selectVertex(vertex, !vertex->isSelected());
+                    // Check if vertex is currently selected
+                    bool isCurrentlySelected = (m_selectedVertices.find(vertex) != m_selectedVertices.end());
+                    selectVertex(vertex, !isCurrentlySelected);
                 }
             }
             break;
@@ -117,7 +85,9 @@ void SelectionManager::invertSelection()
         case SelectionType::Edge:
             for (auto edge : m_mesh->getEdges()) {
                 if (edge) {
-                    selectEdge(edge, !edge->isSelected());
+                    // Check if edge is currently selected
+                    bool isCurrentlySelected = (m_selectedEdges.find(edge) != m_selectedEdges.end());
+                    selectEdge(edge, !isCurrentlySelected);
                 }
             }
             break;
@@ -125,7 +95,9 @@ void SelectionManager::invertSelection()
         case SelectionType::Face:
             for (auto face : m_mesh->getFaces()) {
                 if (face) {
-                    selectFace(face, !face->isSelected());
+                    // Check if face is currently selected
+                    bool isCurrentlySelected = (m_selectedFaces.find(face) != m_selectedFaces.end());
+                    selectFace(face, !isCurrentlySelected);
                 }
             }
             break;
@@ -137,7 +109,7 @@ void SelectionManager::invertSelection()
     updateSelectionVisualization();
 }
 
-bool SelectionManager::selectAtPoint(const QVector3D& worldPos, bool addToSelection)
+bool SelectionManager::selectAtPoint(const glm::vec3& worldPos, bool addToSelection)
 {
     if (!m_mesh) return false;
     
@@ -186,34 +158,23 @@ bool SelectionManager::selectAtPoint(const QVector3D& worldPos, bool addToSelect
     return selectionChanged;
 }
 
-void SelectionManager::beginBoxSelection(const QVector3D& startPos)
+void SelectionManager::beginBoxSelection(const glm::vec3& startPos)
 {
     m_boxSelecting = true;
     m_boxStart = startPos;
     m_boxEnd = startPos;
-    m_selectionBox = QRect();
+    m_selectionBox = { glm::vec2(startPos.x, startPos.y), glm::vec2(startPos.x, startPos.y) };
 }
 
-void SelectionManager::updateBoxSelection(const QVector3D& currentPos)
+void SelectionManager::updateBoxSelection(const glm::vec3& currentPos)
 {
     if (!m_boxSelecting) return;
-    
     m_boxEnd = currentPos;
-    
-    // Update 2D selection box for UI visualization
-    // This would be converted from 3D world coordinates to screen coordinates
-    // For now, we'll create a simple bounding box
-    float minX = std::min(m_boxStart.x(), m_boxEnd.x());
-    float maxX = std::max(m_boxStart.x(), m_boxEnd.x());
-    float minY = std::min(m_boxStart.y(), m_boxEnd.y());
-    float maxY = std::max(m_boxStart.y(), m_boxEnd.y());
-    
-    m_selectionBox = QRect(
-        static_cast<int>(minX), 
-        static_cast<int>(minY),
-        static_cast<int>(maxX - minX), 
-        static_cast<int>(maxY - minY)
-    );
+    float minX = std::min(m_boxStart.x, m_boxEnd.x);
+    float maxX = std::max(m_boxStart.x, m_boxEnd.x);
+    float minY = std::min(m_boxStart.y, m_boxEnd.y);
+    float maxY = std::max(m_boxStart.y, m_boxEnd.y);
+    m_selectionBox = { glm::vec2(minX, minY), glm::vec2(maxX, maxY) };
 }
 
 void SelectionManager::endBoxSelection(bool addToSelection)
@@ -228,21 +189,22 @@ void SelectionManager::endBoxSelection(bool addToSelection)
     }
     
     // Define selection volume (simple box for now)
-    float minX = std::min(m_boxStart.x(), m_boxEnd.x());
-    float maxX = std::max(m_boxStart.x(), m_boxEnd.x());
-    float minY = std::min(m_boxStart.y(), m_boxEnd.y());
-    float maxY = std::max(m_boxStart.y(), m_boxEnd.y());
-    float minZ = std::min(m_boxStart.z(), m_boxEnd.z());
-    float maxZ = std::max(m_boxStart.z(), m_boxEnd.z());
+    float minX = std::min(m_boxStart.x, m_boxEnd.x);
+    float maxX = std::max(m_boxStart.x, m_boxEnd.x);
+    float minY = std::min(m_boxStart.y, m_boxEnd.y);
+    float maxY = std::max(m_boxStart.y, m_boxEnd.y);
+    float minZ = std::min(m_boxStart.z, m_boxEnd.z);
+    float maxZ = std::max(m_boxStart.z, m_boxEnd.z);
     
     switch (m_selectionType) {
         case SelectionType::Vertex:
             for (auto vertex : m_mesh->getVertices()) {
                 if (vertex) {
-                    const auto& pos = vertex->getPosition();
-                    if (pos.x() >= minX && pos.x() <= maxX &&
-                        pos.y() >= minY && pos.y() <= maxY &&
-                        pos.z() >= minZ && pos.z() <= maxZ) {
+                    // Convert glm::vec3 to compare with QVector3D bounds
+                    auto pos_glm = vertex->position;
+                    if (pos_glm.x >= minX && pos_glm.x <= maxX &&
+                        pos_glm.y >= minY && pos_glm.y <= maxY &&
+                        pos_glm.z >= minZ && pos_glm.z <= maxZ) {
                         selectVertex(vertex, true);
                     }
                 }
@@ -251,17 +213,20 @@ void SelectionManager::endBoxSelection(bool addToSelection)
             
         case SelectionType::Edge:
             for (auto edge : m_mesh->getEdges()) {
-                if (edge && edge->getOriginVertex() && edge->getTargetVertex()) {
-                    const auto& pos1 = edge->getOriginVertex()->getPosition();
-                    const auto& pos2 = edge->getTargetVertex()->getPosition();
-                    // Select edge if both endpoints are in box
-                    if ((pos1.x() >= minX && pos1.x() <= maxX &&
-                         pos1.y() >= minY && pos1.y() <= maxY &&
-                         pos1.z() >= minZ && pos1.z() <= maxZ) ||
-                        (pos2.x() >= minX && pos2.x() <= maxX &&
-                         pos2.y() >= minY && pos2.y() <= maxY &&
-                         pos2.z() >= minZ && pos2.z() <= maxZ)) {
-                        selectEdge(edge, true);
+                if (edge && edge->halfEdge && edge->halfEdge->vertex) {
+                    auto halfEdge1 = edge->halfEdge;
+                    auto halfEdge2 = edge->halfEdge->twin;
+                    if (halfEdge1 && halfEdge2 && halfEdge1->vertex && halfEdge2->vertex) {
+                        auto pos1 = halfEdge1->vertex->position;
+                        auto pos2 = halfEdge2->vertex->position;
+                        if ((pos1.x >= minX && pos1.x <= maxX &&
+                             pos1.y >= minY && pos1.y <= maxY &&
+                             pos1.z >= minZ && pos1.z <= maxZ) ||
+                            (pos2.x >= minX && pos2.x <= maxX &&
+                             pos2.y >= minY && pos2.y <= maxY &&
+                             pos2.z >= minZ && pos2.z <= maxZ)) {
+                            selectEdge(edge, true);
+                        }
                     }
                 }
             }
@@ -270,12 +235,23 @@ void SelectionManager::endBoxSelection(bool addToSelection)
         case SelectionType::Face:
             for (auto face : m_mesh->getFaces()) {
                 if (face) {
-                    // Check if face center is in selection box
-                    auto center = face->getCentroid();
-                    if (center.x() >= minX && center.x() <= maxX &&
-                        center.y() >= minY && center.y() <= maxY &&
-                        center.z() >= minZ && center.z() <= maxZ) {
-                        selectFace(face, true);
+                    // Calculate face center manually
+                    auto vertices = face->getVertices();
+                    if (!vertices.empty()) {
+                        glm::vec3 center(0.0f);
+                        for (auto vertex : vertices) {
+                            if (vertex) {
+                                center += vertex->position;
+                            }
+                        }
+                        center /= static_cast<float>(vertices.size());
+                        
+                        // Check if face center is in selection box
+                        if (center.x >= minX && center.x <= maxX &&
+                            center.y >= minY && center.y <= maxY &&
+                            center.z >= minZ && center.z <= maxZ) {
+                            selectFace(face, true);
+                        }
                     }
                 }
             }
@@ -309,8 +285,9 @@ std::vector<HalfEdgeVertexPtr> SelectionManager::getSelectedVertices() const
     std::vector<HalfEdgeVertexPtr> selected;
     if (!m_mesh) return selected;
     
-    for (auto vertex : m_mesh->getVertices()) {
-        if (vertex && vertex->isSelected()) {
+    // Return vertices from our internal selection tracking
+    for (auto vertex : m_selectedVertices) {
+        if (vertex) {
             selected.push_back(vertex);
         }
     }
@@ -322,8 +299,9 @@ std::vector<HalfEdgeEdgePtr> SelectionManager::getSelectedEdges() const
     std::vector<HalfEdgeEdgePtr> selected;
     if (!m_mesh) return selected;
     
-    for (auto edge : m_mesh->getEdges()) {
-        if (edge && edge->isSelected()) {
+    // Return edges from our internal selection tracking
+    for (auto edge : m_selectedEdges) {
+        if (edge) {
             selected.push_back(edge);
         }
     }
@@ -335,8 +313,9 @@ std::vector<HalfEdgeFacePtr> SelectionManager::getSelectedFaces() const
     std::vector<HalfEdgeFacePtr> selected;
     if (!m_mesh) return selected;
     
-    for (auto face : m_mesh->getFaces()) {
-        if (face && face->isSelected()) {
+    // Return faces from our internal selection tracking
+    for (auto face : m_selectedFaces) {
+        if (face) {
             selected.push_back(face);
         }
     }
@@ -345,17 +324,17 @@ std::vector<HalfEdgeFacePtr> SelectionManager::getSelectedFaces() const
 
 bool SelectionManager::isSelected(HalfEdgeVertexPtr vertex) const
 {
-    return vertex && vertex->isSelected();
+    return vertex && (m_selectedVertices.find(vertex) != m_selectedVertices.end());
 }
 
 bool SelectionManager::isSelected(HalfEdgeEdgePtr edge) const
 {
-    return edge && edge->isSelected();
+    return edge && (m_selectedEdges.find(edge) != m_selectedEdges.end());
 }
 
 bool SelectionManager::isSelected(HalfEdgeFacePtr face) const
 {
-    return face && face->isSelected();
+    return face && (m_selectedFaces.find(face) != m_selectedFaces.end());
 }
 
 void SelectionManager::selectVertex(HalfEdgeVertexPtr vertex, bool selected)
@@ -366,10 +345,9 @@ void SelectionManager::selectVertex(HalfEdgeVertexPtr vertex, bool selected)
     // vertex->setSelected(selected);
     
     if (selected) {
-        // TODO: Get proper ID from vertex if available
-        m_selectedVertices.insert(reinterpret_cast<uintptr_t>(vertex.get()));
+        m_selectedVertices.insert(vertex);
     } else {
-        m_selectedVertices.erase(reinterpret_cast<uintptr_t>(vertex.get()));
+        m_selectedVertices.erase(vertex);
     }
 }
 
@@ -381,10 +359,9 @@ void SelectionManager::selectEdge(HalfEdgeEdgePtr edge, bool selected)
     // edge->setSelected(selected);
     
     if (selected) {
-        // TODO: Get proper ID from edge if available
-        m_selectedEdges.insert(reinterpret_cast<uintptr_t>(edge.get()));
+        m_selectedEdges.insert(edge);
     } else {
-        m_selectedEdges.erase(reinterpret_cast<uintptr_t>(edge.get()));
+        m_selectedEdges.erase(edge);
     }
 }
 
@@ -396,10 +373,9 @@ void SelectionManager::selectFace(HalfEdgeFacePtr face, bool selected)
     // face->setSelected(selected);
     
     if (selected) {
-        // TODO: Get proper ID from face if available
-        m_selectedFaces.insert(reinterpret_cast<uintptr_t>(face.get()));
+        m_selectedFaces.insert(face);
     } else {
-        m_selectedFaces.erase(reinterpret_cast<uintptr_t>(face.get()));
+        m_selectedFaces.erase(face);
     }
 }
 
@@ -439,7 +415,7 @@ void SelectionManager::convertSelection(SelectionType toType)
     updateSelectionVisualization();
 }
 
-SelectionManager::RayHit SelectionManager::raycast(const QVector3D& rayOrigin, const QVector3D& rayDirection) const
+SelectionManager::RayHit SelectionManager::raycast(const glm::vec3& rayOrigin, const glm::vec3& rayDirection) const
 {
     RayHit hit;
     if (!m_mesh) return hit;
@@ -456,13 +432,14 @@ SelectionManager::RayHit SelectionManager::raycast(const QVector3D& rayOrigin, c
         // For triangulated faces
         for (size_t i = 1; i < vertices.size() - 1; ++i) {
             float t;
-            QVector3D hitPoint;
+            glm::vec3 hitPoint;
             
-            if (rayTriangleIntersect(rayOrigin, rayDirection,
-                                   vertices[0]->getPosition(),
-                                   vertices[i]->getPosition(),
-                                   vertices[i + 1]->getPosition(),
-                                   t, hitPoint)) {
+            // Use glm::vec3 directly
+            auto pos0 = vertices[0]->position;
+            auto pos1 = vertices[i]->position;
+            auto pos2 = vertices[i + 1]->position;
+            
+            if (rayTriangleIntersect(rayOrigin, rayDirection, pos0, pos1, pos2, t, hitPoint)) {
                 if (t < closestDistance && t > 0) {
                     closestDistance = t;
                     hit.hit = true;
@@ -481,113 +458,90 @@ void SelectionManager::updateSelectionVisualization()
 {
     // This would trigger a viewport update to show selection highlighting
     // For now, just log the selection count
-    qDebug() << "Selection updated:" << getSelectionCount() << "elements selected";
+    spdlog::debug("Selection updated: {} elements selected", getSelectionCount());
 }
 
-HalfEdgeVertexPtr SelectionManager::findClosestVertex(const QVector3D& point, float maxDistance) const
+HalfEdgeVertexPtr SelectionManager::findClosestVertex(const glm::vec3& point, float maxDistance) const
 {
     if (!m_mesh) return nullptr;
-    
     HalfEdgeVertexPtr closest = nullptr;
     float closestDistSq = maxDistance * maxDistance;
-    
     for (auto vertex : m_mesh->getVertices()) {
         if (!vertex) continue;
-        
-        float distSq = (vertex->getPosition() - point).lengthSquared();
+        auto pos = vertex->position;
+        float distSq = glm::dot(pos - point, pos - point);
         if (distSq < closestDistSq) {
             closestDistSq = distSq;
             closest = vertex;
         }
     }
-    
     return closest;
 }
 
-HalfEdgeEdgePtr SelectionManager::findClosestEdge(const QVector3D& point, float maxDistance) const
+HalfEdgeEdgePtr SelectionManager::findClosestEdge(const glm::vec3& point, float maxDistance) const
 {
     if (!m_mesh) return nullptr;
-    
     HalfEdgeEdgePtr closest = nullptr;
     float closestDistSq = maxDistance * maxDistance;
-    
     for (auto edge : m_mesh->getEdges()) {
-        if (!edge || !edge->getOriginVertex() || !edge->getTargetVertex()) continue;
-        
-        // Calculate distance from point to edge (line segment)
-        const auto& p1 = edge->getOriginVertex()->getPosition();
-        const auto& p2 = edge->getTargetVertex()->getPosition();
-        
-        QVector3D edgeVec = p2 - p1;
-        QVector3D pointVec = point - p1;
-        
-        float edgeLengthSq = edgeVec.lengthSquared();
+        if (!edge || !edge->halfEdge) continue;
+        auto halfEdge1 = edge->halfEdge;
+        auto halfEdge2 = edge->halfEdge->twin;
+        if (!halfEdge1 || !halfEdge2 || !halfEdge1->vertex || !halfEdge2->vertex) continue;
+        auto p1 = halfEdge1->vertex->position;
+        auto p2 = halfEdge2->vertex->position;
+        glm::vec3 edgeVec = p2 - p1;
+        glm::vec3 pointVec = point - p1;
+        float edgeLengthSq = glm::dot(edgeVec, edgeVec);
         if (edgeLengthSq < EPSILON) continue;
-        
-        float t = QVector3D::dotProduct(pointVec, edgeVec) / edgeLengthSq;
+        float t = glm::dot(pointVec, edgeVec) / edgeLengthSq;
         t = std::clamp(t, 0.0f, 1.0f);
-        
-        QVector3D closestOnEdge = p1 + t * edgeVec;
-        float distSq = (point - closestOnEdge).lengthSquared();
-        
+        glm::vec3 closestOnEdge = p1 + t * edgeVec;
+        float distSq = glm::dot(point - closestOnEdge, point - closestOnEdge);
         if (distSq < closestDistSq) {
             closestDistSq = distSq;
             closest = edge;
         }
     }
-    
     return closest;
 }
 
-HalfEdgeFacePtr SelectionManager::findClosestFace(const QVector3D& point) const
+HalfEdgeFacePtr SelectionManager::findClosestFace(const glm::vec3& point) const
 {
     if (!m_mesh) return nullptr;
-    
-    // Use raycast to find the face under the point
-    // For simplicity, cast a ray downward from the point
-    QVector3D rayDirection(0, -1, 0);
-    auto hit = raycast(point + QVector3D(0, 100, 0), rayDirection);
-    
+    glm::vec3 rayDirection(0, -1, 0);
+    auto hit = raycast(point + glm::vec3(0, 100, 0), rayDirection);
     return hit.hit ? hit.face : nullptr;
 }
 
-bool SelectionManager::rayTriangleIntersect(const QVector3D& rayOrigin, const QVector3D& rayDirection,
-                                          const QVector3D& v0, const QVector3D& v1, const QVector3D& v2,
-                                          float& t, QVector3D& hitPoint) const
+bool SelectionManager::rayTriangleIntersect(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
+                                           const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2,
+                                           float& t, glm::vec3& hitPoint) const
 {
     // Möller-Trumbore ray-triangle intersection algorithm
     const float RAY_EPSILON = 1e-8f;
-    
-    QVector3D edge1 = v1 - v0;
-    QVector3D edge2 = v2 - v0;
-    QVector3D h = QVector3D::crossProduct(rayDirection, edge2);
-    float a = QVector3D::dotProduct(edge1, h);
-    
+    glm::vec3 edge1 = v1 - v0;
+    glm::vec3 edge2 = v2 - v0;
+    glm::vec3 h = glm::cross(rayDirection, edge2);
+    float a = glm::dot(edge1, h);
     if (a > -RAY_EPSILON && a < RAY_EPSILON) {
         return false; // Ray is parallel to triangle
     }
-    
     float f = 1.0f / a;
-    QVector3D s = rayOrigin - v0;
-    float u = f * QVector3D::dotProduct(s, h);
-    
+    glm::vec3 s = rayOrigin - v0;
+    float u = f * glm::dot(s, h);
     if (u < 0.0f || u > 1.0f) {
         return false;
     }
-    
-    QVector3D q = QVector3D::crossProduct(s, edge1);
-    float v = f * QVector3D::dotProduct(rayDirection, q);
-    
+    glm::vec3 q = glm::cross(s, edge1);
+    float v = f * glm::dot(rayDirection, q);
     if (v < 0.0f || u + v > 1.0f) {
         return false;
     }
-    
-    t = f * QVector3D::dotProduct(edge2, q);
-    
+    t = f * glm::dot(edge2, q);
     if (t > RAY_EPSILON) {
         hitPoint = rayOrigin + rayDirection * t;
         return true;
     }
-    
     return false;
 }

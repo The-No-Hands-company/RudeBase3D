@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.h"
+#include "core/selection_manager.hpp"
 #include <QWidget>
 #include <QGridLayout>
 #include <QSplitter>
@@ -48,7 +49,7 @@ public:
     ~ViewportWidget() override;
     
     // Setup
-    void setScene(std::shared_ptr<Scene> scene);
+    void setScene(std::shared_ptr<rude::Scene> scene);
     void setCameraController(std::unique_ptr<ICameraController> controller);
     void setLightingSystem(std::shared_ptr<LightingSystem> lightingSystem);
     void setGridSystem(std::shared_ptr<GridSystem> gridSystem);
@@ -118,7 +119,7 @@ private:
     bool performSelection(int x, int y, rude::SelectionMode mode);
     
     // Core components
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
     std::shared_ptr<Camera> m_camera;
     std::unique_ptr<ICameraController> m_cameraController;
     std::shared_ptr<LightingSystem> m_lightingSystem;
@@ -184,7 +185,7 @@ public:
     const QList<ViewportWidget*>& getViewports() const { return m_viewports; }
     
     // Global settings
-    void setScene(std::shared_ptr<Scene> scene);
+    void setScene(std::shared_ptr<rude::Scene> scene);
     void setLightingSystem(std::shared_ptr<LightingSystem> lightingSystem);
     void setGridSystem(std::shared_ptr<GridSystem> gridSystem);
     void setRenderSystem(std::shared_ptr<RenderSystem> renderSystem);
@@ -227,7 +228,7 @@ private:
     ViewportWidget* m_activeViewport;
     
     // Global systems
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
     std::shared_ptr<LightingSystem> m_lightingSystem;
     std::shared_ptr<GridSystem> m_gridSystem;
     std::shared_ptr<RenderSystem> m_renderSystem;

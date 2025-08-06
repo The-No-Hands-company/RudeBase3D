@@ -1,5 +1,5 @@
 #include "InsetTool.h"
-#include "HalfEdgeMesh.h"
+
 #include "core/mesh_elements.hpp"
 #include "core/half_edge_mesh.hpp"
 #include <QDebug>

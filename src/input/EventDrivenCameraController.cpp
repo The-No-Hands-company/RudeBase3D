@@ -1,8 +1,12 @@
 #include "input/EventDrivenCameraController.hpp"
 #include "scene/Camera.h"
-#include "scene/Scene.h"
-#include <QDebug>
-#include <QtMath>
+#include "core/scene.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include "InputEvents.h"
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/norm.hpp>
 
 namespace input {
 
@@ -10,52 +14,41 @@ EventDrivenCameraController::EventDrivenCameraController(event::EventDispatcher&
     : QObject(parent)
     , m_dispatcher(dispatcher)
 {
-    qDebug() << "[EventDrivenCameraController] Creating event-driven camera controller";
-    
     // Subscribe to mouse events with high priority for camera control
     m_dispatcher.subscribe<event::MousePressEvent>(
         [this](event::Event& e) { onMousePress(e); },
         event::Priority::High
     );
-    
     m_dispatcher.subscribe<event::MouseMoveEvent>(
         [this](event::Event& e) { onMouseMove(e); },
         event::Priority::High
     );
-    
     m_dispatcher.subscribe<event::MouseReleaseEvent>(
         [this](event::Event& e) { onMouseRelease(e); },
         event::Priority::High
     );
-    
     m_dispatcher.subscribe<event::MouseWheelEvent>(
         [this](event::Event& e) { onMouseWheel(e); },
         event::Priority::High
     );
-    
-    qDebug() << "[EventDrivenCameraController] Subscribed to mouse events";
 }
 
 EventDrivenCameraController::~EventDrivenCameraController()
 {
-    qDebug() << "[EventDrivenCameraController] Destroying event-driven camera controller";
 }
 
 void EventDrivenCameraController::setCamera(std::shared_ptr<Camera> camera)
 {
     m_camera = camera;
     if (m_camera) {
-        qDebug() << "[EventDrivenCameraController] Camera set, position:" << m_camera->getWorldPosition();
         updateOrbitPivot();
-    } else {
-        qDebug() << "[EventDrivenCameraController] Camera cleared";
     }
 }
 
-void EventDrivenCameraController::setScene(std::shared_ptr<Scene> scene)
+void EventDrivenCameraController::setScene(std::shared_ptr<rude::Scene> scene)
 {
     m_scene = scene;
-    qDebug() << "[EventDrivenCameraController] Scene set";
+
 }
 
 void EventDrivenCameraController::onMousePress(event::Event& event)
@@ -78,17 +71,15 @@ void EventDrivenCameraController::onMousePress(event::Event& event)
     
     if (isMayaOrbitAction(mouseEvent)) {
         mode = NavigationMode::Orbit;
-        qDebug() << "[EventDrivenCameraController] Starting Maya orbit mode";
     } else if (isMayaPanAction(mouseEvent)) {
         mode = NavigationMode::Pan;
-        qDebug() << "[EventDrivenCameraController] Starting Maya pan mode";
     } else if (isMayaDollyAction(mouseEvent)) {
         mode = NavigationMode::Dolly;
-        qDebug() << "[EventDrivenCameraController] Starting Maya dolly mode";
     }
     
     if (mode != NavigationMode::None) {
-        QPoint mousePos(mouseEvent.position.x, mouseEvent.position.y);
+        // Convert Qt point to GLM ivec2
+        glm::ivec2 mousePos(static_cast<int>(mouseEvent.position.x), static_cast<int>(mouseEvent.position.y));
         startNavigation(mode, mousePos);
         event.handled = true;
     }
@@ -102,9 +93,8 @@ void EventDrivenCameraController::onMouseMove(event::Event& event)
     
     if (!m_camera) return;
     
-    QPoint mousePos(mouseEvent.position.x, mouseEvent.position.y);
+    glm::ivec2 mousePos(static_cast<int>(mouseEvent.position.x), static_cast<int>(mouseEvent.position.y));
     updateNavigation(mousePos);
-    
     event.handled = true;
 }
 
@@ -113,7 +103,6 @@ void EventDrivenCameraController::onMouseRelease(event::Event& event)
     if (event.handled) return;
     
     if (m_isNavigating) {
-        qDebug() << "[EventDrivenCameraController] Ending navigation";
         endNavigation();
         event.handled = true;
     }
@@ -130,7 +119,7 @@ void EventDrivenCameraController::onMouseWheel(event::Event& event)
     float delta = wheelEvent.delta;
     if (m_invertZoom) delta = -delta;
     
-    qDebug() << "[EventDrivenCameraController] Mouse wheel delta:" << delta;
+
     
     performDolly(delta * m_zoomSensitivity);
     
@@ -141,14 +130,13 @@ void EventDrivenCameraController::resetCamera()
 {
     if (!m_camera) return;
     
-    qDebug() << "[EventDrivenCameraController] Resetting camera";
+
     
-    QVector3D defaultPosition(10.0f, 8.0f, 10.0f);
-    QVector3D target(0, 0, 0);
-    
+
+    glm::vec3 defaultPosition(10.0f, 8.0f, 10.0f);
+    glm::vec3 target(0, 0, 0);
     m_camera->getTransform().setPosition(defaultPosition);
     m_camera->lookAt(target);
-    
     updateOrbitPivot();
     emit cameraChanged();
 }
@@ -157,25 +145,21 @@ void EventDrivenCameraController::frameScene(bool animate)
 {
     if (!m_camera || !m_scene) return;
     
-    qDebug() << "[EventDrivenCameraController] Framing scene";
+
     
     // TODO: Calculate actual scene bounds
-    QVector3D minBounds(-5, -5, -5);
-    QVector3D maxBounds(5, 5, 5);
-    
-    QVector3D center = (minBounds + maxBounds) * 0.5f;
-    QVector3D size = maxBounds - minBounds;
-    float maxDimension = qMax(qMax(size.x(), size.y()), size.z());
-    
+
+    glm::vec3 minBounds(-5, -5, -5);
+    glm::vec3 maxBounds(5, 5, 5);
+    glm::vec3 center = (minBounds + maxBounds) * 0.5f;
+    glm::vec3 size = maxBounds - minBounds;
+    float maxDimension = std::max(std::max(size.x, size.y), size.z);
     float distance = maxDimension * 1.5f;
-    QVector3D newPosition = center + QVector3D(distance, distance * 0.7f, distance);
-    
+    glm::vec3 newPosition = center + glm::vec3(distance, distance * 0.7f, distance);
     m_camera->getTransform().setPosition(newPosition);
     m_camera->lookAt(center);
-    
     m_orbitPivot = center;
     updateOrbitPivot();
-    
     emit cameraChanged();
 }
 
@@ -185,22 +169,19 @@ void EventDrivenCameraController::frameSelection(bool animate)
     frameScene(animate);
 }
 
-void EventDrivenCameraController::startNavigation(NavigationMode mode, const QPoint& mousePos)
+void EventDrivenCameraController::startNavigation(NavigationMode mode, const glm::ivec2& mousePos)
 {
     m_currentMode = mode;
     m_isNavigating = true;
     m_lastMousePos = mousePos;
     m_mousePressPos = mousePos;
-    
-    qDebug() << "[EventDrivenCameraController] Started navigation mode:" << static_cast<int>(mode);
 }
 
-void EventDrivenCameraController::updateNavigation(const QPoint& mousePos)
+void EventDrivenCameraController::updateNavigation(const glm::ivec2& mousePos)
 {
     if (!m_isNavigating || !m_camera) return;
-    
-    QVector2D delta = getMouseDelta(mousePos);
-    
+
+    glm::vec2 delta = getMouseDelta(mousePos);
     switch (m_currentMode) {
         case NavigationMode::Orbit:
             performOrbit(delta);
@@ -209,12 +190,11 @@ void EventDrivenCameraController::updateNavigation(const QPoint& mousePos)
             performPan(delta);
             break;
         case NavigationMode::Dolly:
-            performDolly(delta.y() * 0.1f);
+            performDolly(delta.y * 0.1f);
             break;
         default:
             break;
     }
-    
     m_lastMousePos = mousePos;
 }
 
@@ -222,82 +202,57 @@ void EventDrivenCameraController::endNavigation()
 {
     m_currentMode = NavigationMode::None;
     m_isNavigating = false;
-    
-    qDebug() << "[EventDrivenCameraController] Navigation ended";
 }
 
-void EventDrivenCameraController::performOrbit(const QVector2D& delta)
+
+void EventDrivenCameraController::performOrbit(const glm::vec2& delta)
 {
     if (!m_camera) return;
-    
-    // Get current camera transform
     Transform& transform = m_camera->getTransform();
-    QVector3D position = transform.getPosition();
-    
-    // Calculate orbit around pivot
-    QVector3D toCamera = position - m_orbitPivot;
-    float distance = toCamera.length();
-    
+    glm::vec3 position = transform.getPosition();
+    glm::vec3 toCamera = position - m_orbitPivot;
+    float distance = glm::length(toCamera);
     if (distance < 0.01f) return;
-    
-    // Horizontal rotation (yaw around Y-axis)
-    float yawDelta = -delta.x() * m_orbitSensitivity * 0.005f;
-    QMatrix4x4 yawRotation;
-    yawRotation.rotate(qRadiansToDegrees(yawDelta), QVector3D(0, 1, 0));
-    
-    // Vertical rotation (pitch around camera's right vector)
-    QVector3D right = QVector3D::crossProduct(toCamera.normalized(), QVector3D(0, 1, 0)).normalized();
-    float pitchDelta = -delta.y() * m_orbitSensitivity * 0.005f;
-    QMatrix4x4 pitchRotation;
-    pitchRotation.rotate(qRadiansToDegrees(pitchDelta), right);
-    
-    // Apply rotations
-    QVector3D newToCamera = (yawRotation * pitchRotation).map(toCamera);
-    QVector3D newPosition = m_orbitPivot + newToCamera;
-    
+    float yawDelta = -delta.x * m_orbitSensitivity * 0.005f;
+    glm::mat4 yawRotation = glm::rotate(glm::mat4(1.0f), yawDelta, glm::vec3(0, 1, 0));
+    glm::vec3 right = glm::normalize(glm::cross(glm::normalize(toCamera), glm::vec3(0, 1, 0)));
+    float pitchDelta = -delta.y * m_orbitSensitivity * 0.005f;
+    glm::mat4 pitchRotation = glm::rotate(glm::mat4(1.0f), pitchDelta, right);
+    glm::vec4 toCamera4(toCamera, 1.0f);
+    glm::vec3 newToCamera = glm::vec3(yawRotation * pitchRotation * toCamera4);
+    glm::vec3 newPosition = m_orbitPivot + newToCamera;
     transform.setPosition(newPosition);
     m_camera->lookAt(m_orbitPivot);
-    
     emit cameraChanged();
 }
 
-void EventDrivenCameraController::performPan(const QVector2D& delta)
+
+void EventDrivenCameraController::performPan(const glm::vec2& delta)
 {
     if (!m_camera) return;
-    
     Transform& transform = m_camera->getTransform();
-    QVector3D position = transform.getPosition();
-    QVector3D forward = transform.getForward();
-    QVector3D right = transform.getRight();
-    QVector3D up = QVector3D::crossProduct(right, forward).normalized();
-    
-    // Calculate pan movement
+    glm::vec3 position = transform.getPosition();
+    glm::vec3 forward = transform.getForward();
+    glm::vec3 right = transform.getRight();
+    glm::vec3 up = glm::normalize(glm::cross(right, forward));
     float panSpeed = m_panSensitivity * 0.01f;
-    QVector3D panMovement = (-right * delta.x() + up * delta.y()) * panSpeed;
-    
-    // Move both camera and pivot
+    glm::vec3 panMovement = (-right * delta.x + up * delta.y) * panSpeed;
     transform.setPosition(position + panMovement);
     m_orbitPivot += panMovement;
-    
     emit cameraChanged();
 }
+
 
 void EventDrivenCameraController::performDolly(float delta)
 {
     if (!m_camera) return;
-    
     Transform& transform = m_camera->getTransform();
-    QVector3D position = transform.getPosition();
-    
-    // Dolly toward/away from pivot
-    QVector3D toPivot = (m_orbitPivot - position).normalized();
+    glm::vec3 position = transform.getPosition();
+    glm::vec3 toPivot = glm::normalize(m_orbitPivot - position);
     float dollySpeed = m_zoomSensitivity * 0.5f;
-    QVector3D dollyMovement = toPivot * delta * dollySpeed;
-    
-    // Prevent getting too close to pivot
-    QVector3D newPosition = position + dollyMovement;
-    float distanceToPivot = (m_orbitPivot - newPosition).length();
-    
+    glm::vec3 dollyMovement = toPivot * delta * dollySpeed;
+    glm::vec3 newPosition = position + dollyMovement;
+    float distanceToPivot = glm::length(m_orbitPivot - newPosition);
     if (distanceToPivot > 0.1f) {
         transform.setPosition(newPosition);
         emit cameraChanged();
@@ -319,24 +274,22 @@ bool EventDrivenCameraController::isMayaDollyAction(const event::MouseEvent& mou
     return mouseEvent.isAltPressed && mouseEvent.isRightButton;
 }
 
-QVector2D EventDrivenCameraController::getMouseDelta(const QPoint& currentPos) const
+
+glm::vec2 EventDrivenCameraController::getMouseDelta(const glm::ivec2& currentPos) const
 {
-    QPoint delta = currentPos - m_lastMousePos;
-    return QVector2D(delta.x(), delta.y());
+    glm::ivec2 delta = currentPos - m_lastMousePos;
+    return glm::vec2(static_cast<float>(delta.x), static_cast<float>(delta.y));
 }
 
 void EventDrivenCameraController::updateOrbitPivot()
 {
     if (!m_camera) return;
     
-    QVector3D position = m_camera->getTransform().getPosition();
-    QVector3D forward = m_camera->getTransform().getForward();
-    
-    // Set pivot to a point in front of the camera
-    m_orbitDistance = position.length();
-    m_orbitPivot = position + forward * qMin(m_orbitDistance, 10.0f);
-    
-    qDebug() << "[EventDrivenCameraController] Updated orbit pivot to:" << m_orbitPivot;
+
+    glm::vec3 position = m_camera->getTransform().getPosition();
+    glm::vec3 forward = m_camera->getTransform().getForward();
+    m_orbitDistance = glm::length(position);
+    m_orbitPivot = position + forward * std::min(m_orbitDistance, 10.0f);
 }
 
 } // namespace input

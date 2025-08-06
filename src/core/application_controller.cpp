@@ -1,46 +1,47 @@
+
+
 #include "core/application_controller.hpp"
-#include <QDebug>
+#include <spdlog/spdlog.h>
+
 
 ApplicationController::ApplicationController(QObject* parent)
     : QObject(parent)
 {
-    qDebug() << "[ApplicationController] Created";
-    
+    spdlog::info("[ApplicationController] Created");
     // Create managers
-    m_sceneManager = std::make_unique<SceneManager>(this);
-    m_primitiveManager = std::make_unique<PrimitiveManager>(this);
+    m_sceneManager = std::make_unique<rude::SceneManager>();
+    m_primitiveManager = std::make_unique<PrimitiveManager>();
     m_selectionManager = std::make_unique<rude::SelectionManager>();
     m_meshOperationManager = std::make_unique<rude::MeshOperationManager>();
 }
 
 ApplicationController::~ApplicationController()
 {
-    qDebug() << "[ApplicationController] Destroyed";
+    spdlog::info("[ApplicationController] Destroyed");
 }
 
 void ApplicationController::initialize()
 {
     if (m_initialized) {
-        qWarning() << "[ApplicationController] Already initialized";
+    spdlog::warn("[ApplicationController] Already initialized");
         return;
     }
 
-    qDebug() << "[ApplicationController] Initializing...";
+    spdlog::info("[ApplicationController] Initializing...");
 
     // Set up cross-manager dependencies
     m_meshOperationManager->setSelectionManager(m_selectionManager.get());
 
-    // Set up signal connections
-    setupManagerConnections();
+    // No Qt signal/slot connections
 
     m_initialized = true;
-    qDebug() << "[ApplicationController] Initialization complete";
+    spdlog::info("[ApplicationController] Initialization complete");
 }
 
-void ApplicationController::setScene(std::shared_ptr<Scene> scene)
+void ApplicationController::setScene(std::shared_ptr<rude::Scene> scene)
 {
     if (!m_initialized) {
-        qWarning() << "[ApplicationController] Not initialized";
+    spdlog::warn("[ApplicationController] Not initialized");
         return;
     }
 
@@ -49,47 +50,46 @@ void ApplicationController::setScene(std::shared_ptr<Scene> scene)
     // Set scene for selection manager
     m_selectionManager->setScene(scene.get());
     
-    qDebug() << "[ApplicationController] Scene set on all managers";
+    spdlog::info("[ApplicationController] Scene set on all managers");
 }
 
-Entity* ApplicationController::createPrimitive(const QString& primitiveType, const QString& name)
+Entity* ApplicationController::createPrimitive(const std::string& primitiveType, const std::string& name)
 {
     if (!m_initialized) {
-        qWarning() << "[ApplicationController] Not initialized";
+        spdlog::warn("[ApplicationController] Not initialized");
         return nullptr;
     }
 
-    qDebug() << "[ApplicationController] Creating primitive:" << primitiveType;
+    spdlog::info("[ApplicationController] Creating primitive: {}", primitiveType);
 
     // Delegate to scene manager
     auto entity = m_sceneManager->createPrimitive(primitiveType, name);
     
     if (entity) {
-        qDebug() << "[ApplicationController] Successfully created primitive:" << primitiveType;
+        spdlog::info("[ApplicationController] Successfully created primitive: {}", primitiveType);
         // The entityCreated signal will be forwarded via setupManagerConnections
     } else {
-        qWarning() << "[ApplicationController] Failed to create primitive:" << primitiveType;
+        spdlog::warn("[ApplicationController] Failed to create primitive: {}", primitiveType);
     }
 
     return entity;
 }
 
-bool ApplicationController::executeOperation(const QString& operationName)
+bool ApplicationController::executeOperation(const std::string& operationName)
 {
     if (!m_initialized) {
-        qWarning() << "[ApplicationController] Not initialized";
+        spdlog::warn("[ApplicationController] Not initialized");
         return false;
     }
 
-    qDebug() << "[ApplicationController] Executing operation:" << operationName;
+    spdlog::info("[ApplicationController] Executing operation: {}", operationName);
 
     // Delegate to mesh operation manager
     bool success = m_meshOperationManager->executeOperation(operationName);
     
-    emit operationExecuted(operationName, success);
-    
+    // Operation executed: log or callback can be added here
     if (success) {
-        emit sceneChanged();
+        // Scene changed: log or callback can be added here
     }
 
     return success;
@@ -98,7 +98,7 @@ bool ApplicationController::executeOperation(const QString& operationName)
 void ApplicationController::selectEntity(Entity* entity)
 {
     if (!m_initialized) {
-        qWarning() << "[ApplicationController] Not initialized";
+        spdlog::warn("[ApplicationController] Not initialized");
         return;
     }
 
@@ -109,7 +109,7 @@ void ApplicationController::selectEntity(Entity* entity)
 void ApplicationController::clearSelection()
 {
     if (!m_initialized) {
-        qWarning() << "[ApplicationController] Not initialized";
+        spdlog::warn("[ApplicationController] Not initialized");
         return;
     }
 
@@ -119,7 +119,7 @@ void ApplicationController::clearSelection()
 bool ApplicationController::newScene()
 {
     if (!m_initialized) {
-        qWarning() << "[ApplicationController] Not initialized";
+        spdlog::warn("[ApplicationController] Not initialized");
         return false;
     }
 
@@ -127,27 +127,27 @@ bool ApplicationController::newScene()
     m_sceneManager->clearScene();
     
     // Create new empty scene
-    auto newScene = std::make_shared<Scene>();
+    auto newScene = std::make_shared<rude::Scene>();
     setScene(newScene);
     
     emit sceneChanged();
     return true;
 }
 
-bool ApplicationController::saveScene(const QString& filePath)
+bool ApplicationController::saveScene(const std::string& filePath)
 {
     if (!m_initialized) {
-        qWarning() << "[ApplicationController] Not initialized";
+        spdlog::warn("[ApplicationController] Not initialized");
         return false;
     }
 
     return m_sceneManager->saveScene(filePath);
 }
 
-bool ApplicationController::loadScene(const QString& filePath)
+bool ApplicationController::loadScene(const std::string& filePath)
 {
     if (!m_initialized) {
-        qWarning() << "[ApplicationController] Not initialized";
+        spdlog::warn("[ApplicationController] Not initialized");
         return false;
     }
 
@@ -158,10 +158,10 @@ bool ApplicationController::loadScene(const QString& filePath)
     return success;
 }
 
-bool ApplicationController::importMesh(const QString& filePath)
+bool ApplicationController::importMesh(const std::string& filePath)
 {
     if (!m_initialized) {
-        qWarning() << "[ApplicationController] Not initialized";
+        spdlog::warn("[ApplicationController] Not initialized");
         return false;
     }
 
@@ -171,30 +171,30 @@ bool ApplicationController::importMesh(const QString& filePath)
 
 void ApplicationController::onEntityCreated(Entity* entity)
 {
-    qDebug() << "[ApplicationController] Entity created signal received:" << (entity ? entity->name : "null");
+    spdlog::info("[ApplicationController] Entity created signal received: {}", (entity ? entity->name : "null"));
     emit entityCreated(entity);
     emit sceneChanged();
 }
 
 void ApplicationController::onEntityDeleted(Entity* entity)
 {
-    qDebug() << "[ApplicationController] Entity deleted signal received";
+    spdlog::info("[ApplicationController] Entity deleted signal received");
     emit entityDeleted(entity);
     emit sceneChanged();
 }
 
 void ApplicationController::onSelectionChanged()
 {
-    qDebug() << "[ApplicationController] Selection changed signal received";
+    spdlog::info("[ApplicationController] Selection changed signal received");
     emit selectionChanged();
 }
 
 void ApplicationController::setupManagerConnections()
 {
     // Connect SceneManager signals
-    connect(m_sceneManager.get(), &SceneManager::entityCreated,
+    connect(m_sceneManager.get(), &rude::SceneManager::entityCreated,
             this, &ApplicationController::onEntityCreated);
-    connect(m_sceneManager.get(), &SceneManager::entityDeleted,
+    connect(m_sceneManager.get(), &rude::SceneManager::entityDeleted,
             this, &ApplicationController::onEntityDeleted);
 
     // Connect SelectionManager signals
@@ -204,13 +204,12 @@ void ApplicationController::setupManagerConnections()
     // Connect PrimitiveManager signals
     connect(m_primitiveManager.get(), &PrimitiveManager::primitiveCreated,
             [this](const QString& type, std::shared_ptr<Mesh> mesh) {
-                qDebug() << "[ApplicationController] Primitive created:" << type;
+                spdlog::info("[ApplicationController] Primitive created: {}", type.toStdString());
             });
-    
     connect(m_primitiveManager.get(), &PrimitiveManager::primitiveCreationFailed,
             [this](const QString& type, const QString& error) {
-                qWarning() << "[ApplicationController] Primitive creation failed:" << type << error;
+                spdlog::warn("[ApplicationController] Primitive creation failed: {} {}", type.toStdString(), error.toStdString());
             });
 
-    qDebug() << "[ApplicationController] Manager connections established";
+    spdlog::info("[ApplicationController] Manager connections established");
 }

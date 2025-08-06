@@ -5,6 +5,8 @@
 #include <glm/glm.hpp>
 #include "primitive_manager.hpp"  // Include full definition instead of forward declaration
 
+namespace rude {
+
 class Scene {
 public:
     Scene();
@@ -18,9 +20,24 @@ public:
     void removeEntity(Entity* entity);
     void clear();
     Entity* findEntityById(int id) const;
+    Entity* findEntityById(uint32_t id) const;
+
+    // Modern API additions
+    void deleteEntity(Entity* entity);
+    Entity* duplicateEntity(Entity* entity);
+    std::vector<Entity*> getAllEntities() const;
+    Entity* findEntityByName(const std::string& name) const;
+    Entity* findEntityByName(const QString& name) const;
+    bool isEmpty() const;
+    glm::vec3 getBoundingBoxCenter() const;
+
+    // Bounding box center for all entities
+    glm::vec3 getSceneBoundingBoxCenter() const;
 
 private:
     int nextId;
     std::vector<std::unique_ptr<Entity>> entities;
     std::unique_ptr<PrimitiveManager> m_primitiveManager;
 };
+
+} // namespace rude

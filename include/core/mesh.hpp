@@ -8,10 +8,10 @@
 #include <memory>
 #include <glm/glm.hpp>
 
-namespace rude {
-
-// Forward declarations
+// Forward declaration
 class Entity;
+
+namespace rude {
 
 /**
  * @brief A renderable mesh class

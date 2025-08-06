@@ -2,7 +2,6 @@ add_library(core
     core_system.cpp
     global_shaders.cpp
     half_edge_mesh.cpp
-    material.cpp
     mesh.cpp
     mesh_iterator.cpp
     scene.cpp
@@ -18,6 +17,7 @@ target_include_directories(core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>  # Add src directory for geometry/core includes
     $<INSTALL_INTERFACE:include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../dependencies/glm/glm> # For glm usage in core
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/spdlog/include> # For spdlog
 )
 
 target_link_libraries(core PUBLIC

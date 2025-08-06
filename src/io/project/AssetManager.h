@@ -5,6 +5,8 @@
 #include <QString>
 #include <QHash>
 #include <memory>
+#include <glm/glm.hpp>
+#include <glm/vec4.hpp>
 
 class Mesh;
 class Material;
@@ -22,8 +24,8 @@ public:
     void cleanup();
     
     // Mesh management
-    std::shared_ptr<Mesh> createMesh(const QString& name);
-    std::shared_ptr<Mesh> getMesh(const QString& name) const;
+    rude::MeshPtr createMesh(const QString& name);
+    rude::MeshPtr getMesh(const QString& name) const;
     bool loadMesh(const QString& name, const QString& filePath);
     void removeMesh(const QString& name);
     
@@ -34,17 +36,17 @@ public:
     void removeMaterial(const QString& name);
     
     // Primitive mesh creation
-    std::shared_ptr<Mesh> createCubeMesh(float size = 1.0f);
-    std::shared_ptr<Mesh> createSphereMesh(float radius = 0.5f, int segments = 32, int rings = 16);
-    std::shared_ptr<Mesh> createPlaneMesh(float width = 2.0f, float height = 2.0f);
-    std::shared_ptr<Mesh> createCylinderMesh(float radius = 0.5f, float height = 1.0f, int segments = 32);
-    std::shared_ptr<Mesh> createConeMesh(float radius = 0.5f, float height = 1.0f, int segments = 32);
-    std::shared_ptr<Mesh> createGridMesh(float size = 20.0f, int divisions = 20);
+    rude::MeshPtr createCubeMesh(float size = 1.0f);
+    rude::MeshPtr createSphereMesh(float radius = 0.5f, int segments = 32, int rings = 16);
+    rude::MeshPtr createPlaneMesh(float width = 2.0f, float height = 2.0f);
+    rude::MeshPtr createCylinderMesh(float radius = 0.5f, float height = 1.0f, int segments = 32);
+    rude::MeshPtr createConeMesh(float radius = 0.5f, float height = 1.0f, int segments = 32);
+    rude::MeshPtr createGridMesh(float size = 20.0f, int divisions = 20);
     
     // Default material creation
     std::shared_ptr<Material> createDefaultMaterial();
-    std::shared_ptr<Material> createColoredMaterial(const QVector4D& color);
-    std::shared_ptr<Material> createMetallicMaterial(const QVector4D& color, float metallic = 0.8f, float roughness = 0.2f);
+    std::shared_ptr<Material> createColoredMaterial(const glm::vec4& color);
+    std::shared_ptr<Material> createMetallicMaterial(const glm::vec4& color, float metallic = 0.8f, float roughness = 0.2f);
     
     // Asset queries
     QStringList getMeshNames() const;
@@ -64,7 +66,7 @@ signals:
 private:
     QString generateUniqueName(const QString& baseName, const QStringList& existingNames) const;
     
-    QHash<QString, std::shared_ptr<Mesh>> m_meshCache;
+    QHash<QString, rude::MeshPtr> m_meshCache;
     QHash<QString, std::shared_ptr<Material>> m_materialCache;
     
     // Asset counters for unique naming

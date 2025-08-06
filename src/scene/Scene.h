@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include "Common.h"
 #include <vector>
 #include <QObject>
@@ -16,7 +17,7 @@ public:
     void removeObject(SceneObjectPtr object);
     void removeObject(unsigned int objectId);
     SceneObjectPtr getObject(unsigned int objectId) const;
-    SceneObjectPtr getObjectByName(const QString& name) const;
+    SceneObjectPtr getObjectByName(const std::string& name) const;
     
     const std::vector<SceneObjectPtr>& getObjects() const { return m_objects; }
     void clear();
@@ -31,15 +32,16 @@ public:
     bool isEmpty() const { return m_objects.empty(); }
     
     // Ray casting for object picking
-    SceneObjectPtr pickObject(const QVector3D& rayOrigin, const QVector3D& rayDirection) const;
-    
+
+    SceneObjectPtr pickObject(const glm::vec3& rayOrigin, const glm::vec3& rayDirection) const;
+
     // Bounding box
-    QVector3D getSceneBoundingBoxMin() const;
-    QVector3D getSceneBoundingBoxMax() const;
-    QVector3D getSceneBoundingBoxCenter() const;
-    
+    glm::vec3 getSceneBoundingBoxMin() const;
+    glm::vec3 getSceneBoundingBoxMax() const;
+    glm::vec3 getSceneBoundingBoxCenter() const;
+
     // Rendering
-    void render(const QMatrix4x4& viewMatrix, const QMatrix4x4& projectionMatrix, RenderMode mode);
+    void render(const glm::mat4& viewMatrix, const glm::mat4& projectionMatrix, RenderMode mode);
 
 signals:
     void objectAdded(SceneObjectPtr object);
@@ -52,6 +54,6 @@ private:
     SceneObjectPtr m_selectedObject;
     
     // Helper methods
-    bool rayIntersectsAABB(const QVector3D& rayOrigin, const QVector3D& rayDirection,
-                          const QVector3D& aabbMin, const QVector3D& aabbMax) const;
+    bool rayIntersectsAABB(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
+                          const glm::vec3& aabbMin, const glm::vec3& aabbMax) const;
 };

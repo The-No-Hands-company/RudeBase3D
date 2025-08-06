@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Common.h"
-#include "HalfEdgeMesh.h"
+
 #include "EditContext.h"
 
 // Modeling tools
@@ -59,7 +59,7 @@ public:
     
     // Advanced operations
     bool executeBevel(float amount = 0.1f, int segments = 1);
-    bool executeKnifeCut(const QVector3D& startPoint, const QVector3D& endPoint);
+    bool executeKnifeCut(const glm::vec3& startPoint, const glm::vec3& endPoint);
     bool executeBridge(const std::vector<HalfEdgeEdgePtr>& edges1, 
                       const std::vector<HalfEdgeEdgePtr>& edges2);
     

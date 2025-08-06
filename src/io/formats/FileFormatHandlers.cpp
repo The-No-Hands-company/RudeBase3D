@@ -1,138 +1,139 @@
 #include "FileFormatHandlers.h"
+#include <glm/glm.hpp>
 #include "GeometryConverter.h"
-#include <QFile>
+#include "core/mesh_elements.hpp"
+#include "core/mesh.hpp"
+#include "core/half_edge_mesh.hpp"
+// Qt includes
 #include <QFileInfo>
-#include <QDebug>
-#include <QRegularExpression>
+#include <QString>
+#include <QTextStream>
 #include <algorithm>
 #include <unordered_map>
 
+#include <fstream>
+
 // OBJFileHandler Implementation
-OBJFileHandler::ImportResult OBJFileHandler::importFromFile(const QString& filePath, const ImportOptions& options) {
+OBJFileHandler::ImportResult OBJFileHandler::importFromFile(const std::string& filePath, const ImportOptions& options) {
     ImportResult result;
-    
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        result.errorMessage = QString("Cannot open file: %1").arg(filePath);
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        result.errorMessage = "Cannot open file: " + filePath;
         return result;
     }
-    
-    QTextStream stream(&file);
-    return importFromStream(stream, options);
+    return importFromStream(file, options);
 }
 
-bool OBJFileHandler::exportToFile(const QString& filePath, MeshPtr mesh, const ExportOptions& options) {
+bool OBJFileHandler::exportToFile(const std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options) {
     if (!mesh) {
         return false;
     }
-    
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    std::ofstream file(filePath);
+    if (!file.is_open()) {
         return false;
     }
-    
-    QTextStream stream(&file);
-    return exportToStream(stream, mesh, options);
+    return exportToStream(file, mesh, options);
 }
 
-bool OBJFileHandler::exportToFile(const QString& filePath, HalfEdgeMeshPtr mesh, const ExportOptions& options) {
+bool OBJFileHandler::exportToFile(const std::string& filePath, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options) {
     auto faceVertexMesh = GeometryConverter::toFaceVertex(mesh);
     return exportToFile(filePath, faceVertexMesh, options);
 }
 
-bool OBJFileHandler::exportToFile(const QString& filePath, const std::vector<MeshPtr>& meshes, const ExportOptions& options) {
+bool OBJFileHandler::exportToFile(const std::string& filePath, const std::vector<rude::MeshPtr>& meshes, const ExportOptions& options) {
     if (meshes.empty()) {
         return false;
     }
-    
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    std::ofstream file(filePath);
+    if (!file.is_open()) {
         return false;
     }
-    
-    QTextStream stream(&file);
-    
     // Write header
-    stream << "# Exported from RudeBase3D" << Qt::endl;
-    stream << "# Meshes: " << meshes.size() << Qt::endl;
-    stream << Qt::endl;
-    
+    file << "# Exported from RudeBase3D\n";
+    file << "# Meshes: " << meshes.size() << "\n\n";
     int vertexOffset = 0;
     int normalOffset = 0;
     int texCoordOffset = 0;
-    
     for (size_t i = 0; i < meshes.size(); ++i) {
         const auto& mesh = meshes[i];
         if (!mesh) continue;
-        
         // Write group/object name
-        stream << "g mesh_" << i << Qt::endl;
-        stream << "o mesh_" << i << Qt::endl;
-        
+        file << "g mesh_" << i << "\n";
+        file << "o mesh_" << i << "\n";
         const auto& vertices = mesh->getVertices();
-        
         // Write vertices
         for (const auto& vertex : vertices) {
-            stream << "v " << formatFloat(vertex.position.x(), options.precision)
-                   << " " << formatFloat(vertex.position.y(), options.precision)
-                   << " " << formatFloat(vertex.position.z(), options.precision) << Qt::endl;
+            file << "v " << vertex.position.x << " " << vertex.position.y << " " << vertex.position.z << "\n";
         }
-        
         // Write normals
         if (options.exportNormals) {
             for (const auto& vertex : vertices) {
-                stream << "vn " << formatFloat(vertex.normal.x(), options.precision)
-                       << " " << formatFloat(vertex.normal.y(), options.precision)
-                       << " " << formatFloat(vertex.normal.z(), options.precision) << Qt::endl;
+                file << "vn " << vertex.normal.x << " " << vertex.normal.y << " " << vertex.normal.z << "\n";
             }
         }
-        
         // Write texture coordinates
         if (options.exportTexCoords) {
             for (const auto& vertex : vertices) {
-                stream << "vt " << formatFloat(vertex.texCoord.x(), options.precision)
-                       << " " << formatFloat(vertex.texCoord.y(), options.precision) << Qt::endl;
+                file << "vt " << vertex.texCoord.x << " " << vertex.texCoord.y << "\n";
             }
         }
-        
         // Write faces
         const auto& indices = mesh->getIndices();
         for (size_t j = 0; j < indices.size(); j += 3) {
-            stream << "f";
+            file << "f";
             for (int k = 0; k < 3; ++k) {
                 int idx = indices[j + k] + vertexOffset + 1; // OBJ indices are 1-based
-                stream << " " << idx;
-                
+                file << " " << idx;
                 if (options.exportTexCoords) {
-                    stream << "/" << (idx + texCoordOffset);
+                    file << "/" << (idx + texCoordOffset);
                 }
-                
                 if (options.exportNormals) {
                     if (!options.exportTexCoords) {
-                        stream << "/";
+                        file << "/";
                     }
-                    stream << "/" << (idx + normalOffset);
+                    file << "/" << (idx + normalOffset);
                 }
             }
-            stream << Qt::endl;
+            file << "\n";
         }
-        
         vertexOffset += static_cast<int>(vertices.size());
         if (options.exportNormals) normalOffset += static_cast<int>(vertices.size());
         if (options.exportTexCoords) texCoordOffset += static_cast<int>(vertices.size());
-        
-        stream << Qt::endl;
+        file << "\n";
     }
-    
     return true;
+}
+
+OBJFileHandler::ImportResult OBJFileHandler::importFromStream(std::istream& stream, const ImportOptions& options) {
+    // Convert std::istream to QString for processing
+    std::stringstream buffer;
+    buffer << stream.rdbuf();
+    QString content = QString::fromStdString(buffer.str());
+    QTextStream qstream(&content, QIODevice::ReadOnly);
+    return importFromStream(qstream, options);
+}
+
+bool OBJFileHandler::exportToStream(std::ostream& stream, rude::MeshPtr mesh, const ExportOptions& options) {
+    QString output;
+    QTextStream qstream(&output, QIODevice::WriteOnly);
+    bool success = exportToStream(qstream, mesh, options);
+    if (success) {
+        stream << output.toStdString();
+    }
+    return success;
+}
+
+bool OBJFileHandler::exportToStream(std::ostream& stream, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options) {
+    auto faceVertexMesh = GeometryConverter::toFaceVertex(mesh);
+    return exportToStream(stream, faceVertexMesh, options);
 }
 
 OBJFileHandler::ImportResult OBJFileHandler::importFromStream(QTextStream& stream, const ImportOptions& options) {
     ImportResult result;
     
-    std::vector<QVector3D> vertices;
-    std::vector<QVector3D> normals;
-    std::vector<QVector2D> texCoords;
+    std::vector<glm::vec3> vertices;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> texCoords;
     std::vector<std::vector<int>> faces;
     std::vector<std::vector<int>> texCoordFaces;
     std::vector<std::vector<int>> normalFaces;
@@ -156,24 +157,39 @@ OBJFileHandler::ImportResult OBJFileHandler::importFromStream(QTextStream& strea
         const QString& command = tokens[0];
         
         if (command == "v") {
-            QVector3D vertex;
-            if (parseVertex(tokens, vertex)) {
+            glm::vec3 vertex;
+            // Convert QStringList to std::vector<std::string>
+            std::vector<std::string> stdTokens;
+            for (const QString& token : tokens) {
+                stdTokens.push_back(token.toStdString());
+            }
+            if (parseVertex(stdTokens, vertex)) {
                 vertices.push_back(vertex);
             } else {
                 qWarning() << "Invalid vertex at line" << lineNumber;
             }
         }
         else if (command == "vn") {
-            QVector3D normal;
-            if (parseNormal(tokens, normal)) {
+            glm::vec3 normal;
+            // Convert QStringList to std::vector<std::string>
+            std::vector<std::string> stdTokens;
+            for (const QString& token : tokens) {
+                stdTokens.push_back(token.toStdString());
+            }
+            if (parseNormal(stdTokens, normal)) {
                 normals.push_back(normal);
             } else {
                 qWarning() << "Invalid normal at line" << lineNumber;
             }
         }
         else if (command == "vt") {
-            QVector2D texCoord;
-            if (parseTexCoord(tokens, texCoord)) {
+            glm::vec2 texCoord;
+            // Convert QStringList to std::vector<std::string>
+            std::vector<std::string> stdTokens;
+            for (const QString& token : tokens) {
+                stdTokens.push_back(token.toStdString());
+            }
+            if (parseTexCoord(stdTokens, texCoord)) {
                 texCoords.push_back(texCoord);
             } else {
                 qWarning() << "Invalid texture coordinate at line" << lineNumber;
@@ -184,7 +200,12 @@ OBJFileHandler::ImportResult OBJFileHandler::importFromStream(QTextStream& strea
             std::vector<int> texCoordIndices;
             std::vector<int> normalIndices;
             
-            if (parseFace(tokens, vertexIndices, texCoordIndices, normalIndices)) {
+            // Convert QStringList to std::vector<std::string>
+            std::vector<std::string> stdTokens;
+            for (const QString& token : tokens) {
+                stdTokens.push_back(token.toStdString());
+            }
+            if (parseFace(stdTokens, vertexIndices, texCoordIndices, normalIndices)) {
                 faces.push_back(vertexIndices);
                 texCoordFaces.push_back(texCoordIndices);
                 normalFaces.push_back(normalIndices);
@@ -210,7 +231,7 @@ OBJFileHandler::ImportResult OBJFileHandler::importFromStream(QTextStream& strea
     return result;
 }
 
-bool OBJFileHandler::exportToStream(QTextStream& stream, MeshPtr mesh, const ExportOptions& options) {
+bool OBJFileHandler::exportToStream(QTextStream& stream, rude::MeshPtr mesh, const ExportOptions& options) {
     if (!mesh) {
         return false;
     }
@@ -226,25 +247,25 @@ bool OBJFileHandler::exportToStream(QTextStream& stream, MeshPtr mesh, const Exp
     
     // Write vertices
     for (const auto& vertex : vertices) {
-        stream << "v " << formatFloat(vertex.position.x(), options.precision)
-               << " " << formatFloat(vertex.position.y(), options.precision)
-               << " " << formatFloat(vertex.position.z(), options.precision) << Qt::endl;
+        stream << "v " << formatFloat(vertex.position.x, options.precision)
+               << " " << formatFloat(vertex.position.y, options.precision)
+               << " " << formatFloat(vertex.position.z, options.precision) << Qt::endl;
     }
     
     // Write normals
     if (options.exportNormals) {
         for (const auto& vertex : vertices) {
-            stream << "vn " << formatFloat(vertex.normal.x(), options.precision)
-                   << " " << formatFloat(vertex.normal.y(), options.precision)
-                   << " " << formatFloat(vertex.normal.z(), options.precision) << Qt::endl;
+            stream << "vn " << formatFloat(vertex.normal.x, options.precision)
+                   << " " << formatFloat(vertex.normal.y, options.precision)
+                   << " " << formatFloat(vertex.normal.z, options.precision) << Qt::endl;
         }
     }
     
     // Write texture coordinates
     if (options.exportTexCoords) {
         for (const auto& vertex : vertices) {
-            stream << "vt " << formatFloat(vertex.texCoord.x(), options.precision)
-                   << " " << formatFloat(vertex.texCoord.y(), options.precision) << Qt::endl;
+            stream << "vt " << formatFloat(vertex.texCoord.x, options.precision)
+                   << " " << formatFloat(vertex.texCoord.y, options.precision) << Qt::endl;
         }
     }
     
@@ -274,57 +295,57 @@ bool OBJFileHandler::exportToStream(QTextStream& stream, MeshPtr mesh, const Exp
     return true;
 }
 
-bool OBJFileHandler::exportToStream(QTextStream& stream, HalfEdgeMeshPtr mesh, const ExportOptions& options) {
+bool OBJFileHandler::exportToStream(QTextStream& stream, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options) {
     auto faceVertexMesh = GeometryConverter::toFaceVertex(mesh);
     return exportToStream(stream, faceVertexMesh, options);
 }
 
-bool OBJFileHandler::parseVertex(const QStringList& tokens, QVector3D& vertex) {
+bool OBJFileHandler::parseVertex(const std::vector<std::string>& tokens, glm::vec3& vertex) {
     if (tokens.size() < 4) {
         return false;
     }
     
-    bool ok;
-    vertex.setX(tokens[1].toFloat(&ok));
-    if (!ok) return false;
-    
-    vertex.setY(tokens[2].toFloat(&ok));
-    if (!ok) return false;
-    
-    vertex.setZ(tokens[3].toFloat(&ok));
-    if (!ok) return false;
-    
-    return true;
+    try {
+        vertex.x = std::stof(tokens[1]);
+        vertex.y = std::stof(tokens[2]);
+        vertex.z = std::stof(tokens[3]);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
 }
+// (removed Qt version, see new version at end of file)
 
-bool OBJFileHandler::parseNormal(const QStringList& tokens, QVector3D& normal) {
+bool OBJFileHandler::parseNormal(const std::vector<std::string>& tokens, glm::vec3& normal) {
     return parseVertex(tokens, normal); // Same format as vertex
 }
+// (removed Qt version, see new version at end of file)
 
-bool OBJFileHandler::parseTexCoord(const QStringList& tokens, QVector2D& texCoord) {
+bool OBJFileHandler::parseTexCoord(const std::vector<std::string>& tokens, glm::vec2& texCoord) {
     if (tokens.size() < 3) {
         return false;
     }
     
-    bool ok;
-    texCoord.setX(tokens[1].toFloat(&ok));
-    if (!ok) return false;
-    
-    texCoord.setY(tokens[2].toFloat(&ok));
-    if (!ok) return false;
-    
-    return true;
+    try {
+        texCoord.x = std::stof(tokens[1]);
+        texCoord.y = std::stof(tokens[2]);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
 }
+// (removed Qt version, see new version at end of file)
 
-bool OBJFileHandler::parseFace(const QStringList& tokens, std::vector<int>& vertexIndices,
+bool OBJFileHandler::parseFace(const std::vector<std::string>& tokens, std::vector<int>& vertexIndices,
                               std::vector<int>& texCoordIndices, std::vector<int>& normalIndices) {
     if (tokens.size() < 4) {
         return false;
     }
     
     for (int i = 1; i < tokens.size(); ++i) {
-        const QString& token = tokens[i];
-        QStringList parts = token.split('/');
+        const std::string& token = tokens[i];
+        QString qtoken = QString::fromStdString(token);
+        QStringList parts = qtoken.split('/');
         
         if (parts.isEmpty()) {
             return false;
@@ -361,18 +382,19 @@ bool OBJFileHandler::parseFace(const QStringList& tokens, std::vector<int>& vert
     
     return true;
 }
+// (removed Qt version, see new version at end of file)
 
-MeshPtr OBJFileHandler::buildMesh(const std::vector<QVector3D>& vertices,
-                                 const std::vector<QVector3D>& normals,
-                                 const std::vector<QVector2D>& texCoords,
+rude::MeshPtr OBJFileHandler::buildMesh(const std::vector<glm::vec3>& vertices,
+                                 const std::vector<glm::vec3>& normals,
+                                 const std::vector<glm::vec2>& texCoords,
                                  const std::vector<std::vector<int>>& faces,
                                  const std::vector<std::vector<int>>& texCoordFaces,
                                  const std::vector<std::vector<int>>& normalFaces,
                                  const ImportOptions& options) {
     
-    auto mesh = std::make_shared<Mesh>();
+    auto mesh = std::make_shared<rude::Mesh>();
     
-    std::vector<Vertex> meshVertices;
+    std::vector<rude::Vertex> meshVertices;
     std::vector<unsigned int> meshIndices;
     
     // Convert faces to triangles and build vertex list
@@ -380,48 +402,53 @@ MeshPtr OBJFileHandler::buildMesh(const std::vector<QVector3D>& vertices,
         const auto& face = faces[faceIdx];
         const auto& texCoordFace = (faceIdx < texCoordFaces.size()) ? texCoordFaces[faceIdx] : std::vector<int>();
         const auto& normalFace = (faceIdx < normalFaces.size()) ? normalFaces[faceIdx] : std::vector<int>();
-        
+
         if (face.size() < 3) {
             continue; // Skip invalid faces
         }
-        
+
         // Triangulate face (fan triangulation)
         for (size_t i = 1; i < face.size() - 1; ++i) {
             // Create triangle: vertex[0], vertex[i], vertex[i+1]
             std::vector<int> triangleIndices = {0, static_cast<int>(i), static_cast<int>(i + 1)};
-            
+
             for (int triIdx : triangleIndices) {
-                Vertex vertex;
-                
+                rude::Vertex vertex;
+
+
                 // Position
                 int vertexIndex = face[triIdx];
-                if (vertexIndex >= 0 && vertexIndex < vertices.size()) {
+                if (vertexIndex >= 0 && vertexIndex < static_cast<int>(vertices.size())) {
                     vertex.position = vertices[vertexIndex];
                 } else {
                     qWarning() << "Invalid vertex index:" << vertexIndex;
                     continue;
                 }
-                
+
                 // Normal
-                if (!normalFace.empty() && triIdx < normalFace.size()) {
+                if (!normalFace.empty() && triIdx < static_cast<int>(normalFace.size())) {
                     int normalIndex = normalFace[triIdx];
-                    if (normalIndex >= 0 && normalIndex < normals.size()) {
+                    if (normalIndex >= 0 && normalIndex < static_cast<int>(normals.size())) {
                         vertex.normal = normals[normalIndex];
+                    } else {
+                        vertex.normal = glm::vec3(0, 1, 0); // Default normal
                     }
                 } else {
-                    vertex.normal = QVector3D(0, 1, 0); // Default normal
+                    vertex.normal = glm::vec3(0, 1, 0); // Default normal
                 }
-                
+
                 // Texture coordinate
-                if (!texCoordFace.empty() && triIdx < texCoordFace.size()) {
+                if (!texCoordFace.empty() && triIdx < static_cast<int>(texCoordFace.size())) {
                     int texCoordIndex = texCoordFace[triIdx];
-                    if (texCoordIndex >= 0 && texCoordIndex < texCoords.size()) {
+                    if (texCoordIndex >= 0 && texCoordIndex < static_cast<int>(texCoords.size())) {
                         vertex.texCoord = texCoords[texCoordIndex];
+                    } else {
+                        vertex.texCoord = glm::vec2(0, 0); // Default texcoord
                     }
                 } else {
-                    vertex.texCoord = QVector2D(0, 0); // Default texture coordinate
+                    vertex.texCoord = glm::vec2(0, 0); // Default texcoord
                 }
-                
+
                 meshVertices.push_back(vertex);
                 meshIndices.push_back(static_cast<unsigned int>(meshVertices.size() - 1));
             }
@@ -437,79 +464,72 @@ MeshPtr OBJFileHandler::buildMesh(const std::vector<QVector3D>& vertices,
         generateNormals(meshVertices, meshIndices);
     }
     
-    mesh->setVertices(meshVertices);
-    mesh->setIndices(meshIndices);
+    mesh->setData(meshVertices, meshIndices);
     
     return mesh;
 }
 
-void OBJFileHandler::mergeVertices(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, float tolerance) {
-    std::vector<Vertex> mergedVertices;
+void OBJFileHandler::mergeVertices(std::vector<rude::Vertex>& vertices, std::vector<unsigned int>& indices, float tolerance) {
+    std::vector<rude::Vertex> mergedVertices;
     std::vector<unsigned int> vertexMap(vertices.size());
-    
+
     for (size_t i = 0; i < vertices.size(); ++i) {
         bool found = false;
-        
-        // Look for existing vertex within tolerance
         for (size_t j = 0; j < mergedVertices.size(); ++j) {
             const auto& v1 = vertices[i].position;
             const auto& v2 = mergedVertices[j].position;
-            
             if ((v1 - v2).length() < tolerance) {
                 vertexMap[i] = static_cast<unsigned int>(j);
                 found = true;
                 break;
             }
         }
-        
         if (!found) {
             vertexMap[i] = static_cast<unsigned int>(mergedVertices.size());
             mergedVertices.push_back(vertices[i]);
         }
     }
-    
-    // Update indices
+
     for (auto& index : indices) {
         if (index < vertexMap.size()) {
             index = vertexMap[index];
         }
     }
-    
+
     vertices = std::move(mergedVertices);
 }
 
-void OBJFileHandler::generateNormals(std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
+void OBJFileHandler::generateNormals(std::vector<rude::Vertex>& vertices, const std::vector<unsigned int>& indices) {
     // Reset all normals
     for (auto& vertex : vertices) {
-        vertex.normal = QVector3D(0, 0, 0);
+        vertex.normal = glm::vec3(0, 0, 0);
     }
-    
+
     // Accumulate face normals
-    for (size_t i = 0; i < indices.size(); i += 3) {
-        if (i + 2 >= indices.size()) break;
-        
-        const auto& v0 = vertices[indices[i]].position;
-        const auto& v1 = vertices[indices[i + 1]].position;
-        const auto& v2 = vertices[indices[i + 2]].position;
-        
-        QVector3D edge1 = v1 - v0;
-        QVector3D edge2 = v2 - v0;
-        QVector3D faceNormal = QVector3D::crossProduct(edge1, edge2).normalized();
-        
+    for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+        const glm::vec3& v0 = vertices[indices[i]].position;
+        const glm::vec3& v1 = vertices[indices[i + 1]].position;
+        const glm::vec3& v2 = vertices[indices[i + 2]].position;
+
+        glm::vec3 edge1 = v1 - v0;
+        glm::vec3 edge2 = v2 - v0;
+        glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
         vertices[indices[i]].normal += faceNormal;
         vertices[indices[i + 1]].normal += faceNormal;
         vertices[indices[i + 2]].normal += faceNormal;
     }
-    
+
     // Normalize vertex normals
     for (auto& vertex : vertices) {
-        vertex.normal = vertex.normal.normalized();
+        vertex.normal = glm::normalize(vertex.normal);
     }
 }
 
 QString OBJFileHandler::formatFloat(float value, int precision) {
     return QString::number(value, 'f', precision);
 }
+// (removed Qt version, see new version at end of file)
 
 int OBJFileHandler::parseIndex(const QString& indexStr, int maxIndex) {
     bool ok;
@@ -527,6 +547,7 @@ int OBJFileHandler::parseIndex(const QString& indexStr, int maxIndex) {
         return -1; // Invalid index
     }
 }
+// (removed Qt version, see new version at end of file)
 
 // FileFormatManager Implementation
 FileFormatManager::Format FileFormatManager::detectFormat(const QString& filePath) {
@@ -559,18 +580,22 @@ FileFormatManager::ImportResult FileFormatManager::importFile(const QString& fil
     
     switch (result.detectedFormat) {
         case Format::OBJ: {
-            auto objResult = OBJFileHandler::importFromFile(filePath, s_objImportOptions);
+            auto objResult = OBJFileHandler::importFromFile(filePath.toStdString(), s_objImportOptions);
             result.success = objResult.success;
-            result.errorMessage = objResult.errorMessage;
+            result.errorMessage = QString::fromStdString(objResult.errorMessage);
             result.meshes = objResult.meshes;
-            result.meshNames = objResult.meshNames;
+            // Convert std::vector<std::string> to std::vector<QString>
+            result.meshNames.clear();
+            for (const auto& name : objResult.meshNames) {
+                result.meshNames.push_back(QString::fromStdString(name));
+            }
             break;
         }
         
         case Format::STL: {
-            auto stlResult = STLFileHandler::importFromFile(filePath, s_stlImportOptions);
+            auto stlResult = STLFileHandler::importFromFile(filePath.toStdString(), s_stlImportOptions);
             result.success = stlResult.success;
-            result.errorMessage = stlResult.errorMessage;
+            result.errorMessage = QString::fromStdString(stlResult.errorMessage);
             if (stlResult.mesh) {
                 result.meshes.push_back(stlResult.mesh);
                 result.meshNames.push_back("STL_Mesh");
@@ -579,9 +604,9 @@ FileFormatManager::ImportResult FileFormatManager::importFile(const QString& fil
         }
         
         case Format::PLY: {
-            auto plyResult = PLYFileHandler::importFromFile(filePath, s_plyImportOptions);
+            auto plyResult = PLYFileHandler::importFromFile(filePath.toStdString(), s_plyImportOptions);
             result.success = plyResult.success;
-            result.errorMessage = plyResult.errorMessage;
+            result.errorMessage = QString::fromStdString(plyResult.errorMessage);
             if (plyResult.mesh) {
                 result.meshes.push_back(plyResult.mesh);
                 result.meshNames.push_back("PLY_Mesh");
@@ -597,32 +622,32 @@ FileFormatManager::ImportResult FileFormatManager::importFile(const QString& fil
     return result;
 }
 
-bool FileFormatManager::exportFile(const QString& filePath, MeshPtr mesh) {
+bool FileFormatManager::exportFile(const QString& filePath, rude::MeshPtr mesh) {
     Format format = detectFormat(filePath);
     
     switch (format) {
         case Format::OBJ:
-            return OBJFileHandler::exportToFile(filePath, mesh, s_objExportOptions);
+            return OBJFileHandler::exportToFile(filePath.toStdString(), mesh, s_objExportOptions);
         case Format::STL:
-            return STLFileHandler::exportToFile(filePath, mesh, s_stlExportOptions);
+            return STLFileHandler::exportToFile(filePath.toStdString(), mesh, s_stlExportOptions);
         case Format::PLY:
-            return PLYFileHandler::exportToFile(filePath, mesh, s_plyExportOptions);
+            return PLYFileHandler::exportToFile(filePath.toStdString(), mesh, s_plyExportOptions);
         default:
             return false;
     }
 }
 
-bool FileFormatManager::exportFile(const QString& filePath, HalfEdgeMeshPtr mesh) {
+bool FileFormatManager::exportFile(const QString& filePath, rude::HalfEdgeMeshPtr mesh) {
     auto faceVertexMesh = GeometryConverter::toFaceVertex(mesh);
     return exportFile(filePath, faceVertexMesh);
 }
 
-bool FileFormatManager::exportFile(const QString& filePath, const std::vector<MeshPtr>& meshes) {
+bool FileFormatManager::exportFile(const QString& filePath, const std::vector<rude::MeshPtr>& meshes) {
     Format format = detectFormat(filePath);
     
     switch (format) {
         case Format::OBJ:
-            return OBJFileHandler::exportToFile(filePath, meshes, s_objExportOptions);
+            return OBJFileHandler::exportToFile(filePath.toStdString(), meshes, s_objExportOptions);
         default:
             // For other formats, combine meshes or export the first one
             if (!meshes.empty()) {
@@ -641,42 +666,36 @@ PLYFileHandler::ImportOptions FileFormatManager::s_plyImportOptions;
 PLYFileHandler::ExportOptions FileFormatManager::s_plyExportOptions;
 
 // STL and PLY handlers - simplified implementations
-STLFileHandler::ImportResult STLFileHandler::importFromFile(const QString& filePath, const ImportOptions& options) {
+STLFileHandler::ImportResult STLFileHandler::importFromFile(const std::string& filePath, const ImportOptions& options) {
     ImportResult result;
     result.errorMessage = "STL import not yet implemented";
     return result;
 }
 
-bool STLFileHandler::exportToFile(const QString& filePath, MeshPtr mesh, const ExportOptions& options) {
-    Q_UNUSED(filePath)
-    Q_UNUSED(mesh)
-    Q_UNUSED(options)
-    qDebug() << "STL export not yet implemented";
+bool STLFileHandler::exportToFile(const std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options) {
+    // TODO: Implement STL export logic using std::ofstream
+    // Placeholder implementation
     return false;
 }
 
-bool STLFileHandler::exportToFile(const QString& filePath, HalfEdgeMeshPtr mesh, const ExportOptions& options) {
+bool STLFileHandler::exportToFile(const std::string& filePath, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options) {
     auto faceVertexMesh = GeometryConverter::toFaceVertex(mesh);
     return exportToFile(filePath, faceVertexMesh, options);
 }
 
-PLYFileHandler::ImportResult PLYFileHandler::importFromFile(const QString& filePath, const ImportOptions& options) {
+PLYFileHandler::ImportResult PLYFileHandler::importFromFile(const std::string& filePath, const ImportOptions& options) {
     ImportResult result;
-    Q_UNUSED(filePath)
-    Q_UNUSED(options)
     result.errorMessage = "PLY import not yet implemented";
     return result;
 }
 
-bool PLYFileHandler::exportToFile(const QString& filePath, MeshPtr mesh, const ExportOptions& options) {
-    Q_UNUSED(filePath)
-    Q_UNUSED(mesh)
-    Q_UNUSED(options)
-    qDebug() << "PLY export not yet implemented";
+bool PLYFileHandler::exportToFile(const std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options) {
+    // TODO: Implement PLY export logic using std::ofstream
+    // Placeholder implementation
     return false;
 }
 
-bool PLYFileHandler::exportToFile(const QString& filePath, HalfEdgeMeshPtr mesh, const ExportOptions& options) {
+bool PLYFileHandler::exportToFile(const std::string& filePath, rude::HalfEdgeMeshPtr mesh, const ExportOptions& options) {
     auto faceVertexMesh = GeometryConverter::toFaceVertex(mesh);
     return exportToFile(filePath, faceVertexMesh, options);
 }

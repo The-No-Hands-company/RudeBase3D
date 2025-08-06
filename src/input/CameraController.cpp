@@ -1,16 +1,21 @@
+
 #include "CameraController.h"
 #include "scene/Camera.h"
-#include "scene/Scene.h"
+#include "core/scene.hpp"
+#include "core/scene_manager.hpp"
+#include "tools/selection/SelectionManager.h"
 #include "scene/SceneObject.h"
-#include "geometry/core/Mesh.h"
+#include "core/mesh.hpp"
 #include "core/math/Transform.h"
-#include <QTimer>
 #include <algorithm>
 #include <cmath>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
-CameraController::CameraController(QObject* parent)
-    : QObject(parent)
-    , m_cameraMode(CameraMode::Orbit)
+CameraController::CameraController()
+    : m_cameraMode(CameraMode::Orbit)
     , m_orbitMode(OrbitMode::SceneCenter)
     , m_customPivot(0.0f, 0.0f, 0.0f)
     , m_movementSpeed(5.0f)
@@ -21,13 +26,10 @@ CameraController::CameraController(QObject* parent)
     , m_invertY(false)
     , m_orbitDistance(10.0f)
     , m_orbitCenter(0.0f, 0.0f, 0.0f)
-    , m_animationTimer(nullptr)
     , m_animationTime(0.0f)
     , m_animationDuration(1.0f)
 {
-    m_animationTimer = new QTimer(this);
-    m_animationTimer->setInterval(16); // ~60 FPS
-    connect(m_animationTimer, &QTimer::timeout, this, &CameraController::updateAnimation);
+    // No QTimer, use manual time tracking for animation
 }
 
 void CameraController::setCamera(std::shared_ptr<Camera> camera)
@@ -38,16 +40,21 @@ void CameraController::setCamera(std::shared_ptr<Camera> camera)
     }
 }
 
-void CameraController::setScene(std::shared_ptr<Scene> scene)
+void CameraController::setSceneManager(std::shared_ptr<rude::SceneManager> sceneManager)
 {
-    m_scene = scene;
+    m_sceneManager = sceneManager;
+}
+
+void CameraController::setSelectionManager(std::shared_ptr<SelectionManager> selectionManager)
+{
+    m_selectionManager = selectionManager;
 }
 
 void CameraController::setCameraMode(CameraMode mode)
 {
     if (m_cameraMode != mode) {
         m_cameraMode = mode;
-        emit cameraModeChanged(mode);
+        // cameraModeChanged(mode); // Qt signal removed
     }
 }
 
@@ -56,11 +63,12 @@ void CameraController::setOrbitMode(OrbitMode mode)
     if (m_orbitMode != mode) {
         m_orbitMode = mode;
         updateOrbitDistance();
-        emit orbitModeChanged(mode);
+        // orbitModeChanged(mode); // Qt signal removed
     }
 }
 
-void CameraController::setCustomPivot(const QVector3D& pivot)
+
+void CameraController::setCustomPivot(const glm::vec3& pivot)
 {
     m_customPivot = pivot;
     if (m_orbitMode == OrbitMode::CustomPivot) {
@@ -71,34 +79,25 @@ void CameraController::setCustomPivot(const QVector3D& pivot)
 void CameraController::resetCamera()
 {
     if (!m_camera) return;
-    
     // Reset to default position based on scene
-    QVector3D target = getOrbitCenter();
-    QVector3D position = target + QVector3D(5.0f, 5.0f, 5.0f);
-    
+    glm::vec3 target = getOrbitCenter();
+    glm::vec3 position = target + glm::vec3(5.0f, 5.0f, 5.0f);
     m_camera->getTransform().setPosition(position);
     m_camera->lookAt(target);
-    
     m_orbitCenter = target;
     updateOrbitDistance();
-    
-    emit cameraChanged();
+    // cameraChanged(); // Qt signal removed
 }
 
 void CameraController::frameScene(bool animate)
 {
-    if (!m_camera || !m_scene || m_scene->isEmpty()) {
+    if (!m_camera || !m_sceneManager || m_sceneManager->isEmpty()) {
         resetCamera();
         return;
     }
-    
-    QVector3D sceneCenter = getSceneCenter();
-    QVector3D sceneMin = m_scene->getSceneBoundingBoxMin();
-    QVector3D sceneMax = m_scene->getSceneBoundingBoxMax();
-    QVector3D sceneSize = sceneMax - sceneMin;
-    
-    QVector3D targetPosition = calculateFramingPosition(sceneCenter, sceneSize);
-    
+    glm::vec3 sceneCenter = getSceneCenter();
+    glm::vec3 sceneSize = glm::vec3(2.0f, 2.0f, 2.0f); // Default size
+    glm::vec3 targetPosition = calculateFramingPosition(sceneCenter, sceneSize);
     if (animate && !isAnimating()) {
         startAnimation(targetPosition, sceneCenter);
     } else {
@@ -106,21 +105,20 @@ void CameraController::frameScene(bool animate)
         m_camera->lookAt(sceneCenter);
         m_orbitCenter = sceneCenter;
         updateOrbitDistance();
-        emit cameraChanged();
+        // cameraChanged(); // Qt signal removed
     }
 }
 
 void CameraController::frameSelectedObject(bool animate)
 {
-    if (!m_camera || !m_scene) return;
-    
-    auto selectedObject = m_scene->getSelectedObject();
-    if (!selectedObject) {
+    if (!m_camera || !m_selectionManager) return;
+    auto selectedVertices = m_selectionManager->getSelectedVertices();
+    if (selectedVertices.empty()) {
         frameScene(animate);
         return;
     }
-    
-    focusOnObject(selectedObject, animate);
+    glm::vec3 center = getSelectionCenter();
+    focusOnPoint(center, animate);
 }
 
 void CameraController::frameAll(bool animate)
@@ -131,105 +129,91 @@ void CameraController::frameAll(bool animate)
 void CameraController::updateAspectRatio(float aspectRatio)
 {
     if (!m_camera) return;
-    
     m_camera->setAspectRatio(aspectRatio);
-    emit cameraChanged();
+    // cameraChanged(); // Qt signal removed
 }
+
 
 void CameraController::orbit(float deltaYaw, float deltaPitch)
 {
     if (m_cameraMode != CameraMode::Orbit) return;
-    
-    QVector3D center = getOrbitCenter();
+    glm::vec3 center = getOrbitCenter();
     orbitAroundPoint(center, deltaYaw, deltaPitch);
 }
 
-void CameraController::orbitAroundPoint(const QVector3D& center, float deltaYaw, float deltaPitch)
+
+void CameraController::orbitAroundPoint(const glm::vec3& center, float deltaYaw, float deltaPitch)
 {
     if (!m_camera) return;
-    
+
     // Apply Y inversion if enabled
     if (m_invertY) {
         deltaPitch = -deltaPitch;
     }
-    
+
     // Scale by rotation speed
     deltaYaw *= m_rotationSpeed;
     deltaPitch *= m_rotationSpeed;
-    
+
     // Get current position relative to center
-    QVector3D currentPos = m_camera->getWorldPosition();
-    QVector3D offset = currentPos - center;
-    
-    // Create rotation matrices
-    QMatrix4x4 yawRotation;
-    yawRotation.rotate(deltaYaw, QVector3D(0, 1, 0)); // World Y axis
-    
-    // For pitch, we need to rotate around the camera's right vector
-    QVector3D rightVector = m_camera->getRight();
-    QMatrix4x4 pitchRotation;
-    pitchRotation.rotate(deltaPitch, rightVector);
-    
-    // Apply rotations
-    QVector4D newOffset4 = pitchRotation * yawRotation * QVector4D(offset, 1.0f);
-    QVector3D newOffset = newOffset4.toVector3D();
-    
+    glm::vec3 currentPos = m_camera->getWorldPosition();
+    glm::vec3 offset = currentPos - center;
+
+    // Yaw: rotate around world Y axis
+    glm::mat4 yawRot = glm::rotate(glm::mat4(1.0f), glm::radians(deltaYaw), glm::vec3(0, 1, 0));
+    offset = glm::vec3(yawRot * glm::vec4(offset, 1.0f));
+
+    // Pitch: rotate around camera's right vector
+    glm::vec3 rightVector = m_camera->getRight();
+    glm::mat4 pitchRot = glm::rotate(glm::mat4(1.0f), glm::radians(deltaPitch), rightVector);
+    offset = glm::vec3(pitchRot * glm::vec4(offset, 1.0f));
+
     // Clamp pitch to avoid flipping
-    QVector3D newPos = center + newOffset;
-    QVector3D toCenter = (center - newPos).normalized();
-    float dot = QVector3D::dotProduct(toCenter, QVector3D(0, 1, 0));
-    
-    // Prevent flipping by limiting pitch
+    glm::vec3 newPos = center + offset;
+    glm::vec3 toCenter = glm::normalize(center - newPos);
+    float dot = glm::dot(toCenter, glm::vec3(0, 1, 0));
     if (dot > 0.95f || dot < -0.95f) {
-        return; // Skip this movement to prevent gimbal lock
+        return; // Prevent gimbal lock
     }
-    
+
     // Update camera position and look at center
     m_camera->getTransform().setPosition(newPos);
     m_camera->lookAt(center);
-    
+
     // Update orbit state
     m_orbitCenter = center;
-    m_orbitDistance = newOffset.length();
-    
-    emit cameraChanged();
+    m_orbitDistance = glm::length(offset);
+
+    // cameraChanged(); // Qt signal removed
 }
 
-void CameraController::pan(const QVector3D& delta)
+
+void CameraController::pan(const glm::vec2& delta)
 {
     if (!m_camera) return;
-    
     // Scale by pan speed
-    QVector3D scaledDelta = delta * m_panSpeed;
-    
+    glm::vec2 scaledDelta = delta * m_panSpeed;
     // Transform delta to world space using camera orientation
-    QVector3D right = m_camera->getRight();
-    QVector3D up = m_camera->getUp();
-    
-    QVector3D worldDelta = right * scaledDelta.x() + up * scaledDelta.y();
-    
+    glm::vec3 right = m_camera->getRight();
+    glm::vec3 up = m_camera->getUp();
+    glm::vec3 worldDelta = right * scaledDelta.x + up * scaledDelta.y;
     // Move camera and orbit center
     m_camera->getTransform().translate(worldDelta);
     m_orbitCenter += worldDelta;
-    
-    emit cameraChanged();
+
 }
 
 void CameraController::dolly(float delta)
 {
     if (!m_camera) return;
     
-    QVector3D forward = m_camera->getForward();
-    QVector3D movement = forward * (delta * m_movementSpeed);
-    
+    glm::vec3 forward = m_camera->getForward();
+    glm::vec3 movement = forward * (delta * m_movementSpeed);
     m_camera->getTransform().translate(movement);
-    
     // Update orbit distance if in orbit mode
     if (m_cameraMode == CameraMode::Orbit) {
         updateOrbitDistance();
     }
-    
-    emit cameraChanged();
 }
 
 void CameraController::zoom(float delta)
@@ -243,9 +227,9 @@ void CameraController::zoom(float delta)
         // FOV zoom for fly mode
         float currentFOV = m_camera->getFOV();
         float newFOV = currentFOV - (delta * m_zoomSpeed * 5.0f);
-        newFOV = qBound(10.0f, newFOV, 120.0f); // Clamp FOV
+        newFOV = std::clamp(newFOV, 10.0f, 120.0f); // Clamp FOV
         m_camera->setFOV(newFOV);
-        emit cameraChanged();
+        // cameraChanged(); // Qt signal removed
     }
 }
 
@@ -253,7 +237,7 @@ void CameraController::zoom(float delta)
 void CameraController::moveForward(float distance)
 {
     if (!m_camera) return;
-    QVector3D movement = m_camera->getForward() * (distance * m_movementSpeed);
+    glm::vec3 movement = m_camera->getForward() * (distance * m_movementSpeed);
     m_camera->getTransform().translate(movement);
     emit cameraChanged();
 }
@@ -266,7 +250,7 @@ void CameraController::moveBackward(float distance)
 void CameraController::moveLeft(float distance)
 {
     if (!m_camera) return;
-    QVector3D movement = -m_camera->getRight() * (distance * m_movementSpeed);
+    glm::vec3 movement = -m_camera->getRight() * (distance * m_movementSpeed);
     m_camera->getTransform().translate(movement);
     emit cameraChanged();
 }
@@ -279,7 +263,7 @@ void CameraController::moveRight(float distance)
 void CameraController::moveUp(float distance)
 {
     if (!m_camera) return;
-    QVector3D movement = QVector3D(0, 1, 0) * (distance * m_movementSpeed);
+    glm::vec3 movement = glm::vec3(0, 1, 0) * (distance * m_movementSpeed);
     m_camera->getTransform().translate(movement);
     emit cameraChanged();
 }
@@ -304,27 +288,27 @@ void CameraController::rotate(float deltaPitch, float deltaYaw, float deltaRoll)
     deltaRoll *= m_rotationSpeed;
     
     // Get current rotation as Euler angles
-    QVector3D currentRotation = m_camera->getTransform().getEulerAngles();
+    glm::vec3 currentRotation = m_camera->getTransform().getEulerAngles();
     
     // Apply rotations
-    currentRotation.setX(currentRotation.x() + deltaPitch);
-    currentRotation.setY(currentRotation.y() + deltaYaw);
-    currentRotation.setZ(currentRotation.z() + deltaRoll);
+    currentRotation.x += deltaPitch;
+    currentRotation.y += deltaYaw;
+    currentRotation.z += deltaRoll;
     
     // Clamp pitch to avoid flipping
-    currentRotation.setX(qBound(-89.0f, currentRotation.x(), 89.0f));
-    
+    currentRotation.x = glm::clamp(currentRotation.x, -89.0f, 89.0f);
     m_camera->getTransform().setEulerAngles(currentRotation);
-    emit cameraChanged();
+    // cameraChanged(); // Qt signal removed
 }
 
-void CameraController::focusOnPoint(const QVector3D& point, bool animate)
+
+void CameraController::focusOnPoint(const glm::vec3& point, bool animate)
 {
     if (!m_camera) return;
-    
-    QVector3D direction = (point - m_camera->getWorldPosition()).normalized();
-    QVector3D targetPosition = point - direction * 5.0f; // 5 units back from point
-    
+
+    glm::vec3 direction = glm::normalize(point - m_camera->getWorldPosition());
+    glm::vec3 targetPosition = point - direction * 5.0f;
+
     if (animate && !isAnimating()) {
         startAnimation(targetPosition, point);
     } else {
@@ -332,7 +316,7 @@ void CameraController::focusOnPoint(const QVector3D& point, bool animate)
         m_camera->lookAt(point);
         m_orbitCenter = point;
         updateOrbitDistance();
-        emit cameraChanged();
+        // cameraChanged(); // Qt signal removed
     }
 }
 
@@ -342,18 +326,12 @@ void CameraController::focusOnObject(std::shared_ptr<SceneObject> object, bool a
     
     auto mesh = object->getMesh();
     if (!mesh) return;
-    
     // Get object center and size
-    QVector3D objectMin = mesh->getBoundingBoxMin();
-    QVector3D objectMax = mesh->getBoundingBoxMax();
-    QMatrix4x4 transform = object->getTransform().getModelMatrix();
-    
-    // Transform bounding box to world space
-    QVector3D center = transform.map((objectMin + objectMax) * 0.5f);
-    QVector3D size = objectMax - objectMin;
-    
-    QVector3D targetPosition = calculateFramingPosition(center, size);
-    
+    glm::vec3 min = mesh->getBoundingBoxMin();
+    glm::vec3 max = mesh->getBoundingBoxMax();
+    glm::vec3 center = (min + max) * 0.5f;
+    glm::vec3 size = max - min;
+    glm::vec3 targetPosition = calculateFramingPosition(center, size);
     if (animate && !isAnimating()) {
         startAnimation(targetPosition, center);
     } else {
@@ -361,36 +339,35 @@ void CameraController::focusOnObject(std::shared_ptr<SceneObject> object, bool a
         m_camera->lookAt(center);
         m_orbitCenter = center;
         updateOrbitDistance();
-        emit cameraChanged();
+        // cameraChanged(); // Qt signal removed
     }
 }
 
-void CameraController::setViewDirection(const QVector3D& direction, const QVector3D& up, bool animate)
+void CameraController::setViewDirection(const glm::vec3& direction, const glm::vec3& up, bool animate)
 {
     if (!m_camera) return;
-    
-    QVector3D currentPos = m_camera->getWorldPosition();
-    QVector3D target = currentPos + direction.normalized() * 10.0f;
-    
+    glm::vec3 currentPos = m_camera->getWorldPosition();
+    glm::vec3 dir = glm::normalize(direction);
+    glm::vec3 target = currentPos + dir * 10.0f;
+    glm::vec3 upVec = glm::normalize(up);
     if (animate && !isAnimating()) {
         startAnimation(currentPos, target);
     } else {
-        m_camera->lookAt(target, up);
-        emit cameraChanged();
+        m_camera->lookAt(target, upVec);
     }
 }
 
 // Predefined views
 void CameraController::setTopView(bool animate)
 {
-    QVector3D center = getOrbitCenter();
-    QVector3D position = center + QVector3D(0, 10, 0);
-    
+    glm::vec3 center = getOrbitCenter();
+    glm::vec3 position = center + glm::vec3(0, 10, 0);
+    glm::vec3 up = glm::vec3(0, 0, -1);
     if (animate && !isAnimating()) {
         startAnimation(position, center);
     } else {
         m_camera->getTransform().setPosition(position);
-        m_camera->lookAt(center, QVector3D(0, 0, -1));
+        m_camera->lookAt(center, up);
         updateOrbitDistance();
         emit cameraChanged();
     }
@@ -398,14 +375,14 @@ void CameraController::setTopView(bool animate)
 
 void CameraController::setBottomView(bool animate)
 {
-    QVector3D center = getOrbitCenter();
-    QVector3D position = center + QVector3D(0, -10, 0);
-    
+    glm::vec3 center = getOrbitCenter();
+    glm::vec3 position = center + glm::vec3(0, -10, 0);
+    glm::vec3 up = glm::vec3(0, 0, 1);
     if (animate && !isAnimating()) {
         startAnimation(position, center);
     } else {
         m_camera->getTransform().setPosition(position);
-        m_camera->lookAt(center, QVector3D(0, 0, 1));
+        m_camera->lookAt(center, up);
         updateOrbitDistance();
         emit cameraChanged();
     }
@@ -413,9 +390,8 @@ void CameraController::setBottomView(bool animate)
 
 void CameraController::setFrontView(bool animate)
 {
-    QVector3D center = getOrbitCenter();
-    QVector3D position = center + QVector3D(0, 0, 10);
-    
+    glm::vec3 center = getOrbitCenter();
+    glm::vec3 position = center + glm::vec3(0, 0, 10);
     if (animate && !isAnimating()) {
         startAnimation(position, center);
     } else {
@@ -428,9 +404,8 @@ void CameraController::setFrontView(bool animate)
 
 void CameraController::setBackView(bool animate)
 {
-    QVector3D center = getOrbitCenter();
-    QVector3D position = center + QVector3D(0, 0, -10);
-    
+    glm::vec3 center = getOrbitCenter();
+    glm::vec3 position = center + glm::vec3(0, 0, -10);
     if (animate && !isAnimating()) {
         startAnimation(position, center);
     } else {
@@ -443,9 +418,8 @@ void CameraController::setBackView(bool animate)
 
 void CameraController::setLeftView(bool animate)
 {
-    QVector3D center = getOrbitCenter();
-    QVector3D position = center + QVector3D(-10, 0, 0);
-    
+    glm::vec3 center = getOrbitCenter();
+    glm::vec3 position = center + glm::vec3(-10, 0, 0);
     if (animate && !isAnimating()) {
         startAnimation(position, center);
     } else {
@@ -458,9 +432,8 @@ void CameraController::setLeftView(bool animate)
 
 void CameraController::setRightView(bool animate)
 {
-    QVector3D center = getOrbitCenter();
-    QVector3D position = center + QVector3D(10, 0, 0);
-    
+    glm::vec3 center = getOrbitCenter();
+    glm::vec3 position = center + glm::vec3(10, 0, 0);
     if (animate && !isAnimating()) {
         startAnimation(position, center);
     } else {
@@ -473,9 +446,8 @@ void CameraController::setRightView(bool animate)
 
 void CameraController::setIsometricView(bool animate)
 {
-    QVector3D center = getOrbitCenter();
-    QVector3D position = center + QVector3D(7.07f, 7.07f, 7.07f); // 45° angles
-    
+    glm::vec3 center = getOrbitCenter();
+    glm::vec3 position = center + glm::vec3(7.07f, 7.07f, 7.07f); // 45° angles
     if (animate && !isAnimating()) {
         startAnimation(position, center);
     } else {
@@ -487,31 +459,32 @@ void CameraController::setIsometricView(bool animate)
 }
 
 // Query methods
-QVector3D CameraController::getWorldPosition() const
+
+glm::vec3 CameraController::getWorldPosition() const
 {
-    if (!m_camera) return QVector3D();
+    if (!m_camera) return glm::vec3(0.0f);
     return m_camera->getWorldPosition();
 }
 
-QMatrix4x4 CameraController::getViewMatrix() const
+glm::mat4 CameraController::getViewMatrix() const
 {
-    if (!m_camera) return QMatrix4x4();
+    if (!m_camera) return glm::mat4(1.0f);
     return m_camera->getViewMatrix();
 }
 
-QMatrix4x4 CameraController::getProjectionMatrix() const
+glm::mat4 CameraController::getProjectionMatrix() const
 {
-    if (!m_camera) return QMatrix4x4();
+    if (!m_camera) return glm::mat4(1.0f);
     return m_camera->getProjectionMatrix();
 }
 
-QVector3D CameraController::screenToWorldRay(const QVector2D& screenPos, const QSize& viewportSize) const
+glm::vec3 CameraController::screenToWorldRay(const glm::vec2& screenPos, const glm::ivec2& viewportSize) const
 {
-    if (!m_camera) return QVector3D();
+    if (!m_camera) return glm::vec3(0.0f);
     return m_camera->screenToWorldRay(screenPos, viewportSize);
 }
 
-QVector3D CameraController::getCurrentPivot() const
+glm::vec3 CameraController::getCurrentPivot() const
 {
     return getOrbitCenter();
 }
@@ -525,135 +498,112 @@ float CameraController::getDistanceToTarget() const
 void CameraController::updateAnimation()
 {
     if (!m_camera || !isAnimating()) return;
-    
-    m_animationTime += m_animationTimer->interval() / 1000.0f;
+    // Manual time tracking: caller should update m_animationTime externally (e.g., per-frame)
     float t = m_animationTime / m_animationDuration;
-    
     if (t >= 1.0f) {
         // Animation complete
         t = 1.0f;
         stopAnimation();
     }
-    
     // Smooth easing (ease-in-out)
     t = t * t * (3.0f - 2.0f * t);
-    
     // Interpolate position and look-at target
-    QVector3D currentPos = m_animStartPosition + (m_animTargetPosition - m_animStartPosition) * t;
-    QVector3D currentLookAt = m_animStartLookAt + (m_animTargetLookAt - m_animStartLookAt) * t;
-    
+    glm::vec3 currentPos = m_animStartPosition + (m_animTargetPosition - m_animStartPosition) * t;
+    glm::vec3 currentLookAt = m_animStartLookAt + (m_animTargetLookAt - m_animStartLookAt) * t;
     m_camera->getTransform().setPosition(currentPos);
     m_camera->lookAt(currentLookAt);
-    
     if (t >= 1.0f) {
         m_orbitCenter = currentLookAt;
         updateOrbitDistance();
     }
-    
-    emit cameraChanged();
 }
 
-void CameraController::startAnimation(const QVector3D& targetPosition, const QVector3D& targetLookAt)
+void CameraController::startAnimation(const glm::vec3& targetPosition, const glm::vec3& targetLookAt)
 {
     if (!m_camera) return;
-    
     m_animStartPosition = m_camera->getWorldPosition();
     m_animTargetPosition = targetPosition;
     m_animStartLookAt = getOrbitCenter();
     m_animTargetLookAt = targetLookAt;
     m_animationTime = 0.0f;
     m_animationDuration = 1.0f / m_animationSpeed;
-    
-    m_animationTimer->start();
+    // Manual time tracking: caller should update m_animationTime externally (e.g., per-frame)
 }
 
 void CameraController::stopAnimation()
 {
-    if (m_animationTimer) {
-        m_animationTimer->stop();
-    }
     m_animationTime = 0.0f;
 }
 
 // Helper methods
-QVector3D CameraController::getSceneCenter() const
+glm::vec3 CameraController::getSceneCenter() const
 {
-    if (!m_scene) {
-        return QVector3D(0.0f, 0.0f, 0.0f);
+    if (!m_sceneManager || m_sceneManager->isEmpty()) {
+        return glm::vec3(0.0f, 0.0f, 0.0f);
     }
-    
-    try {
-        if (m_scene->isEmpty()) {
-            return QVector3D(0.0f, 0.0f, 0.0f);
-        }
-        return m_scene->getSceneBoundingBoxCenter();
-    } catch (...) {
-        // Fall back to origin if scene access fails
-        return QVector3D(0.0f, 0.0f, 0.0f);
+    auto scene = m_sceneManager->getScene();
+    if (scene) {
+        return scene->getSceneBoundingBoxCenter();
     }
+    return glm::vec3(0.0f, 0.0f, 0.0f);
 }
 
-QVector3D CameraController::getSelectionCenter() const
+glm::vec3 CameraController::getSelectionCenter() const
 {
-    if (!m_scene) return QVector3D(0.0f, 0.0f, 0.0f);
-    
-    auto selectedObject = m_scene->getSelectedObject();
-    if (!selectedObject) return getSceneCenter();
-    
-    auto mesh = selectedObject->getMesh();
-    if (!mesh) return getSceneCenter();
-    
-    QVector3D min = mesh->getBoundingBoxMin();
-    QVector3D max = mesh->getBoundingBoxMax();
-    QMatrix4x4 transform = selectedObject->getTransform().getModelMatrix();
-    
-    return transform.map((min + max) * 0.5f);
+    if (!m_selectionManager) return getSceneCenter();
+    auto selectedVertices = m_selectionManager->getSelectedVertices();
+    if (selectedVertices.empty()) return getSceneCenter();
+    glm::vec3 sum(0, 0, 0);
+    for (const auto& v : selectedVertices) {
+        sum += v->getPosition();
+    }
+    return sum / float(selectedVertices.size());
 }
 
-float CameraController::calculateFramingDistance(const QVector3D& sceneSize) const
+// Removed duplicate/incorrect signature for calculateFramingDistance
+// No Qt math types, only GLM
+void CameraController::cameraChanged() {
+    // No-op: event/callback system can be implemented if needed
+}
+
+float CameraController::calculateFramingDistance(const glm::vec3& sceneSize) const
 {
     if (!m_camera) return 10.0f;
-    
-    float maxDimension = std::max({sceneSize.x(), sceneSize.y(), sceneSize.z()});
+    float maxDimension = std::max({sceneSize.x, sceneSize.y, sceneSize.z});
     if (maxDimension < 0.1f) {
         maxDimension = 2.0f;
     }
-    
     float fov = m_camera->getFOV();
-    float distance = (maxDimension * 0.5f) / std::tan(qDegreesToRadians(fov * 0.5f));
-    
+    float distance = (maxDimension * 0.5f) / std::tan(glm::radians(fov * 0.5f));
     return std::max(distance * 1.5f, maxDimension * 2.0f);
 }
 
-QVector3D CameraController::calculateFramingPosition(const QVector3D& target, const QVector3D& size) const
+glm::vec3 CameraController::calculateFramingPosition(const glm::vec3& target, const glm::vec3& size) const
 {
     float distance = calculateFramingDistance(size);
-    
-    // Position camera at a good viewing angle
-    QVector3D direction;
+    glm::vec3 direction;
     if (m_camera) {
-        // Maintain current viewing direction if possible
-        direction = (target - m_camera->getWorldPosition()).normalized();
-        if (direction.length() < 0.1f) {
-            direction = QVector3D(1.0f, 1.0f, 1.0f).normalized();
+        direction = glm::normalize(target - m_camera->getWorldPosition());
+        if (glm::length(direction) < 0.1f) {
+            direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
         }
     } else {
-        direction = QVector3D(1.0f, 1.0f, 1.0f).normalized();
+        direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
     }
-    
     return target - direction * distance;
 }
 
-QVector3D CameraController::getOrbitCenter() const
+
+glm::vec3 CameraController::getOrbitCenter() const
 {
     switch (m_orbitMode) {
         case OrbitMode::WorldCenter:
-            return QVector3D(0.0f, 0.0f, 0.0f);
+            return glm::vec3(0.0f);
         case OrbitMode::SceneCenter:
             try {
                 return getSceneCenter();
             } catch (...) {
-                return QVector3D(0.0f, 0.0f, 0.0f);
+                return glm::vec3(0.0f);
             }
         case OrbitMode::Selection:
             try {
@@ -668,12 +618,12 @@ QVector3D CameraController::getOrbitCenter() const
     }
 }
 
+
 void CameraController::updateOrbitDistance()
 {
     if (!m_camera) return;
-    
-    QVector3D center = getOrbitCenter();
-    QVector3D cameraPos = m_camera->getWorldPosition();
-    m_orbitDistance = (cameraPos - center).length();
+    glm::vec3 center = getOrbitCenter();
+    glm::vec3 cameraPos = m_camera->getWorldPosition();
+    m_orbitDistance = glm::length(cameraPos - center);
     m_orbitCenter = center;
 }

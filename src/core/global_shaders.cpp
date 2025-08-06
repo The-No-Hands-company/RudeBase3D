@@ -1,5 +1,6 @@
 #include "core/global_shaders.hpp"
 #include <QOpenGLContext>
+#include <spdlog/spdlog.h>
 #include <mutex>
 
 namespace {
@@ -90,26 +91,23 @@ GLuint GlobalShaders::getMeshShader() const {
     
     // Verify the shader program is still valid
     if (meshShaderProgram == 0) {
-        qWarning() << "[GlobalShaders::getMeshShader] Shader program is 0 (not initialized)";
+        spdlog::warn("[GlobalShaders::getMeshShader] Shader program is 0 (not initialized)");
         return 0;
     }
-    
     if (!initialized) {
-        qWarning() << "[GlobalShaders::getMeshShader] GlobalShaders not initialized";
+        spdlog::warn("[GlobalShaders::getMeshShader] GlobalShaders not initialized");
         return 0;
     }
-    
     // Check if we have a valid OpenGL context
     QOpenGLContext* context = QOpenGLContext::currentContext();
     if (!context || !context->isValid()) {
-        qWarning() << "[GlobalShaders::getMeshShader] No valid OpenGL context";
+        spdlog::warn("[GlobalShaders::getMeshShader] No valid OpenGL context");
         return 0;
     }
-    
     // Verify the program is still valid in OpenGL
     if (const_cast<GlobalShaders*>(this)->initializeOpenGLFunctions()) {
         if (!const_cast<GlobalShaders*>(this)->glIsProgram(meshShaderProgram)) {
-            qWarning() << "[GlobalShaders::getMeshShader] Shader program" << meshShaderProgram << "is no longer valid in OpenGL";
+            spdlog::warn("[GlobalShaders::getMeshShader] Shader program {} is no longer valid in OpenGL", meshShaderProgram);
             return 0;
         }
     }
@@ -122,23 +120,21 @@ bool GlobalShaders::initialize() {
     
     QOpenGLContext* context = QOpenGLContext::currentContext();
     if (!context) {
-        qWarning() << "[GlobalShaders::initialize] No OpenGL context available for shader initialization";
+        spdlog::warn("[GlobalShaders::initialize] No OpenGL context available for shader initialization");
         return false;
     }
-    
     if (!context->isValid()) {
-        qWarning() << "[GlobalShaders::initialize] OpenGL context is not valid";
+        spdlog::warn("[GlobalShaders::initialize] OpenGL context is not valid");
         return false;
     }
-    
     if (!this->initializeOpenGLFunctions()) {
-        qWarning() << "[GlobalShaders::initialize] Failed to initialize OpenGL functions";
+        spdlog::warn("[GlobalShaders::initialize] Failed to initialize OpenGL functions");
         return false;
     }
 
     // Clean up existing program if any
     if (meshShaderProgram != 0) {
-        qDebug() << "[GlobalShaders::initialize] Cleaning up existing shader program" << meshShaderProgram;
+        spdlog::info("[GlobalShaders::initialize] Cleaning up existing shader program {}", meshShaderProgram);
         this->glDeleteProgram(meshShaderProgram);
         meshShaderProgram = 0;
     }
@@ -146,7 +142,7 @@ bool GlobalShaders::initialize() {
     // Create vertex shader
     GLuint vertexShader = this->glCreateShader(GL_VERTEX_SHADER);
     if (vertexShader == 0) {
-        qWarning() << "[GlobalShaders::initialize] Failed to create vertex shader";
+        spdlog::warn("[GlobalShaders::initialize] Failed to create vertex shader");
         return false;
     }
     
@@ -159,7 +155,7 @@ bool GlobalShaders::initialize() {
     this->glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
     if (!success) {
         this->glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog);
-        qWarning() << "[GlobalShaders::initialize] Vertex shader compilation failed:" << infoLog;
+        spdlog::warn("[GlobalShaders::initialize] Vertex shader compilation failed: {}", infoLog);
         this->glDeleteShader(vertexShader);
         return false;
     }
@@ -167,7 +163,7 @@ bool GlobalShaders::initialize() {
     // Create fragment shader
     GLuint fragmentShader = this->glCreateShader(GL_FRAGMENT_SHADER);
     if (fragmentShader == 0) {
-        qWarning() << "[GlobalShaders::initialize] Failed to create fragment shader";
+        spdlog::warn("[GlobalShaders::initialize] Failed to create fragment shader");
         this->glDeleteShader(vertexShader);
         return false;
     }
@@ -179,7 +175,7 @@ bool GlobalShaders::initialize() {
     this->glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
     if (!success) {
         this->glGetShaderInfoLog(fragmentShader, 512, nullptr, infoLog);
-        qWarning() << "[GlobalShaders::initialize] Fragment shader compilation failed:" << infoLog;
+        spdlog::warn("[GlobalShaders::initialize] Fragment shader compilation failed: {}", infoLog);
         this->glDeleteShader(vertexShader);
         this->glDeleteShader(fragmentShader);
         return false;
@@ -188,7 +184,7 @@ bool GlobalShaders::initialize() {
     // Create shader program
     meshShaderProgram = this->glCreateProgram();
     if (meshShaderProgram == 0) {
-        qWarning() << "[GlobalShaders::initialize] Failed to create shader program";
+        spdlog::warn("[GlobalShaders::initialize] Failed to create shader program");
         this->glDeleteShader(vertexShader);
         this->glDeleteShader(fragmentShader);
         return false;
@@ -202,7 +198,7 @@ bool GlobalShaders::initialize() {
     this->glGetProgramiv(meshShaderProgram, GL_LINK_STATUS, &success);
     if (!success) {
         this->glGetProgramInfoLog(meshShaderProgram, 512, nullptr, infoLog);
-        qWarning() << "[GlobalShaders::initialize] Shader program linking failed:" << infoLog;
+        spdlog::warn("[GlobalShaders::initialize] Shader program linking failed: {}", infoLog);
         this->glDeleteShader(vertexShader);
         this->glDeleteShader(fragmentShader);
         this->glDeleteProgram(meshShaderProgram);
@@ -216,13 +212,13 @@ bool GlobalShaders::initialize() {
 
     // Verify the program is valid
     if (!this->glIsProgram(meshShaderProgram)) {
-        qWarning() << "[GlobalShaders::initialize] Created program is not valid";
+        spdlog::warn("[GlobalShaders::initialize] Created program is not valid");
         this->glDeleteProgram(meshShaderProgram);
         meshShaderProgram = 0;
         return false;
     }
 
     initialized = true;
-    qDebug() << "[GlobalShaders::initialize] Mesh shader program initialized successfully with ID:" << meshShaderProgram;
+    spdlog::info("[GlobalShaders::initialize] Mesh shader program initialized successfully with ID: {}", meshShaderProgram);
     return true;
 }

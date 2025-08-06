@@ -1,14 +1,12 @@
 #pragma once
 
-// Include Qt components with proper paths
+#ifdef USE_QT
 #include <QtCore/QString>
 #include <QtCore/QObject>
 #include <QtOpenGLWidgets/QOpenGLWidget>
-#include <QtGui/QMatrix4x4>
-#include <QtGui/QVector3D>
-#include <QtGui/QVector2D>
-#include <QtGui/QVector4D>
-#include <QtGui/QQuaternion>
+#endif
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <memory>
 #include <vector>
 #include <string>
@@ -18,23 +16,21 @@
 #include <expected>
 #include <span>
 #include <glm/glm.hpp>
+#include "core/mesh_forward.hpp"
 
-// Conversion utilities between Qt and GLM types
-inline glm::vec3 toGlm(const QVector3D& qvec) {
-    return glm::vec3(qvec.x(), qvec.y(), qvec.z());
-}
-
-inline glm::vec2 toGlm(const QVector2D& qvec) {
-    return glm::vec2(qvec.x(), qvec.y());
-}
-
-inline QVector3D toQt(const glm::vec3& gvec) {
-    return QVector3D(gvec.x, gvec.y, gvec.z);
-}
-
-inline QVector2D toQt(const glm::vec2& gvec) {
-    return QVector2D(gvec.x, gvec.y);
-}
+// Conversion utilities between Qt and GLM types (deprecated, to be removed)
+// inline glm::vec3 toGlm(const QVector3D& qvec) {
+//     return glm::vec3(qvec.x(), qvec.y(), qvec.z());
+// }
+// inline glm::vec2 toGlm(const QVector2D& qvec) {
+//     return glm::vec2(qvec.x(), qvec.y());
+// }
+// inline QVector3D toQt(const glm::vec3& gvec) {
+//     return QVector3D(gvec.x, gvec.y, gvec.z);
+// }
+// inline QVector2D toQt(const glm::vec2& gvec) {
+//     return QVector2D(gvec.x, gvec.y);
+// }
 
 // Forward declarations
 class Scene;
@@ -47,7 +43,6 @@ namespace rude {
     class Face;
 }
 
-class Mesh;
 class Material;
 class Transform;
 class GeometryConverter;
@@ -103,7 +98,6 @@ enum class SelectionType {
 
 // Common typedefs
 using SceneObjectPtr = std::shared_ptr<SceneObject>;
-using MeshPtr = std::shared_ptr<Mesh>;
 using MaterialPtr = std::shared_ptr<Material>;
 using HalfEdgeMeshPtr = std::shared_ptr<rude::HalfEdgeMesh>;
 using HalfEdgeVertexPtr = std::shared_ptr<rude::Vertex>;
@@ -124,28 +118,23 @@ constexpr float DEG_TO_RAD = PI / 180.0f;
 constexpr float RAD_TO_DEG = 180.0f / PI;
 
 // World coordinate system constants
-const QVector3D WORLD_UP(0.0f, 1.0f, 0.0f);
-const QVector3D WORLD_FORWARD(0.0f, 0.0f, -1.0f);
-const QVector3D WORLD_RIGHT(1.0f, 0.0f, 0.0f);
+const glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
+const glm::vec3 WORLD_FORWARD(0.0f, 0.0f, -1.0f);
+const glm::vec3 WORLD_RIGHT(1.0f, 0.0f, 0.0f);
 
-// Conversion functions between Qt and GLM types
-#include <glm/glm.hpp>
-
-inline glm::vec3 qtToGlm(const QVector3D& v) {
-    return glm::vec3(v.x(), v.y(), v.z());
-}
-
-inline glm::vec2 qtToGlm(const QVector2D& v) {
-    return glm::vec2(v.x(), v.y());
-}
-
-inline QVector3D glmToQt(const glm::vec3& v) {
-    return QVector3D(v.x, v.y, v.z);
-}
-
-inline QVector2D glmToQt(const glm::vec2& v) {
-    return QVector2D(v.x, v.y);
-}
+// Conversion functions between Qt and GLM types (deprecated, to be removed)
+// inline glm::vec3 qtToGlm(const QVector3D& v) {
+//     return glm::vec3(v.x(), v.y(), v.z());
+// }
+// inline glm::vec2 qtToGlm(const QVector2D& v) {
+//     return glm::vec2(v.x(), v.y());
+// }
+// inline QVector3D glmToQt(const glm::vec3& v) {
+//     return QVector3D(v.x, v.y, v.z);
+// }
+// inline QVector2D glmToQt(const glm::vec2& v) {
+//     return QVector2D(v.x, v.y);
+// }
 
 // C++23 Concepts for type safety
 template<typename T>
@@ -156,7 +145,7 @@ concept Transformable = requires(T t) {
 
 template<typename T>
 concept Renderable = requires(T t) {
-    { t.getMesh() } -> std::convertible_to<MeshPtr>;
+    { t.getMesh() } -> std::convertible_to<rude::MeshPtr>;
     { t.getMaterial() } -> std::convertible_to<MaterialPtr>;
     { t.isVisible() } -> std::convertible_to<bool>;
 };

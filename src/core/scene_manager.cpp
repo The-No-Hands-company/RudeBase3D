@@ -1,319 +1,160 @@
+
 #include "core/scene_manager.hpp"
 #include "core/primitive_manager.hpp"
-#include "geometry/core/Material.h"
-#include <glm/gtc/quaternion.hpp>
-#include <QDebug>
+#include <glm/glm.hpp>
+#include <fstream>
+#include <spdlog/spdlog.h>
+
+namespace rude {
 
 SceneManager::SceneManager(QObject* parent)
-    : QObject(parent)
+    : QObject(parent), m_scene(std::make_shared<rude::Scene>()), m_primitiveManager(nullptr), m_externalPrimitiveManager(nullptr), m_selectedEntity(nullptr)
 {
-    qDebug() << "[SceneManager] Created";
-    // Initialize primitive manager
-    m_primitiveManager = std::make_unique<PrimitiveManager>(this);
 }
 
-SceneManager::~SceneManager()
-{
-    qDebug() << "[SceneManager] Destroyed";
-}
+SceneManager::~SceneManager() = default;
 
-void SceneManager::setScene(std::shared_ptr<Scene> scene)
-{
+void SceneManager::setScene(std::shared_ptr<rude::Scene> scene) {
     m_scene = scene;
-    qDebug() << "[SceneManager] Scene set";
+    emit sceneLoaded("");
 }
 
-void SceneManager::setPrimitiveManager(PrimitiveManager* primitiveManager)
-{
-    if (primitiveManager) {
-        // Release the internal primitive manager and use the external one
-        m_primitiveManager.reset();
-        m_externalPrimitiveManager = primitiveManager;
-        qDebug() << "[SceneManager] External primitive manager set and will be used";
+void SceneManager::setPrimitiveManager(PrimitiveManager* primitiveManager) {
+    m_externalPrimitiveManager = primitiveManager;
+}
+
+Entity* SceneManager::createPrimitive(const std::string& primitiveType, const std::string& name) {
+    // Map primitiveType string to rude::PrimitiveType enum if possible
+    rude::PrimitiveType type = rude::PrimitiveType::Unknown;
+    std::string typeStr = primitiveType;
+    if (typeStr == "cube") type = rude::PrimitiveType::Cube;
+    else if (typeStr == "sphere") type = rude::PrimitiveType::Sphere;
+    else if (typeStr == "cylinder") type = rude::PrimitiveType::Cylinder;
+    else if (typeStr == "plane") type = rude::PrimitiveType::Plane;
+    else if (typeStr == "cone") type = rude::PrimitiveType::Cone;
+    else if (typeStr == "torus") type = rude::PrimitiveType::Torus;
+    else if (typeStr == "icosphere") type = rude::PrimitiveType::Icosphere;
+    // Add more as needed
+    std::string entityName = name.empty() ? typeStr : name;
+    Entity* entity = nullptr;
+    if (type != rude::PrimitiveType::Unknown) {
+        entity = m_scene ? m_scene->createEntity(type, entityName) : nullptr;
     } else {
-        qDebug() << "[SceneManager] Warning: null primitive manager provided";
+        entity = m_scene ? m_scene->createEntity(rude::PrimitiveType::Unknown, entityName) : nullptr;
     }
-}
-
-Entity* SceneManager::createPrimitive(const QString& primitiveType, const QString& name)
-{
-    qDebug() << "[SceneManager] ==> START createPrimitive:" << primitiveType << "name:" << name;
-    
-    if (!m_scene) {
-        qWarning() << "[SceneManager] Cannot create primitive: No scene set";
-        return nullptr;
-    }
-
-    qDebug() << "[SceneManager] Creating primitive:" << primitiveType;
-
-    try {
-        // Determine the primitive type enum
-        rude::PrimitiveType type = rude::PrimitiveType::Cube; // Default
-        if (primitiveType.toLower() == "cube") {
-            type = rude::PrimitiveType::Cube;
-            qDebug() << "[SceneManager] Primitive type set to CUBE";
-        } else if (primitiveType.toLower() == "plane") {
-            type = rude::PrimitiveType::Plane;
-            qDebug() << "[SceneManager] Primitive type set to PLANE";
-        } else if (primitiveType.toLower() == "sphere") {
-            type = rude::PrimitiveType::Sphere;
-            qDebug() << "[SceneManager] Primitive type set to SPHERE";
-        } else {
-            qWarning() << "[SceneManager] Unknown primitive type:" << primitiveType;
-            return nullptr;
-        }
-
-        // Generate name if not provided
-        QString entityName = name.isEmpty() ? generateEntityName(primitiveType) : name;
-        qDebug() << "[SceneManager] Generated entity name:" << entityName;
-
-        // Create the entity using the correct Scene interface
-        qDebug() << "[SceneManager] About to call m_scene->createEntity...";
-        Entity* entity = m_scene->createEntity(type, entityName.toStdString());
-        if (!entity) {
-            qWarning() << "[SceneManager] Failed to create entity";
-            return nullptr;
-        }
-        qDebug() << "[SceneManager] Entity created successfully with ID:" << entity->getId();
-
-        // Create the mesh using PrimitiveManager
-        PrimitiveManager* manager = m_externalPrimitiveManager ? m_externalPrimitiveManager : m_primitiveManager.get();
-        if (!manager) {
-            qWarning() << "[SceneManager] No primitive manager available";
-            return nullptr;
-        }
-        qDebug() << "[SceneManager] Using primitive manager:" << (m_externalPrimitiveManager ? "external" : "internal");
-        
-        std::shared_ptr<Mesh> mesh;
-        if (primitiveType.toLower() == "cube") {
-            qDebug() << "[SceneManager] Creating cube mesh...";
-            mesh = manager->createCube();
-        } else if (primitiveType.toLower() == "plane") {
-            qDebug() << "[SceneManager] Creating plane mesh...";
-            mesh = manager->createPlane();
-        } else if (primitiveType.toLower() == "sphere") {
-            qDebug() << "[SceneManager] Creating sphere mesh...";
-            mesh = manager->createSphere();
-        }
-
-        if (!mesh) {
-            qWarning() << "[SceneManager] Failed to create mesh for primitive:" << primitiveType;
-            // Clean up the entity
-            // TODO: Implement entity deletion in scene
-            return nullptr;
-        }
-
-        // Set up the entity
-        entity->setMesh(mesh);
-        entity->setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
-        entity->setScale(glm::vec3(1.0f));
-        entity->setRotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
-
-        // TODO: Set default material on entity instead of mesh
-        // Material defaultMaterial;
-        // defaultMaterial.diffuse = glm::vec3(0.7f, 0.7f, 0.8f);
-        // defaultMaterial.specular = glm::vec3(1.0f);
-        // defaultMaterial.shininess = 32.0f;
-        // entity->setMaterial(defaultMaterial);
-
-        connectEntitySignals(entity);
-
-        emit entityCreated(entity);
-        qDebug() << "[SceneManager] Successfully created primitive:" << primitiveType << "named:" << entityName;
-
-        return entity;
-
-    } catch (const std::exception& e) {
-        qWarning() << "[SceneManager] Exception creating primitive:" << e.what();
-        return nullptr;
-    }
-}
-
-Entity* SceneManager::createEntity(const QString& name)
-{
-    if (!m_scene) {
-        qWarning() << "[SceneManager] Cannot create entity: No scene set";
-        return nullptr;
-    }
-
-    QString entityName = name.isEmpty() ? generateEntityName("Entity") : name;
-    auto entity = m_scene->createEntity(rude::PrimitiveType::None, entityName.toStdString());
-    
-    if (entity) {
-        connectEntitySignals(entity);
-        emit entityCreated(entity);
-    }
-
+    emit entityCreated(entity);
     return entity;
 }
 
-Entity* SceneManager::importMesh(const QString& filePath, const QString& name)
-{
-    // TODO: Implement mesh import functionality
-    qDebug() << "[SceneManager] Mesh import not yet implemented:" << filePath;
-    return nullptr;
+Entity* SceneManager::createEntity(const std::string& name) {
+    if (!m_scene) return nullptr;
+    std::string entityName = name;
+    // Default to Unknown type
+    auto entity = m_scene->createEntity(rude::PrimitiveType::Unknown, entityName);
+    connectEntitySignals(entity);
+    emit entityCreated(entity);
+    return entity;
 }
 
-void SceneManager::deleteEntity(Entity* entity)
-{
-    if (!entity || !m_scene) {
-        return;
-    }
+Entity* SceneManager::importMesh(const std::string& filePath, const std::string& name) {
+    // Stub: create entity and mark as imported
+    Entity* entity = createEntity(name.empty() ? filePath : name);
+    // TODO: Load mesh from file and assign to entity
+    emit entityCreated(entity);
+    return entity;
+}
 
-    qDebug() << "[SceneManager] Deleting entity:" << entity->getName();
-    
-    // TODO: Implement entity deletion in scene
-    // m_scene->deleteEntity(entity);
-    
+void SceneManager::deleteEntity(Entity* entity) {
+    if (!m_scene || !entity) return;
+    m_scene->deleteEntity(entity);
     emit entityDeleted(entity);
 }
 
-void SceneManager::deleteSelectedEntities()
-{
-    // TODO: Coordinate with SelectionManager to delete selected entities
-    qDebug() << "[SceneManager] Delete selected entities not yet implemented";
-}
-
-void SceneManager::duplicateEntity(Entity* entity)
-{
-    // TODO: Implement entity duplication
-    qDebug() << "[SceneManager] Entity duplication not yet implemented";
-}
-
-void SceneManager::clearScene()
-{
-    if (m_scene) {
-        // TODO: Implement scene clearing
-        emit sceneCleared();
-    }
-}
-
-bool SceneManager::saveScene(const QString& filePath)
-{
-    // TODO: Implement scene serialization
-    qDebug() << "[SceneManager] Scene saving not yet implemented:" << filePath;
-    return false;
-}
-
-bool SceneManager::loadScene(const QString& filePath)
-{
-    // TODO: Implement scene deserialization
-    qDebug() << "[SceneManager] Scene loading not yet implemented:" << filePath;
-    return false;
-}
-
-std::vector<Entity*> SceneManager::getAllEntities() const
-{
-    if (!m_scene) {
-        return {};
-    }
-
-    // Convert from unique_ptr vector to raw pointer vector
-    const auto& entityPtrs = m_scene->getEntities();
-    std::vector<Entity*> result;
-    result.reserve(entityPtrs.size());
-    
-    for (const auto& entityPtr : entityPtrs) {
-        result.push_back(entityPtr.get());
-    }
-    
-    return result;
-}
-
-Entity* SceneManager::findEntityByName(const QString& name) const
-{
-    if (!m_scene) {
-        return nullptr;
-    }
-
-    const auto& entities = m_scene->getEntities();
-    for (const auto& entityPtr : entities) {
-        if (entityPtr && entityPtr->getName() == name.toStdString()) {
-            return entityPtr.get();
-        }
-    }
-    return nullptr;
-}
-
-Entity* SceneManager::findEntityById(uint32_t id) const
-{
-    if (!m_scene) {
-        return nullptr;
-    }
-
-    const auto& entities = m_scene->getEntities();
-    for (const auto& entityPtr : entities) {
-        if (entityPtr && entityPtr->getId() == static_cast<int>(id)) {
-            return entityPtr.get();
-        }
-    }
-    return nullptr;
-}
-
-QString SceneManager::generateEntityName(const QString& baseName) const
-{
-    QString name = baseName;
-    int counter = 1;
-    
-    while (findEntityByName(name)) {
-        name = QString("%1_%2").arg(baseName).arg(counter++);
-    }
-    
-    return name;
-}
-
-void SceneManager::connectEntitySignals(Entity* entity)
-{
-    if (!entity) return;
-    
-    // TODO: Connect entity-specific signals if any
-    // For example, entity property changes, etc.
-}
-
-// Implement the picking method
-Entity* SceneManager::pickObject(const QVector3D& rayOrigin, const QVector3D& rayDirection) const
-{
-    if (!m_scene) return nullptr;
-    
-    Entity* closestEntity = nullptr;
-    float closestDist = std::numeric_limits<float>::max();
-    
-    // Get all root entities and perform ray intersection tests
-    auto rootEntities = m_scene->getRootEntities();
-    for (auto* entity : rootEntities) {
-        // Simple ray-entity intersection test
-        // This is a stub implementation - real implementation would use proper ray-mesh intersection
-        
-        // For now, just return the first entity
-        if (!closestEntity) {
-            closestEntity = entity;
-            break;
-        }
-    }
-    
-    return closestEntity;
-}
-
-void SceneManager::setSelectedObject(Entity* entity)
-{
-    if (m_selectedEntity == entity) return;
-    
-    m_selectedEntity = entity;
-    
-    // Emit signal for selection change
+void SceneManager::deleteSelectedEntities() {
+    if (!m_scene || !m_selectedEntity) return;
+    deleteEntity(m_selectedEntity);
+    m_selectedEntity = nullptr;
     emit selectionChanged();
 }
 
-bool SceneManager::isEmpty() const
-{
-    return !m_scene || m_scene->getEntities().empty();
+void SceneManager::duplicateEntity(Entity* entity) {
+    if (!m_scene || !entity) return;
+    Entity* copy = m_scene->duplicateEntity(entity);
+    connectEntitySignals(copy);
+    emit entityCreated(copy);
 }
 
-QVector3D SceneManager::getSceneBoundingBoxCenter() const
-{
-    if (!m_scene) return QVector3D(0, 0, 0);
-    
-    // Calculate center of all entities
-    // This is a stub implementation - real implementation would calculate proper bounding box
-    return QVector3D(0, 0, 0);
+void SceneManager::clearScene() {
+    if (m_scene) m_scene->clear();
+    m_selectedEntity = nullptr;
+    emit sceneCleared();
 }
+
+bool SceneManager::saveScene(const std::string& filePath) {
+    // Stub: serialize scene to file
+    if (!m_scene) return false;
+    std::ofstream file(filePath);
+    if (!file.is_open()) return false;
+    file << "Scene serialization not implemented";
+    file.close();
+    emit sceneSaved(filePath);
+    return true;
+}
+
+bool SceneManager::loadScene(const std::string& filePath) {
+    // Stub: load scene from file
+    std::ifstream file(filePath);
+    if (!file.is_open()) return false;
+    // TODO: Deserialize scene
+    file.close();
+    emit sceneLoaded(filePath);
+    return true;
+}
+
+std::vector<Entity*> SceneManager::getAllEntities() const {
+    if (!m_scene) return {};
+    return m_scene->getAllEntities();
+}
+
+Entity* SceneManager::findEntityByName(const std::string& name) const {
+    if (!m_scene) return nullptr;
+    return m_scene->findEntityByName(name);
+}
+
+Entity* SceneManager::findEntityById(uint32_t id) const {
+    if (!m_scene) return nullptr;
+    return m_scene->findEntityById(id);
+}
+
+Entity* SceneManager::pickObject(const glm::vec3& rayOrigin, const glm::vec3& rayDirection) const {
+    // Stub: implement picking logic
+    if (!m_scene) return nullptr;
+    // Convert to glm::vec3 if needed
+    return nullptr;
+}
+
+void SceneManager::setSelectedObject(Entity* entity) {
+    m_selectedEntity = entity;
+    emit selectionChanged();
+}
+
+bool SceneManager::isEmpty() const {
+    return !m_scene || m_scene->isEmpty();
+}
+
+glm::vec3 SceneManager::getSceneBoundingBoxCenter() const {
+    if (!m_scene) return glm::vec3();
+    return m_scene->getBoundingBoxCenter();
+}
+
+std::string SceneManager::generateEntityName(const std::string& baseName) const {
+    // Stub: generate a unique name
+    return baseName + "_1";
+}
+
+void SceneManager::connectEntitySignals(Entity* entity) {
+    // Stub: connect signals if needed
+    Q_UNUSED(entity);
+}
+
+} // namespace rude

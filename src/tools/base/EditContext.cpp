@@ -1,9 +1,15 @@
+
 #include "EditContext.h"
 #include "GeometryConverter.h"
 #include "SceneObject.h"
 #include "Scene.h"
-#include <QDebug>
+
+#include <glm/glm.hpp>
 #include <algorithm>
+
+#include "core/mesh_elements.hpp"
+#include "core/half_edge_mesh.hpp"
+#include "core/half_edge_utils.hpp"
 
 // EditContext Implementation
 EditContext::EditContext(QObject* parent)
@@ -54,7 +60,7 @@ void EditContext::setActiveObject(SceneObjectPtr object) {
     }
 }
 
-HalfEdgeMeshPtr EditContext::getActiveHalfEdgeMesh() const {
+rude::HalfEdgeMeshPtr EditContext::getActiveHalfEdgeMesh() const {
     return m_workingHalfEdgeMesh;
 }
 
@@ -147,10 +153,13 @@ void EditContext::invertSelection() {
             clearSelectionInternal();
             
             for (auto& face : allFaces) {
-                if (!face->isSelected()) {
+                // TODO: Fix selection logic to use external tracking (rude:: API has no isSelected/setSelected)
+                // The rude:: API doesn't have built-in selection state, so we need to track it externally
+                if (std::find(m_selectedFaces.begin(), m_selectedFaces.end(), face) == m_selectedFaces.end()) {
                     addFaceToSelection(face);
+                } else {
+                    removeFaceFromSelection(face);
                 }
-                face->setSelected(!face->isSelected());
             }
             break;
         }
@@ -162,7 +171,7 @@ void EditContext::invertSelection() {
     emit selectionChanged();
 }
 
-void EditContext::selectVertex(HalfEdgeVertexPtr vertex, bool addToSelection) {
+void EditContext::selectVertex(rude::VertexPtr vertex, bool addToSelection) {
     if (!vertex || m_currentSelectionType != SelectionType::Vertex) return;
     
     if (!addToSelection) {
@@ -170,12 +179,12 @@ void EditContext::selectVertex(HalfEdgeVertexPtr vertex, bool addToSelection) {
     }
     
     addVertexToSelection(vertex);
-    vertex->setSelected(true);
+    // Note: Selection state is now managed externally, not as vertex property
     
     emit selectionChanged();
 }
 
-void EditContext::selectEdge(HalfEdgeEdgePtr edge, bool addToSelection) {
+void EditContext::selectEdge(rude::EdgePtr edge, bool addToSelection) {
     if (!edge || m_currentSelectionType != SelectionType::Edge) return;
     
     if (!addToSelection) {
@@ -183,12 +192,12 @@ void EditContext::selectEdge(HalfEdgeEdgePtr edge, bool addToSelection) {
     }
     
     addEdgeToSelection(edge);
-    edge->setSelected(true);
+    // Note: Selection state is now managed externally, not as edge property
     
     emit selectionChanged();
 }
 
-void EditContext::selectFace(HalfEdgeFacePtr face, bool addToSelection) {
+void EditContext::selectFace(rude::FacePtr face, bool addToSelection) {
     if (!face || m_currentSelectionType != SelectionType::Face) return;
     
     if (!addToSelection) {
@@ -196,39 +205,39 @@ void EditContext::selectFace(HalfEdgeFacePtr face, bool addToSelection) {
     }
     
     addFaceToSelection(face);
-    face->setSelected(true);
+    // Note: Selection state is now managed externally, not as face property
     
     emit selectionChanged();
 }
 
-void EditContext::deselectVertex(HalfEdgeVertexPtr vertex) {
+void EditContext::deselectVertex(rude::VertexPtr vertex) {
     if (!vertex) return;
     
     removeVertexFromSelection(vertex);
-    vertex->setSelected(false);
+    // Note: Selection state is now managed externally, not as vertex property
     
     emit selectionChanged();
 }
 
-void EditContext::deselectEdge(HalfEdgeEdgePtr edge) {
+void EditContext::deselectEdge(rude::EdgePtr edge) {
     if (!edge) return;
     
     removeEdgeFromSelection(edge);
-    edge->setSelected(false);
+    // Note: Selection state is now managed externally, not as edge property
     
     emit selectionChanged();
 }
 
-void EditContext::deselectFace(HalfEdgeFacePtr face) {
+void EditContext::deselectFace(rude::FacePtr face) {
     if (!face) return;
     
     removeFaceFromSelection(face);
-    face->setSelected(false);
+    // Note: Selection state is now managed externally, not as face property
     
     emit selectionChanged();
 }
 
-void EditContext::boxSelect(const QVector3D& min, const QVector3D& max, bool addToSelection) {
+void EditContext::boxSelect(const glm::vec3& min, const glm::vec3& max, bool addToSelection) {
     if (!m_workingHalfEdgeMesh) return;
     
     if (!addToSelection) {
@@ -238,12 +247,11 @@ void EditContext::boxSelect(const QVector3D& min, const QVector3D& max, bool add
     switch (m_currentSelectionType) {
         case SelectionType::Vertex: {
             for (auto& vertex : m_workingHalfEdgeMesh->getVertices()) {
-                const auto& pos = vertex->getPosition();
-                if (pos.x() >= min.x() && pos.x() <= max.x() &&
-                    pos.y() >= min.y() && pos.y() <= max.y() &&
-                    pos.z() >= min.z() && pos.z() <= max.z()) {
+                auto pos = vertex->position;
+                if (pos.x >= min.x && pos.x <= max.x &&
+                    pos.y >= min.y && pos.y <= max.y &&
+                    pos.z >= min.z && pos.z <= max.z) {
                     addVertexToSelection(vertex);
-                    vertex->setSelected(true);
                 }
             }
             break;
@@ -251,12 +259,19 @@ void EditContext::boxSelect(const QVector3D& min, const QVector3D& max, bool add
         
         case SelectionType::Edge: {
             for (auto& edge : m_workingHalfEdgeMesh->getEdges()) {
-                auto midpoint = edge->getMidpoint();
-                if (midpoint.x() >= min.x() && midpoint.x() <= max.x() &&
-                    midpoint.y() >= min.y() && midpoint.y() <= max.y() &&
-                    midpoint.z() >= min.z() && midpoint.z() <= max.z()) {
-                    addEdgeToSelection(edge);
-                    edge->setSelected(true);
+                // Calculate edge midpoint manually
+                if (edge->halfEdge && edge->halfEdge->vertex && 
+                    edge->halfEdge->twin && edge->halfEdge->twin->vertex) {
+                    auto pos1 = edge->halfEdge->vertex->position;
+                    auto pos2 = edge->halfEdge->twin->vertex->position;
+                    glm::vec3 midpoint = (pos1 + pos2) * 0.5f;
+                    
+                    if (midpoint.x >= min.x && midpoint.x <= max.x &&
+                        midpoint.y >= min.y && midpoint.y <= max.y &&
+                        midpoint.z >= min.z && midpoint.z <= max.z) {
+                        addEdgeToSelection(edge);
+                        // Note: Selection state is now managed externally
+                    }
                 }
             }
             break;
@@ -264,12 +279,23 @@ void EditContext::boxSelect(const QVector3D& min, const QVector3D& max, bool add
         
         case SelectionType::Face: {
             for (auto& face : m_workingHalfEdgeMesh->getFaces()) {
-                auto centroid = face->getCentroid();
-                if (centroid.x() >= min.x() && centroid.x() <= max.x() &&
-                    centroid.y() >= min.y() && centroid.y() <= max.y() &&
-                    centroid.z() >= min.z() && centroid.z() <= max.z()) {
-                    addFaceToSelection(face);
-                    face->setSelected(true);
+                // Calculate face centroid manually
+                auto vertices = face->getVertices();
+                if (!vertices.empty()) {
+                    glm::vec3 centroid(0.0f);
+                    for (auto vertex : vertices) {
+                        if (vertex) {
+                            centroid += vertex->position;
+                        }
+                    }
+                    centroid /= static_cast<float>(vertices.size());
+                    
+                    if (centroid.x >= min.x && centroid.x <= max.x &&
+                        centroid.y >= min.y && centroid.y <= max.y &&
+                        centroid.z >= min.z && centroid.z <= max.z) {
+                        addFaceToSelection(face);
+                        // Note: Selection state is now managed externally
+                    }
                 }
             }
             break;
@@ -282,7 +308,7 @@ void EditContext::boxSelect(const QVector3D& min, const QVector3D& max, bool add
     emit selectionChanged();
 }
 
-void EditContext::selectEdgeLoop(HalfEdgeEdgePtr startEdge, bool addToSelection) {
+void EditContext::selectEdgeLoop(rude::EdgePtr startEdge, bool addToSelection) {
     if (!startEdge || m_currentSelectionType != SelectionType::Edge) return;
     
     if (!addToSelection) {
@@ -291,17 +317,17 @@ void EditContext::selectEdgeLoop(HalfEdgeEdgePtr startEdge, bool addToSelection)
     
     // Simple edge loop implementation
     // In a real implementation, this would traverse the mesh topology
-    auto edgeLoop = HalfEdgeUtils::getEdgeLoop(startEdge);
+    auto edgeLoop = rude::HalfEdgeUtils::getEdgeLoop(startEdge);
     
     for (auto& edge : edgeLoop) {
         addEdgeToSelection(edge);
-        edge->setSelected(true);
+        // Note: Selection state is now managed externally
     }
     
     emit selectionChanged();
 }
 
-void EditContext::selectEdgeRing(HalfEdgeEdgePtr startEdge, bool addToSelection) {
+void EditContext::selectEdgeRing(rude::EdgePtr startEdge, bool addToSelection) {
     if (!startEdge || m_currentSelectionType != SelectionType::Edge) return;
     
     if (!addToSelection) {
@@ -309,11 +335,11 @@ void EditContext::selectEdgeRing(HalfEdgeEdgePtr startEdge, bool addToSelection)
     }
     
     // Simple edge ring implementation
-    auto edgeRing = HalfEdgeUtils::getEdgeRing(startEdge);
+    auto edgeRing = rude::HalfEdgeUtils::getEdgeRing(startEdge);
     
     for (auto& edge : edgeRing) {
         addEdgeToSelection(edge);
-        edge->setSelected(true);
+        // Note: Selection state is now managed externally
     }
     
     emit selectionChanged();
@@ -355,16 +381,8 @@ void EditContext::updateWorkingMesh() {
 }
 
 void EditContext::clearSelectionInternal() {
-    // Clear selection flags on elements
-    for (auto& vertex : m_selectedVertices) {
-        vertex->setSelected(false);
-    }
-    for (auto& edge : m_selectedEdges) {
-        edge->setSelected(false);
-    }
-    for (auto& face : m_selectedFaces) {
-        face->setSelected(false);
-    }
+    // Selection flags are no longer stored on elements, just clear our internal lists
+    // Note: Selection state is now managed externally, not as element properties
     
     // Clear selection lists
     m_selectedVertices.clear();
@@ -372,37 +390,37 @@ void EditContext::clearSelectionInternal() {
     m_selectedFaces.clear();
 }
 
-void EditContext::addVertexToSelection(HalfEdgeVertexPtr vertex) {
+void EditContext::addVertexToSelection(rude::VertexPtr vertex) {
     if (std::find(m_selectedVertices.begin(), m_selectedVertices.end(), vertex) == m_selectedVertices.end()) {
         m_selectedVertices.push_back(vertex);
     }
 }
 
-void EditContext::addEdgeToSelection(HalfEdgeEdgePtr edge) {
+void EditContext::addEdgeToSelection(rude::EdgePtr edge) {
     if (std::find(m_selectedEdges.begin(), m_selectedEdges.end(), edge) == m_selectedEdges.end()) {
         m_selectedEdges.push_back(edge);
     }
 }
 
-void EditContext::addFaceToSelection(HalfEdgeFacePtr face) {
+void EditContext::addFaceToSelection(rude::FacePtr face) {
     if (std::find(m_selectedFaces.begin(), m_selectedFaces.end(), face) == m_selectedFaces.end()) {
         m_selectedFaces.push_back(face);
     }
 }
 
-void EditContext::removeVertexFromSelection(HalfEdgeVertexPtr vertex) {
+void EditContext::removeVertexFromSelection(rude::VertexPtr vertex) {
     m_selectedVertices.erase(
         std::remove(m_selectedVertices.begin(), m_selectedVertices.end(), vertex),
         m_selectedVertices.end());
 }
 
-void EditContext::removeEdgeFromSelection(HalfEdgeEdgePtr edge) {
+void EditContext::removeEdgeFromSelection(rude::EdgePtr edge) {
     m_selectedEdges.erase(
         std::remove(m_selectedEdges.begin(), m_selectedEdges.end(), edge),
         m_selectedEdges.end());
 }
 
-void EditContext::removeFaceFromSelection(HalfEdgeFacePtr face) {
+void EditContext::removeFaceFromSelection(rude::FacePtr face) {
     m_selectedFaces.erase(
         std::remove(m_selectedFaces.begin(), m_selectedFaces.end(), face),
         m_selectedFaces.end());

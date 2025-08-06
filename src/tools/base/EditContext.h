@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Common.h"
-#include "HalfEdgeMesh.h"
+
 #include <QObject>
 #include <memory>
 #include <vector>
@@ -38,29 +38,29 @@ public:
     void commitChangesToMesh(); // Apply half-edge changes back to face-vertex mesh
 
     // Selection management
-    const std::vector<HalfEdgeVertexPtr>& getSelectedVertices() const { return m_selectedVertices; }
-    const std::vector<HalfEdgeEdgePtr>& getSelectedEdges() const { return m_selectedEdges; }
-    const std::vector<HalfEdgeFacePtr>& getSelectedFaces() const { return m_selectedFaces; }
+    const std::vector<rude::VertexPtr>& getSelectedVertices() const { return m_selectedVertices; }
+    const std::vector<rude::EdgePtr>& getSelectedEdges() const { return m_selectedEdges; }
+    const std::vector<rude::FacePtr>& getSelectedFaces() const { return m_selectedFaces; }
     
     void clearSelection();
     void selectAll();
     void invertSelection();
     
     // Element selection
-    void selectVertex(HalfEdgeVertexPtr vertex, bool addToSelection = false);
-    void selectEdge(HalfEdgeEdgePtr edge, bool addToSelection = false);
-    void selectFace(HalfEdgeFacePtr face, bool addToSelection = false);
+    void selectVertex(rude::VertexPtr vertex, bool addToSelection = false);
+    void selectEdge(rude::EdgePtr edge, bool addToSelection = false);
+    void selectFace(rude::FacePtr face, bool addToSelection = false);
     
-    void deselectVertex(HalfEdgeVertexPtr vertex);
-    void deselectEdge(HalfEdgeEdgePtr edge);
-    void deselectFace(HalfEdgeFacePtr face);
+    void deselectVertex(rude::VertexPtr vertex);
+    void deselectEdge(rude::EdgePtr edge);
+    void deselectFace(rude::FacePtr face);
     
     // Box selection
-    void boxSelect(const QVector3D& min, const QVector3D& max, bool addToSelection = false);
+    void boxSelect(const glm::vec3& min, const glm::vec3& max, bool addToSelection = false);
     
     // Loop/ring selection
-    void selectEdgeLoop(HalfEdgeEdgePtr startEdge, bool addToSelection = false);
-    void selectEdgeRing(HalfEdgeEdgePtr startEdge, bool addToSelection = false);
+    void selectEdgeLoop(rude::EdgePtr startEdge, bool addToSelection = false);
+    void selectEdgeRing(rude::EdgePtr startEdge, bool addToSelection = false);
 
     // Validation
     bool canEdit() const;
@@ -84,19 +84,19 @@ private:
     HalfEdgeMeshPtr m_workingHalfEdgeMesh;
     
     // Current selection
-    std::vector<HalfEdgeVertexPtr> m_selectedVertices;
-    std::vector<HalfEdgeEdgePtr> m_selectedEdges;
-    std::vector<HalfEdgeFacePtr> m_selectedFaces;
+    std::vector<rude::VertexPtr> m_selectedVertices;
+    std::vector<rude::EdgePtr> m_selectedEdges;
+    std::vector<rude::FacePtr> m_selectedFaces;
     
     // Helper methods
     void updateWorkingMesh();
     void clearSelectionInternal();
-    void addVertexToSelection(HalfEdgeVertexPtr vertex);
-    void addEdgeToSelection(HalfEdgeEdgePtr edge);
-    void addFaceToSelection(HalfEdgeFacePtr face);
-    void removeVertexFromSelection(HalfEdgeVertexPtr vertex);
-    void removeEdgeFromSelection(HalfEdgeEdgePtr edge);
-    void removeFaceFromSelection(HalfEdgeFacePtr face);
+    void addVertexToSelection(rude::VertexPtr vertex);
+    void addEdgeToSelection(rude::EdgePtr edge);
+    void addFaceToSelection(rude::FacePtr face);
+    void removeVertexFromSelection(rude::VertexPtr vertex);
+    void removeEdgeFromSelection(rude::EdgePtr edge);
+    void removeFaceFromSelection(rude::FacePtr face);
 };
 
 /**

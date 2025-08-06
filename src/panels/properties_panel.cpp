@@ -3,7 +3,7 @@
 #include <QVBoxLayout>
 #include <QLabel>
 
-PropertiesPanel::PropertiesPanel(QWidget* parent)
+rude::PropertiesPanel::PropertiesPanel(QWidget* parent)
     : QDockWidget("Properties", parent), contentWidget(new QWidget(this))
 {
     setWidget(contentWidget);
@@ -11,12 +11,12 @@ PropertiesPanel::PropertiesPanel(QWidget* parent)
     layout->addWidget(new QLabel("[Properties Placeholder]", contentWidget));
 }
 
-void PropertiesPanel::setEntity(Entity* entity) {
+void rude::PropertiesPanel::setEntity(Entity* entity) {
     currentEntity = entity;
     updateProperties();
 }
 
-void PropertiesPanel::updateProperties() {
+void rude::PropertiesPanel::updateProperties() {
     // For now, just update the placeholder text
     // In the future, display/edit entity properties
 }

@@ -11,7 +11,11 @@
 
 // Forward declarations
 class Entity;
-class Scene;
+
+namespace rude {
+    class Scene;
+    class SceneManager;
+}
 
 namespace rude {
 
@@ -88,10 +92,10 @@ public:
     void selectByRect(const QRect& rect, const glm::mat4& viewProj, ComponentType type);
     
     // Scene management
-    void setScene(Scene* scene);
-    Scene* getScene() const { return m_scene; }
-    void setSceneManager(class SceneManager* sceneManager) { m_sceneManager = sceneManager; }
-    class SceneManager* getSceneManager() const { return m_sceneManager; }
+    void setScene(rude::Scene* scene);
+    rude::Scene* getScene() const { return m_scene; }
+    void setSceneManager(rude::SceneManager* sceneManager) { m_sceneManager = sceneManager; }
+    rude::SceneManager* getSceneManager() const { return m_sceneManager; }
     
     // Selection actions
     void selectAll();
@@ -141,8 +145,8 @@ private:
     ComponentType m_currentSelectionType = ComponentType::None;
     
     // Parent objects
-    Scene* m_scene = nullptr;
-    class SceneManager* m_sceneManager = nullptr;
+    rude::Scene* m_scene = nullptr;
+    rude::SceneManager* m_sceneManager = nullptr;
     
     // Internal helpers
     void emitAppropriateSignal(ComponentType type);

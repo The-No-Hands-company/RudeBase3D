@@ -10,6 +10,8 @@
 // Forward declaration
 class PrimitiveManager;
 
+namespace rude {
+
 /**
  * @brief Central manager for scene operations and entity lifecycle
  * 
@@ -34,16 +36,16 @@ public:
     ~SceneManager();
 
     // Scene management
-    void setScene(std::shared_ptr<Scene> scene);
-    std::shared_ptr<Scene> getScene() const { return m_scene; }
+    void setScene(std::shared_ptr<rude::Scene> scene);
+    std::shared_ptr<rude::Scene> getScene() const { return m_scene; }
     
     // Manager coordination
     void setPrimitiveManager(PrimitiveManager* primitiveManager);
 
     // Entity creation (delegates to appropriate factories)
-    Entity* createPrimitive(const QString& primitiveType, const QString& name = QString());
-    Entity* createEntity(const QString& name = QString());
-    Entity* importMesh(const QString& filePath, const QString& name = QString());
+    Entity* createPrimitive(const std::string& primitiveType, const std::string& name = "");
+    Entity* createEntity(const std::string& name = "");
+    Entity* importMesh(const std::string& filePath, const std::string& name = "");
     
     // Entity management
     void deleteEntity(Entity* entity);
@@ -52,37 +54,39 @@ public:
     
     // Scene operations
     void clearScene();
-    bool saveScene(const QString& filePath);
-    bool loadScene(const QString& filePath);
+    bool saveScene(const std::string& filePath);
+    bool loadScene(const std::string& filePath);
     
     // Query operations
     std::vector<Entity*> getAllEntities() const;
-    Entity* findEntityByName(const QString& name) const;
+    Entity* findEntityByName(const std::string& name) const;
     Entity* findEntityById(uint32_t id) const;
     
     // Selection operations
-    Entity* pickObject(const QVector3D& rayOrigin, const QVector3D& rayDirection) const;
+    Entity* pickObject(const glm::vec3& rayOrigin, const glm::vec3& rayDirection) const;
     void setSelectedObject(Entity* entity);
     Entity* getSelectedObject() const { return m_selectedEntity; }
     bool isEmpty() const;
-    QVector3D getSceneBoundingBoxCenter() const;
+    glm::vec3 getSceneBoundingBoxCenter() const;
 
 signals:
     void entityCreated(Entity* entity);
     void entityDeleted(Entity* entity);
     void sceneCleared();
-    void sceneLoaded(const QString& filePath);
-    void sceneSaved(const QString& filePath);
+    void sceneLoaded(const std::string& filePath);
+    void sceneSaved(const std::string& filePath);
     void selectionChanged();
 
 private:
     // Data
-    std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<rude::Scene> m_scene;
     std::unique_ptr<PrimitiveManager> m_primitiveManager;
     PrimitiveManager* m_externalPrimitiveManager = nullptr;
     Entity* m_selectedEntity = nullptr;
     
     // Helper methods
-    QString generateEntityName(const QString& baseName) const;
+    std::string generateEntityName(const std::string& baseName) const;
     void connectEntitySignals(Entity* entity);
 };
+
+} // namespace rude
