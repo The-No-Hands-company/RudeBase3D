@@ -2,6 +2,7 @@
 
 #include "core/scene_manager.hpp"
 #include "core/selection_manager.hpp"
+#include "core/edit_preview_system.hpp"
 #include "ecs/ECSManager.h"
 #include <memory>
 
@@ -29,6 +30,7 @@ public:
     rude::SceneManager* getSceneManager() const { return m_sceneManager.get(); }
     rude::SelectionManager* getSelectionManager() const { return m_selectionManager.get(); }
     rude::ecs::ECSManager* getECSManager() const { return m_ecsManager.get(); }
+    RudeBase3D::Core::EditPreviewSystem* getEditPreviewSystem() const { return m_editPreviewSystem.get(); }
 
     // Initialize all core systems
     void initialize();
@@ -48,6 +50,7 @@ private:
     std::unique_ptr<rude::SceneManager> m_sceneManager;
     std::unique_ptr<rude::SelectionManager> m_selectionManager;
     std::unique_ptr<rude::ecs::ECSManager> m_ecsManager;
+    std::unique_ptr<RudeBase3D::Core::EditPreviewSystem> m_editPreviewSystem;
     
     // Other managers will be added as needed:
     // - PrimitiveManager

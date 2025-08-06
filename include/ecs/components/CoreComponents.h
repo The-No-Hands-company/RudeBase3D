@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../Component.h"
+#include "../Entity.h"
+#include "../../core/mesh_forward.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -8,12 +10,12 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
+#include <unordered_map>
+
+// Forward declaration for Material class
+class Material;
 
 namespace rude::ecs {
-
-// Forward declarations
-struct Mesh;
-class Material;
 
 /**
  * @brief Component that defines the position, rotation, and scale of an entity
@@ -55,18 +57,18 @@ struct TransformComponent : public Component {
  * @brief Component that contains mesh geometry data
  */
 struct MeshComponent : public Component {
-    std::shared_ptr<Mesh> mesh;
+    std::shared_ptr<rude::Mesh> mesh;
     bool isDirty = true; // Flag to indicate if mesh needs to be uploaded to GPU
 
     MeshComponent() = default;
-    explicit MeshComponent(std::shared_ptr<Mesh> meshPtr) : mesh(std::move(meshPtr)) {}
+    explicit MeshComponent(std::shared_ptr<rude::Mesh> meshPtr) : mesh(std::move(meshPtr)) {}
 };
 
 /**
  * @brief Component that defines material properties for rendering
  */
 struct MaterialComponent : public Component {
-    std::shared_ptr<Material> material;
+    std::shared_ptr<::Material> material;
     
     // Basic material properties (can be overridden by material)
     glm::vec3 albedo{1.0f, 1.0f, 1.0f};
@@ -75,7 +77,7 @@ struct MaterialComponent : public Component {
     float emissive = 0.0f;
 
     MaterialComponent() = default;
-    explicit MaterialComponent(std::shared_ptr<Material> mat) : material(std::move(mat)) {}
+    explicit MaterialComponent(std::shared_ptr<::Material> mat) : material(std::move(mat)) {}
 };
 
 /**
