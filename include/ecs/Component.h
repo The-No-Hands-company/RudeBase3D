@@ -1,3 +1,34 @@
+/*
+ * ██████╗ ██╗   ██╗██████╗ ███████╗██████╗  █████╗ ███████╗███████╗██████╗ ██████╗ 
+ * ██╔══██╗██║   ██║██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝╚════██╗██╔══██╗
+ * ██████╔╝██║   ██║██║  ██║█████╗  ██████╔╝███████║███████╗█████╗   █████╔╝██║  ██║
+ * ██╔══██╗██║   ██║██║  ██║██╔══╝  ██╔══██╗██╔══██║╚════██║██╔══╝   ╚═══██╗██║  ██║
+ * ██║  ██║╚██████╔╝██████╔╝███████╗██████╔╝██║  ██║███████║███████╗██████╔╝██████╔╝
+ * ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═════╝ ╚═════╝ 
+ * 
+ * Professional 3D Modeling & Animation Software
+ * 
+ * ████████████████████████████████████████████████████████████████████████████████
+ * █                                                                              █
+ * █  FILE: Component.h                                                           █
+ * █  DESCRIPTION: ECS Component Base Class & Type System                        █
+ * █                                                                              █
+ * █  PART OF: RudeBase3D - Professional 3D Modeling & Animation Suite            █
+ * █  VERSION: 1.0.0                                                              █
+ * █  CREATED: 2024                                                               █
+ * █  UPDATED: August 7, 2025                                                     █
+ * █                                                                              █
+ * █  LICENSE: MIT License                                                        █
+ * █  COMPANY: The No Hands Company                                               █
+ * █  AUTHOR: RudeBase3D Development Team                                         █
+ * █                                                                              █
+ * █  This file contains the core Component base class providing type            █
+ * █  identification and data container functionality for the Entity             █
+ * █  Component System architecture used throughout RudeBase3D.                  █
+ * █                                                                              █
+ * ████████████████████████████████████████████████████████████████████████████████
+ */
+
 #pragma once
 
 #include <typeinfo>

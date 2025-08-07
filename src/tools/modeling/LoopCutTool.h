@@ -1,3 +1,34 @@
+/*
+ * ██████╗ ██╗   ██╗██████╗ ███████╗██████╗  █████╗ ███████╗███████╗██████╗ ██████╗ 
+ * ██╔══██╗██║   ██║██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝╚════██╗██╔══██╗
+ * ██████╔╝██║   ██║██║  ██║█████╗  ██████╔╝███████║███████╗█████╗   █████╔╝██║  ██║
+ * ██╔══██╗██║   ██║██║  ██║██╔══╝  ██╔══██╗██╔══██║╚════██║██╔══╝   ╚═══██╗██║  ██║
+ * ██║  ██║╚██████╔╝██████╔╝███████╗██████╔╝██║  ██║███████║███████╗██████╔╝██████╔╝
+ * ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═════╝ ╚═════╝ 
+ * 
+ * Professional 3D Modeling & Animation Software
+ * 
+ * ████████████████████████████████████████████████████████████████████████████████
+ * █                                                                              █
+ * █  FILE: LoopCutTool.h                                                         █
+ * █  DESCRIPTION: Advanced Loop Cut Tool for Mesh Edge Loop Division            █
+ * █                                                                              █
+ * █  PART OF: RudeBase3D - Professional 3D Modeling & Animation Suite            █
+ * █  VERSION: 1.0.0                                                              █
+ * █  CREATED: 2024                                                               █
+ * █  UPDATED: August 7, 2025                                                     █
+ * █                                                                              █
+ * █  LICENSE: MIT License                                                        █
+ * █  COMPANY: The No Hands Company                                               █
+ * █  AUTHOR: RudeBase3D Development Team                                         █
+ * █                                                                              █
+ * █  This file contains the LoopCutTool class providing advanced edge loop      █
+ * █  cutting functionality for precise mesh division and topology modification  █
+ * █  in professional 3D modeling workflows.                                     █
+ * █                                                                              █
+ * ████████████████████████████████████████████████████████████████████████████████
+ */
+
 #pragma once
 
 #include "Common.h"

@@ -1,3 +1,34 @@
+/*
+ * ██████╗ ██╗   ██╗██████╗ ███████╗██████╗  █████╗ ███████╗███████╗██████╗ ██████╗ 
+ * ██╔══██╗██║   ██║██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝╚════██╗██╔══██╗
+ * ██████╔╝██║   ██║██║  ██║█████╗  ██████╔╝███████║███████╗█████╗   █████╔╝██║  ██║
+ * ██╔══██╗██║   ██║██║  ██║██╔══╝  ██╔══██╗██╔══██║╚════██║██╔══╝   ╚═══██╗██║  ██║
+ * ██║  ██║╚██████╔╝██████╔╝███████╗██████╔╝██║  ██║███████║███████╗██████╔╝██████╔╝
+ * ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═════╝ ╚═════╝ 
+ * 
+ * Professional 3D Modeling & Animation Software
+ * 
+ * ████████████████████████████████████████████████████████████████████████████████
+ * █                                                                              █
+ * █  FILE: ECS.h                                                                 █
+ * █  DESCRIPTION: Entity Component System Main Include & API                    █
+ * █                                                                              █
+ * █  PART OF: RudeBase3D - Professional 3D Modeling & Animation Suite            █
+ * █  VERSION: 1.0.0                                                              █
+ * █  CREATED: 2024                                                               █
+ * █  UPDATED: August 7, 2025                                                     █
+ * █                                                                              █
+ * █  LICENSE: MIT License                                                        █
+ * █  COMPANY: The No Hands Company                                               █
+ * █  AUTHOR: RudeBase3D Development Team                                         █
+ * █                                                                              █
+ * █  This file provides the main include interface for the Entity Component     █
+ * █  System architecture, offering convenient access to all ECS classes        █
+ * █  and utilities used throughout the RudeBase3D application.                  █
+ * █                                                                              █
+ * ████████████████████████████████████████████████████████████████████████████████
+ */
+
 #pragma once
 
 /**
