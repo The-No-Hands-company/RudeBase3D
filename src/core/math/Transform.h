@@ -5,10 +5,10 @@
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
-class Transform {
+class LegacyTransform {
 public:
-    Transform();
-    ~Transform() = default;
+    LegacyTransform();
+    ~LegacyTransform() = default;
 
     // Position
     void setPosition(const glm::vec3& position);

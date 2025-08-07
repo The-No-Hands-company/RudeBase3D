@@ -360,6 +360,10 @@ glm::vec3 MayaCameraController::calculateSelectionCenter() const
 float MayaCameraController::calculateFramingDistance(const glm::vec3& target, float objectSize) const
 {
     if (!m_camera) return 10.0f;
+    
+    // target parameter will be used for distance calculation from camera to target
+    (void)target; // Future: calculate distance based on camera-to-target vector
+    
     float fov = glm::radians(m_camera->getFOV());
     float distance = objectSize / (2.0f * tan(fov * 0.5f));
     // Add some margin

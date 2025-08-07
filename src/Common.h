@@ -44,7 +44,7 @@ namespace rude {
 }
 
 class Material;
-class Transform;
+struct Transform;
 class GeometryConverter;
 class NURBSSurface;
 class SubdivisionMesh;
@@ -136,16 +136,16 @@ const glm::vec3 WORLD_RIGHT(1.0f, 0.0f, 0.0f);
 //     return QVector2D(v.x, v.y);
 // }
 
-// C++23 Concepts for type safety
+// C++20 Concepts for type safety
 template<typename T>
 concept Transformable = requires(T t) {
-    { t.getTransform() } -> std::convertible_to<Transform&>;
-    { t.setTransform(std::declval<Transform>()) } -> std::same_as<void>;
+    { t.getTransform() } -> ::std::convertible_to<Transform&>;
+    { t.setTransform(::std::declval<Transform>()) } -> ::std::same_as<void>;
 };
 
 template<typename T>
 concept Renderable = requires(T t) {
-    { t.getMesh() } -> std::convertible_to<rude::MeshPtr>;
-    { t.getMaterial() } -> std::convertible_to<MaterialPtr>;
-    { t.isVisible() } -> std::convertible_to<bool>;
+    { t.getMesh() } -> ::std::convertible_to<rude::MeshPtr>;
+    { t.getMaterial() } -> ::std::convertible_to<MaterialPtr>;
+    { t.isVisible() } -> ::std::convertible_to<bool>;
 };

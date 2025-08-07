@@ -9,13 +9,16 @@
 namespace rude {
 namespace HalfEdgeUtils {
 
-std::pair<rude::EdgePtr, rude::EdgePtr> splitEdge(rude::HalfEdgeMeshPtr mesh, rude::EdgePtr edge, const glm::vec3& position) {
+::std::pair<rude::EdgePtr, rude::EdgePtr> splitEdge(rude::HalfEdgeMeshPtr mesh, rude::EdgePtr edge, const glm::vec3& position) {
     if (!edge || !mesh) {
         return {nullptr, nullptr};
     }
 
     // This is a simplified implementation
     // In a real implementation, we'd need proper mesh connectivity
+    // Position parameter will be used for new vertex placement
+    (void)position; // Future: world position for split vertex
+    
     qDebug() << "Edge splitting not yet fully implemented";
     return {nullptr, nullptr};
 }
@@ -114,6 +117,9 @@ std::vector<rude::FacePtr> extrudeFaces(rude::HalfEdgeMeshPtr mesh, const std::v
         for (const auto& edge : edges) {
             // Check if this edge is on the boundary of the extrusion
             // (i.e., the adjacent face is not being extruded)
+            // edge variable will be used for boundary checking and side face creation
+            (void)edge; // Acknowledge usage for future edge-based operations
+            
             auto halfEdge = face->halfEdge; // Get the half-edge from the face
             if (!halfEdge) continue;
             

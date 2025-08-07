@@ -103,6 +103,8 @@ bool BlenderCameraController::handleKeyPress(const KeyEvent& event)
 bool BlenderCameraController::handleKeyRelease(const KeyEvent& event)
 {
     // No need to track modifier state, handled via event.modifiers
+    // Event parameter acknowledged for future key-specific release handling
+    (void)event;
     return false;
 }
 void BlenderCameraController::frameScene(bool animate)
@@ -114,6 +116,8 @@ void BlenderCameraController::frameScene(bool animate)
     bool hasObjects = false;
     // TODO: Implement scene bounding box calculation
     // For now, use a default framing
+    // hasObjects will be used to determine if scene has content for framing
+    (void)hasObjects;
 
     glm::vec3 center = (minBounds + maxBounds) * 0.5f;
     glm::vec3 size = maxBounds - minBounds;
@@ -310,6 +314,8 @@ void BlenderCameraController::setNumpadView(int key)
 {
     // TODO: Implement numpad view switching logic here
     // Example: if (key == 1) setFrontView();
+    // Key parameter will be used to determine specific view to set
+    (void)key; // Future: switch camera to specific numpad view based on key
 }
 
 void BlenderCameraController::setFrontView()

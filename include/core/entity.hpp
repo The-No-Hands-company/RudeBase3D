@@ -6,7 +6,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <QMatrix4x4>
-#include "core/math/Transform.h"
+#include "core/transform.hpp"
 #include "core/qt_glm_utils.hpp"
 
 #include "core/mesh_forward.hpp"
@@ -37,11 +37,10 @@ public:
         transform.setPosition(pos);
     }
     glm::quat getRotation() const { 
-        // TODO: Refactor rotation to glm::quat in Transform
-        return glm::quat(1, 0, 0, 0); // Placeholder
+        return transform.getRotation();
     }
     void setRotation(const glm::quat& rot) { 
-        // TODO: Refactor rotation to glm::quat in Transform
+        transform.setRotation(rot);
     }
     glm::vec3 getWorldPosition() const {
         return getPosition(); // For now, just return local position; update if world space is different

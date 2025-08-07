@@ -2,6 +2,7 @@
 #include "core/scene_manager.hpp"
 #include "core/selection_manager.hpp"
 #include "core/primitive_manager.hpp"
+#include "core/edit_preview_system.hpp"
 #include "ecs/ECSManager.h"
 #include <spdlog/spdlog.h>
 
@@ -43,6 +44,13 @@ void CoreSystem::initialize() {
     spdlog::info("Connected SelectionManager to SceneManager");
     }
     
+    // Create edit preview system
+    m_editPreviewSystem = std::make_unique<RudeBase3D::Core::EditPreviewSystem>(
+        m_ecsManager.get(), 
+        m_sceneManager->getScene().get()
+    );
+    spdlog::info("Edit Preview System initialized successfully");
+    
     spdlog::info("Core systems initialized successfully");
     spdlog::info("CoreSystem::initialize() - Core systems ready");
     
@@ -55,6 +63,11 @@ void CoreSystem::update(float deltaTime) {
     // Update ECS systems
     if (m_ecsManager) {
         m_ecsManager->update(deltaTime);
+    }
+    
+    // Update edit preview system
+    if (m_editPreviewSystem) {
+        m_editPreviewSystem->update(deltaTime);
     }
     
     // Update other systems as needed
@@ -80,6 +93,7 @@ void CoreSystem::shutdown() {
     }
     
     // Destroy managers in reverse order of creation
+    m_editPreviewSystem.reset();
     m_ecsManager.reset();
     m_selectionManager.reset();
     m_sceneManager.reset();

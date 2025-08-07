@@ -77,11 +77,14 @@ void Gizmo::setSnapScale(float scale) {
     m_snapScale = scale;
 }
 
-void Gizmo::drawLabel(const glm::vec3& position, const std::string& text, const Camera& camera) const {
+void Gizmo::drawLabel(const glm::vec3& position, const ::std::string& text, const Camera& camera) const {
     if (!m_showLabels) return;
 
     // TODO: Implement text rendering using a font texture or text rendering library
-    // For now, this is a stub implementation
+    // For now, this is a stub implementation that acknowledges parameter usage
+    (void)position; // Future: world position for label placement
+    (void)text;     // Future: text content to render
+    (void)camera;   // Future: camera matrices for screen projection
 }
 
 float Gizmo::snapValue(float value, float snap) const {

@@ -28,6 +28,8 @@ void TranslateGizmo::draw(const Camera& camera) const {
     if (!m_target) return;
 
     // This will be implemented later with a proper rendering system
+    // Use camera for view/projection matrices when rendering is implemented
+    (void)camera;
 }
 
 bool TranslateGizmo::handleMousePressed(const event::MousePressEvent& e, const Camera& camera) {
@@ -55,6 +57,8 @@ bool TranslateGizmo::handleMouseReleased(const event::MouseReleaseEvent& e, cons
     if (m_isDragging && e.isLeftButton) {
         m_isDragging = false;
         m_hoveredAxis = Axis::None;
+        // Camera could be used for coordinate system transforms during release
+        (void)camera;
         return true;
     }
     return false;

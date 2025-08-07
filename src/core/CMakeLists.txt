@@ -1,5 +1,6 @@
 add_library(core
     core_system.cpp
+    edit_preview_system.cpp
     global_shaders.cpp
     half_edge_mesh.cpp
     mesh.cpp

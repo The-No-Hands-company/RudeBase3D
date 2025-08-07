@@ -666,15 +666,21 @@ PLYFileHandler::ImportOptions FileFormatManager::s_plyImportOptions;
 PLYFileHandler::ExportOptions FileFormatManager::s_plyExportOptions;
 
 // STL and PLY handlers - simplified implementations
-STLFileHandler::ImportResult STLFileHandler::importFromFile(const std::string& filePath, const ImportOptions& options) {
+STLFileHandler::ImportResult STLFileHandler::importFromFile(const ::std::string& filePath, const ImportOptions& options) {
     ImportResult result;
     result.errorMessage = "STL import not yet implemented";
+    // Parameters will be used when STL parsing is implemented
+    (void)filePath; // Future: file path for STL reading
+    (void)options;  // Future: import configuration options
     return result;
 }
 
-bool STLFileHandler::exportToFile(const std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options) {
+bool STLFileHandler::exportToFile(const ::std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options) {
     // TODO: Implement STL export logic using std::ofstream
-    // Placeholder implementation
+    // Placeholder implementation - parameters acknowledged for future use
+    (void)filePath; // Future: output file path for STL writing
+    (void)mesh;     // Future: mesh data to export as STL
+    (void)options;  // Future: export configuration options
     return false;
 }
 
@@ -683,15 +689,21 @@ bool STLFileHandler::exportToFile(const std::string& filePath, rude::HalfEdgeMes
     return exportToFile(filePath, faceVertexMesh, options);
 }
 
-PLYFileHandler::ImportResult PLYFileHandler::importFromFile(const std::string& filePath, const ImportOptions& options) {
+PLYFileHandler::ImportResult PLYFileHandler::importFromFile(const ::std::string& filePath, const ImportOptions& options) {
     ImportResult result;
     result.errorMessage = "PLY import not yet implemented";
+    // Parameters acknowledged for future PLY parsing implementation
+    (void)filePath; // Future: file path for PLY reading
+    (void)options;  // Future: import configuration options
     return result;
 }
 
-bool PLYFileHandler::exportToFile(const std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options) {
+bool PLYFileHandler::exportToFile(const ::std::string& filePath, rude::MeshPtr mesh, const ExportOptions& options) {
     // TODO: Implement PLY export logic using std::ofstream
-    // Placeholder implementation
+    // Placeholder implementation - parameters acknowledged for future use
+    (void)filePath; // Future: output file path for PLY writing
+    (void)mesh;     // Future: mesh data to export as PLY
+    (void)options;  // Future: export configuration options
     return false;
 }
 

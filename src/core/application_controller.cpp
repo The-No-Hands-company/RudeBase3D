@@ -203,8 +203,10 @@ void ApplicationController::setupManagerConnections()
 
     // Connect PrimitiveManager signals
     connect(m_primitiveManager.get(), &PrimitiveManager::primitiveCreated,
-            [this](const QString& type, std::shared_ptr<Mesh> mesh) {
+            [this](const QString& type, ::std::shared_ptr<Mesh> mesh) {
                 spdlog::info("[ApplicationController] Primitive created: {}", type.toStdString());
+                // mesh parameter available for future integration with scene management
+                (void)mesh; // Future: add mesh to scene or entity system
             });
     connect(m_primitiveManager.get(), &PrimitiveManager::primitiveCreationFailed,
             [this](const QString& type, const QString& error) {

@@ -137,6 +137,11 @@ void ToolbarManager::insertToolbarBreak(const QString& beforeToolbar)
     if (m_toolbars.contains(beforeToolbar)) {
         QToolBar* toolbar = m_toolbars[beforeToolbar];
         Qt::ToolBarArea area = m_mainWindow->toolBarArea(toolbar);
+        
+        // area could be used for area-specific break insertion logic
+        // For now, acknowledge variable until area-specific functionality is needed
+        (void)area;
+        
         m_mainWindow->insertToolBarBreak(toolbar);
     }
 }

@@ -354,7 +354,12 @@ void PropertiesPanel::onResetTransform()
         return;
     }
     
-    m_selectedObject->getTransform().reset();
+    // Reset transform to default values (identity)
+    auto& transform = m_selectedObject->getTransform();
+    transform.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+    transform.setRotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f)); // Identity quaternion
+    transform.setScale(glm::vec3(1.0f, 1.0f, 1.0f));
+    
     updateTransformProperties();
 }
 

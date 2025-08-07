@@ -170,6 +170,9 @@ void CameraStateManager::applyCameraBookmark(const CameraBookmark& bookmark, boo
 {
     if (!m_camera) return;
 
+    // animate parameter could be used for smooth transitions
+    (void)animate; // Future: enable smooth animated bookmark transitions
+    
     m_camera->getTransform().setPosition(bookmark.position);
     m_camera->lookAt(bookmark.target, bookmark.up);
     m_camera->setFOV(bookmark.fov);

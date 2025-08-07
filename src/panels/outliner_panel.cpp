@@ -53,6 +53,11 @@ void OutlinerPanel::onItemSelectionChanged() {
 
 void OutlinerPanel::onItemDoubleClicked(QTreeWidgetItem* item, int column) {
     if (!item) return;
+    
+    // Column parameter could be used for different actions based on which column was clicked
+    // For now, acknowledge parameter until column-specific actions are implemented
+    (void)column;
+    
     Entity* entity = reinterpret_cast<Entity*>(item->data(0, Qt::UserRole).value<quintptr>());
     emit zoomToEntity(entity);
 }

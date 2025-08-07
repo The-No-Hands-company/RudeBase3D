@@ -36,9 +36,21 @@ public:
     bool handleInput(const event::MouseEvent& event, const Camera& camera);
     
     // Specific event handlers
-    virtual bool handleMousePressed(const event::MousePressEvent& e, const Camera& camera) { return false; }
-    virtual bool handleMouseReleased(const event::MouseReleaseEvent& e, const Camera& camera) { return false; }
-    virtual bool handleMouseMoved(const event::MouseMoveEvent& e, const Camera& camera) { return false; }
+    virtual bool handleMousePressed(const event::MousePressEvent& e, const Camera& camera) { 
+        // Base implementation - record event for potential subclass usage
+        (void)e; (void)camera; 
+        return false; 
+    }
+    virtual bool handleMouseReleased(const event::MouseReleaseEvent& e, const Camera& camera) { 
+        // Base implementation - record event for potential subclass usage
+        (void)e; (void)camera; 
+        return false; 
+    }
+    virtual bool handleMouseMoved(const event::MouseMoveEvent& e, const Camera& camera) { 
+        // Base implementation - record event for potential subclass usage
+        (void)e; (void)camera; 
+        return false; 
+    }
     
     virtual bool isHovered() const = 0;
     virtual bool isActive() const = 0;

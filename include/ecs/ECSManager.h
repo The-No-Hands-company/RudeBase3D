@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ECS.h"
+#include "components/CoreComponents.h"
 #include <memory>
 
 namespace rude::ecs {

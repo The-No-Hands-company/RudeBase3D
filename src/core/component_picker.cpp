@@ -174,6 +174,20 @@ std::vector<SelectionData> ComponentPicker::pickComponentsInRegion(float x1, flo
 
 glm::vec3 ComponentPicker::getRayOrigin(float mouseX, float mouseY, int viewportWidth, int viewportHeight) const {
     if (!m_camera) return glm::vec3(0.0f);
+    
+    // For a typical 3D camera, the ray origin is the camera position
+    // The mouse coordinates help determine the ray direction, not origin
+    // However, we can validate the viewport coordinates
+    if (viewportWidth <= 0 || viewportHeight <= 0) {
+        qDebug() << "[ComponentPicker] Invalid viewport dimensions:" << viewportWidth << "x" << viewportHeight;
+        return glm::vec3(0.0f);
+    }
+    
+    if (mouseX < 0 || mouseX > viewportWidth || mouseY < 0 || mouseY > viewportHeight) {
+        qDebug() << "[ComponentPicker] Mouse coordinates outside viewport:" 
+                 << mouseX << "," << mouseY << "in" << viewportWidth << "x" << viewportHeight;
+    }
+    
     return m_camera->getPosition();
 }
 

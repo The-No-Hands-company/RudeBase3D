@@ -27,6 +27,8 @@ ScaleGizmo::~ScaleGizmo() {}
 void ScaleGizmo::draw(const Camera& camera) const {
     if (!m_target) return;
     // Drawing logic will be implemented later
+    // Camera will be used for view/projection matrices during rendering
+    (void)camera;
 }
 
 bool ScaleGizmo::handleMousePressed(const event::MousePressEvent& e, const Camera& camera) {
@@ -50,6 +52,8 @@ bool ScaleGizmo::handleMouseReleased(const event::MouseReleaseEvent& e, const Ca
     if (m_isDragging && e.isLeftButton) {
         m_isDragging = false;
         m_activeAxis = Axis::None;
+        // Camera could be used for coordinate transforms during release
+        (void)camera;
         return true;
     }
     return false;
@@ -103,7 +107,11 @@ bool ScaleGizmo::isHovered() const {
 Axis ScaleGizmo::hitTestAxis(const glm::vec3& rayOrigin, const glm::vec3& rayDir) const {
     if (!m_target) return Axis::None;
 
-    float minDistance = std::numeric_limits<float>::max();
+    // rayDir would be used for proper ray-object intersection testing
+    // For now, acknowledge parameter for future ray-casting implementation
+    (void)rayDir;
+
+    float minDistance = ::std::numeric_limits<float>::max();
     Axis closestAxis = Axis::None;
 
     for (int i = 0; i < 3; ++i) {
@@ -113,7 +121,7 @@ Axis ScaleGizmo::hitTestAxis(const glm::vec3& rayOrigin, const glm::vec3& rayDir
         
         // A simple bounding box check for the cube at the end of the axis
         float dist = distanceToCube(rayOrigin, cubeCenter, axisDir, 0.1f); // 0.1f is cube size
-        if (dist < std::numeric_limits<float>::max()) {
+        if (dist < ::std::numeric_limits<float>::max()) {
              if (dist < minDistance) {
                 minDistance = dist;
                 closestAxis = axis;
@@ -126,6 +134,9 @@ Axis ScaleGizmo::hitTestAxis(const glm::vec3& rayOrigin, const glm::vec3& rayDir
 float ScaleGizmo::distanceToCube(const glm::vec3& point, const glm::vec3& center, const glm::vec3& direction, float size) const
 {
     // This is a simplified placeholder. A real implementation would be more robust.
+    // Direction would be used for oriented bounding box calculations
+    (void)direction;
+    
     glm::vec3 min = center - glm::vec3(size);
     glm::vec3 max = center + glm::vec3(size);
     if (point.x > min.x && point.x < max.x &&
@@ -133,12 +144,16 @@ float ScaleGizmo::distanceToCube(const glm::vec3& point, const glm::vec3& center
         point.z > min.z && point.z < max.z) {
         return glm::distance(point, center);
     }
-    return std::numeric_limits<float>::max();
+    return ::std::numeric_limits<float>::max();
 }
 
 void ScaleGizmo::drawCube(const glm::vec3& position, const glm::vec3& direction, float size, const glm::vec3& color) const {
     // TODO: Implement cube drawing
-    // For now, this is a stub implementation
+    // For now, this is a stub implementation that acknowledges all parameters
+    (void)position;  // Future: world position for cube placement
+    (void)direction; // Future: orientation for cube alignment
+    (void)size;      // Future: scale factor for cube dimensions
+    (void)color;     // Future: color for cube rendering
 }
 
 

@@ -719,7 +719,21 @@ std::shared_ptr<Mesh> PrimitiveManager::createIcosahedron(float radius)
 
 void PrimitiveManager::subdivideMesh(std::shared_ptr<Mesh> mesh, int levels)
 {
-    // TODO: Implement mesh subdivision
-    // This would use the half-edge mesh structure for subdivision
-    qDebug() << "[PrimitiveManager] Mesh subdivision not yet implemented";
+    if (!mesh) {
+        qDebug() << "[PrimitiveManager] Cannot subdivide: mesh is null";
+        return;
+    }
+    
+    if (levels <= 0) {
+        qDebug() << "[PrimitiveManager] Cannot subdivide: levels must be positive, got" << levels;
+        return;
+    }
+    
+    // TODO: Implement actual mesh subdivision algorithm
+    // For now, validate inputs and log the operation
+    qDebug() << "[PrimitiveManager] Subdivision requested:" << levels << "levels for mesh with" 
+             << mesh->getVertices().size() << "vertices";
+    
+    // TODO: Implement subdivision using the half-edge mesh structure
+    qDebug() << "[PrimitiveManager] Mesh subdivision algorithm not yet implemented";
 }
