@@ -349,6 +349,38 @@ void UIManager::createViewMenu()
     transformModeMenu->addAction(m_translateModeAction);
     transformModeMenu->addAction(m_rotateModeAction);
     transformModeMenu->addAction(m_scaleModeAction);
+    
+    m_viewMenu->addSeparator();
+    
+    // Add Panels submenu
+    auto panelsMenu = m_viewMenu->addMenu("&Panels");
+    
+    // Add panel visibility toggles
+    auto showOutlinerAction = new QAction("&Outliner", this);
+    showOutlinerAction->setCheckable(true);
+    showOutlinerAction->setChecked(true);
+    panelsMenu->addAction(showOutlinerAction);
+    
+    auto showPropertiesAction = new QAction("&Properties", this);
+    showPropertiesAction->setCheckable(true);
+    showPropertiesAction->setChecked(true);
+    panelsMenu->addAction(showPropertiesAction);
+    
+    auto showSelectionAction = new QAction("&Selection", this);
+    showSelectionAction->setCheckable(true);
+    showSelectionAction->setChecked(true);
+    panelsMenu->addAction(showSelectionAction);
+    
+    auto showEditPreviewAction = new QAction("&Edit Preview", this);
+    showEditPreviewAction->setCheckable(true);
+    showEditPreviewAction->setChecked(true);
+    panelsMenu->addAction(showEditPreviewAction);
+    
+    // Connect panel visibility actions
+    connect(showOutlinerAction, &QAction::toggled, this, &UIManager::showOutlinerPanel);
+    connect(showPropertiesAction, &QAction::toggled, this, &UIManager::showPropertiesPanel);
+    connect(showSelectionAction, &QAction::toggled, this, &UIManager::showSelectionPanel);
+    connect(showEditPreviewAction, &QAction::toggled, this, &UIManager::showEditPreviewPanel);
 }
 
 void UIManager::createHelpMenu()

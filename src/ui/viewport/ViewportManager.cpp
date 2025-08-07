@@ -13,6 +13,8 @@
 #include "rendering/effects/LightingSystem.h"
 #include "ui/viewport/GridSystem.h"
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <QMouseEvent>
 #include <QKeyEvent>
 #include <QPainter>

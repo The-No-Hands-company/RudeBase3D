@@ -13,7 +13,9 @@
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <QDebug>
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 Viewport3D::Viewport3D(QWidget* parent)
     : QOpenGLWidget(parent)

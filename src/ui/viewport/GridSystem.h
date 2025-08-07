@@ -3,6 +3,8 @@
 #include "Common.h"
 #include <QObject>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <memory>
 
 // Forward declarations

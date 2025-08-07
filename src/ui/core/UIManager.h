@@ -96,6 +96,12 @@ signals:
     void transformModeChanged(TransformMode mode);
     void renderModeChanged(RenderMode mode);
     
+    // Panel visibility
+    void showOutlinerPanel(bool show);
+    void showPropertiesPanel(bool show);
+    void showSelectionPanel(bool show);
+    void showEditPreviewPanel(bool show);
+    
 private slots:
     void onRecentFileTriggered();
     
