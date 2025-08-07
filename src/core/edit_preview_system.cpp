@@ -264,6 +264,15 @@ void EditPreviewSystem::update(float deltaTime) {
     if (hasActivePreview()) {
         // Could add subtle animation effects here, like pulsing opacity
         // or updating time-based parameters
+        
+        // For now, just accumulate time for potential future use
+        static float accumulatedTime = 0.0f;
+        accumulatedTime += deltaTime;
+        
+        // TODO: Add time-based effects like:
+        // - Pulsing opacity for preview objects
+        // - Animated preview parameter changes
+        // - Time-based preview decay/cleanup
     }
 }
 
@@ -297,16 +306,37 @@ std::shared_ptr<rude::Mesh> EditPreviewSystem::applyOperation(const std::shared_
 std::shared_ptr<rude::Mesh> EditPreviewSystem::applySubdivision(const std::shared_ptr<rude::Mesh>& mesh, const EditPreviewParams& params) {
     if (!mesh) return nullptr;
     
-    // For now, just return a copy of the original mesh
+    // Validate subdivision parameters
+    int levels = params.subdivisionLevels;
+    if (levels <= 0) {
+        qDebug() << "[EditPreviewSystem] Invalid subdivision levels:" << levels;
+        return mesh;
+    }
+    
     // TODO: Implement proper subdivision using the project's mesh processing tools
+    qDebug() << "[EditPreviewSystem] Subdivision preview requested with" << levels << "levels";
+    
+    // For now, just return a copy of the original mesh
     return std::make_shared<rude::Mesh>(*mesh);
 }
 
 std::shared_ptr<rude::Mesh> EditPreviewSystem::applyExtrude(const std::shared_ptr<rude::Mesh>& mesh, const EditPreviewParams& params) {
     if (!mesh) return nullptr;
     
+    // Use extrude parameters
+    float distance = params.extrudeDistance;
+    glm::vec3 direction = params.extrudeDirection;
+    
+    if (distance <= 0.0f) {
+        qDebug() << "[EditPreviewSystem] Invalid extrude distance:" << distance;
+        return mesh;
+    }
+    
+    // TODO: Implement proper extrusion using the project's mesh processing tools
+    qDebug() << "[EditPreviewSystem] Extrude preview requested with distance" << distance 
+             << "and direction (" << direction.x << "," << direction.y << "," << direction.z << ")";
+    
     // For now, just return a copy of the original mesh
-    // TODO: Implement proper extrude using the project's mesh processing tools
     return std::make_shared<rude::Mesh>(*mesh);
 }
 

@@ -56,6 +56,12 @@ void GizmoHandler::handleMouseRelease(QMouseEvent* event) {
 
 bool GizmoHandler::isHovered(int x, int y) const {
     if (!m_camera || !m_activeGizmo) return false;
+    
+    // x, y would be used for precise mouse position hit testing
+    // For now, delegate to gizmo's isHovered method
+    (void)x; // Future: screen coordinates for hit testing
+    (void)y; // Future: screen coordinates for hit testing
+    
     return m_activeGizmo->isHovered();
 }
 

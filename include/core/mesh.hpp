@@ -25,11 +25,11 @@ public:
     ~Mesh();
 
     // Mesh data access
-    std::vector<rude::Vertex>& getVertices() { return m_vertices; }
-    const std::vector<rude::Vertex>& getVertices() const { return m_vertices; }
+    ::std::vector<rude::Vertex>& getVertices() { return m_vertices; }
+    const ::std::vector<rude::Vertex>& getVertices() const { return m_vertices; }
     
-    std::vector<unsigned int>& getIndices() { return m_indices; }
-    const std::vector<unsigned int>& getIndices() const { return m_indices; }
+    ::std::vector<unsigned int>& getIndices() { return m_indices; }
+    const ::std::vector<unsigned int>& getIndices() const { return m_indices; }
     
     // Mesh operations
     void extrudeFace(int faceIndex, float distance);
@@ -38,7 +38,7 @@ public:
     void updateNormals();
     
     // Data setting
-    void setData(const std::vector<rude::Vertex>& vertices, const std::vector<unsigned int>& indices);
+    void setData(const ::std::vector<rude::Vertex>& vertices, const ::std::vector<unsigned int>& indices);
     
     // OpenGL operations
     void uploadToGPU();
@@ -53,8 +53,8 @@ public:
     float getBoundingRadius() const;
     
     // Conversion
-    std::shared_ptr<HalfEdgeMesh> toHalfEdgeMesh() const;
-    static Mesh fromHalfEdgeMesh(const std::shared_ptr<HalfEdgeMesh>& halfEdgeMesh);
+    ::std::shared_ptr<HalfEdgeMesh> toHalfEdgeMesh() const;
+    static Mesh fromHalfEdgeMesh(const ::std::shared_ptr<HalfEdgeMesh>& halfEdgeMesh);
     
     // Property queries
     bool isEmpty() const { return m_vertices.empty(); }
@@ -62,8 +62,8 @@ public:
     size_t getTriangleCount() const { return m_indices.size() / 3; }
 
 private:
-    std::vector<rude::Vertex> m_vertices;
-    std::vector<unsigned int> m_indices;
+    ::std::vector<rude::Vertex> m_vertices;
+    ::std::vector<unsigned int> m_indices;
     
     // OpenGL objects
     unsigned int m_VAO;  // Vertex Array Object

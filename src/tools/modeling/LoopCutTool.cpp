@@ -126,6 +126,10 @@ std::vector<HalfEdgeEdgePtr> LoopCutTool::findEdgeLoop(HalfEdgeEdgePtr startEdge
 HalfEdgeEdgePtr LoopCutTool::findNextLoopEdge(HalfEdgeEdgePtr currentEdge, HalfEdgeFacePtr throughFace) const {
     if (!currentEdge) return nullptr;
     
+    // throughFace parameter could be used for face-constrained loop cutting
+    // For now, acknowledge parameter until face-specific loop logic is implemented
+    (void)throughFace;
+    
     // Get the face on one side of the current edge
     auto face = currentEdge->halfEdge ? currentEdge->halfEdge->face : nullptr;
     if (!face && currentEdge->halfEdge && currentEdge->halfEdge->twin) {
@@ -329,6 +333,10 @@ bool LoopCutTool::isManifoldEdge(HalfEdgeEdgePtr edge) const {
 
 bool LoopCutTool::wouldCreateInvalidTopology(HalfEdgeEdgePtr edge, float position) const {
     // Check if cutting at this position would create degenerate geometry
+    
+    // edge parameter will be used for topology validation when implemented
+    // For now, acknowledge parameter for future topology checking
+    (void)edge;
     if (position <= 0.01f || position >= 0.99f) {
         return true; // Too close to existing vertices
     }

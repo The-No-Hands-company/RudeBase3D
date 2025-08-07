@@ -145,7 +145,8 @@ void EventDrivenCameraController::frameScene(bool animate)
 {
     if (!m_camera || !m_scene) return;
     
-
+    // animate parameter will be used for smooth camera transitions
+    (void)animate; // Future: enable smooth animated framing vs instant
     
     // TODO: Calculate actual scene bounds
 

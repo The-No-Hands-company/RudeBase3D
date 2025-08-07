@@ -177,12 +177,18 @@ void SelectionToolbar::createOperationActions()
     
     // Select Similar
     auto selectSimilarAction = createAction("operation_select_similar", "Select Similar", "Select similar entities", true);
+    // TODO: Connect selectSimilarAction to selection manager when implemented
+    (void)selectSimilarAction; // Acknowledge action until similar selection is implemented
     
     // Grow Selection
     auto growAction = createAction("operation_grow", "Grow", "Grow selection to connected elements", true);
+    // TODO: Connect growAction to selection manager when implemented
+    (void)growAction; // Acknowledge action until grow selection is implemented
     
     // Shrink Selection
     auto shrinkAction = createAction("operation_shrink", "Shrink", "Shrink selection", true);
+    // TODO: Connect shrinkAction to selection manager when implemented
+    (void)shrinkAction; // Acknowledge action until shrink selection is implemented
 }
 
 void SelectionToolbar::setSelectionMode(rude::ComponentType mode)

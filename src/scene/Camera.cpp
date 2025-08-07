@@ -2,6 +2,8 @@
 #include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 Camera::Camera()
     : m_fov(50.0f)  // Slightly wider FOV for better workspace view
@@ -17,7 +19,18 @@ Camera::Camera()
     // Set professional isometric-style default camera position
     // Position camera at 45-degree angle for good 3D overview
     m_transform.setPosition(glm::vec3(7.0f, 5.0f, 7.0f));
-    m_transform.lookAt(glm::vec3(0.0f, 0.0f, 0.0f));
+    
+    // Calculate rotation to look at origin from current position
+    glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 forward = glm::normalize(target - m_transform.position);
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 right = glm::normalize(glm::cross(forward, up));
+    up = glm::normalize(glm::cross(right, forward));
+    
+    // Create rotation matrix and convert to quaternion
+    glm::mat3 rotMatrix = glm::mat3(right, up, -forward);
+    m_transform.rotation = glm::quat_cast(rotMatrix);
+    
     updateProjectionMatrix();
 }
 

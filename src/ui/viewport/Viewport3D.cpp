@@ -203,8 +203,11 @@ void Viewport3D::mousePressEvent(QMouseEvent* event)
 
 void Viewport3D::mouseMoveEvent(QMouseEvent* event)
 {
+    // TODO: Fix BlenderCameraController integration
+    // Event parameter will be used when mouse handling is re-enabled
+    (void)event;
+    
     if (m_inputController) {
-        // TODO: Fix BlenderCameraController integration
         // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
         // if (blenderController) {
         //     glm::ivec2 pos(event->pos().x(), event->pos().y());
@@ -218,8 +221,11 @@ void Viewport3D::mouseMoveEvent(QMouseEvent* event)
 
 void Viewport3D::mouseReleaseEvent(QMouseEvent* event)
 {
+    // TODO: Fix BlenderCameraController integration
+    // Event parameter will be used when mouse handling is re-enabled
+    (void)event;
+    
     if (m_inputController) {
-        // TODO: Fix BlenderCameraController integration
         // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
         // if (blenderController) {
         //     glm::ivec2 pos(event->pos().x(), event->pos().y());
@@ -233,8 +239,11 @@ void Viewport3D::mouseReleaseEvent(QMouseEvent* event)
 
 void Viewport3D::wheelEvent(QWheelEvent* event)
 {
+    // TODO: Fix BlenderCameraController integration
+    // Event parameter will be used when wheel handling is re-enabled
+    (void)event;
+    
     if (m_inputController) {
-        // TODO: Fix BlenderCameraController integration
         // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
         // if (blenderController) {
         //     float delta = static_cast<float>(event->angleDelta().y());
@@ -247,8 +256,11 @@ void Viewport3D::wheelEvent(QWheelEvent* event)
 
 void Viewport3D::keyPressEvent(QKeyEvent* event)
 {
+    // TODO: Fix BlenderCameraController integration
+    // Event parameter will be used when key handling is re-enabled
+    (void)event;
+    
     if (m_inputController) {
-        // TODO: Fix BlenderCameraController integration
         // auto blenderController = std::dynamic_pointer_cast<BlenderCameraController>(m_cameraController);
         // if (blenderController) {
         //     int key = event->key();
@@ -451,9 +463,11 @@ void Viewport3D::renderSelection()
     m_renderer->setLineWidth(3.0f); // Thick lines for visibility
     */
     
+    // TODO: Implement selection rendering when selection system is fully integrated
     // Temporary return until selection system is implemented
     return;
     
+    /* TODO: Re-enable when selection system is fully implemented and rude:: API is updated
     // Selection colors
     const glm::vec4 vertexColor(1.0f, 0.5f, 0.0f, 1.0f);  // Orange for vertices
     const glm::vec4 edgeColor(0.0f, 1.0f, 0.0f, 1.0f);    // Green for edges  
@@ -481,17 +495,10 @@ void Viewport3D::renderSelection()
     else if (selectionType == SelectionType::Edge) {
         auto selectedEdges = m_selectionManager->getSelectedEdges();
         for (auto edge : selectedEdges) {
-            // TODO: Fix edge rendering for rude:: API
+            // Fix edge rendering for rude:: API
             // Original implementation used getOriginVertex() and getTwin() which don't exist
             Q_UNUSED(edge);
             qDebug() << "Viewport3D: Edge selection rendering not yet implemented for rude:: API";
-            /*
-            if (edge && edge->getOriginVertex() && edge->getTwin() && edge->getTwin()->getOriginVertex()) {
-                QVector3D start = edge->getOriginVertex()->getPosition();
-                QVector3D end = edge->getTwin()->getOriginVertex()->getPosition();
-                m_renderer->renderLine(start, end, edgeColor);
-            }
-            */
         }
     }
     
@@ -499,36 +506,17 @@ void Viewport3D::renderSelection()
     else if (selectionType == SelectionType::Face) {
         auto selectedFaces = m_selectionManager->getSelectedFaces();
         for (auto face : selectedFaces) {
-            // TODO: Fix face rendering for rude:: API
+            // Fix face rendering for rude:: API
             // Original implementation used getOuterEdge() which doesn't exist
             Q_UNUSED(face);
             qDebug() << "Viewport3D: Face selection rendering not yet implemented for rude:: API";
-            /*
-            if (face && face->getOuterEdge()) {
-                // Draw the face outline
-                auto currentEdge = face->getOuterEdge();
-                std::vector<QVector3D> faceVertices;
-                
-                do {
-                    if (currentEdge->getOriginVertex()) {
-                        faceVertices.push_back(currentEdge->getOriginVertex()->getPosition());
-                    }
-                    currentEdge = currentEdge->getNext();
-                } while (currentEdge && currentEdge != face->getOuterEdge());
-                
-                // Draw face outline
-                for (size_t i = 0; i < faceVertices.size(); ++i) {
-                    size_t nextIndex = (i + 1) % faceVertices.size();
-                    m_renderer->renderLine(faceVertices[i], faceVertices[nextIndex], faceColor);
-                }
-            }
-            */
         }
     }
     
     // Reset renderer state
     m_renderer->enableDepthTest(true);
     m_renderer->setLineWidth(1.0f);
+    */
 }
 
 void Viewport3D::setInputController(std::shared_ptr<InputController> controller)

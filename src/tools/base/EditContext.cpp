@@ -93,7 +93,8 @@ void EditContext::selectAll() {
             m_selectedVertices = m_workingHalfEdgeMesh->getVertices();
             for (auto& vertex : m_selectedVertices) {
                 // TODO: Selection state is managed externally, not as vertex property
-                // vertex->setSelected(true);
+                // Future: Implement per-vertex selection state
+                (void)vertex; // Acknowledge vertex until selection state implementation
             }
             break;
             
@@ -101,7 +102,8 @@ void EditContext::selectAll() {
             m_selectedEdges = m_workingHalfEdgeMesh->getEdges();
             for (auto& edge : m_selectedEdges) {
                 // TODO: Selection state is managed externally, not as edge property
-                // edge->setSelected(true);
+                // Future: Implement per-edge selection state
+                (void)edge; // Acknowledge edge until selection state implementation
             }
             break;
             
@@ -109,7 +111,8 @@ void EditContext::selectAll() {
             m_selectedFaces = m_workingHalfEdgeMesh->getFaces();
             for (auto& face : m_selectedFaces) {
                 // TODO: Selection state is managed externally, not as face property
-                // face->setSelected(true);
+                // Future: Implement per-face selection state
+                (void)face; // Acknowledge face until selection state implementation
             }
             break;
             

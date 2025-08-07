@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
-#include "core/math/Transform.h"
+#include "core/transform.hpp"
 
 /**
  * @brief Camera class for handling view and projection matrices

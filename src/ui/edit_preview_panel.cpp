@@ -558,10 +558,19 @@ void EditPreviewPanel::onPreviewStarted(EntityID entityId, Core::EditOperation o
 }
 
 void EditPreviewPanel::onPreviewUpdated(EntityID entityId, Core::EditOperation operation) {
+    // Parameters will be used for entity-specific preview updates when implemented
+    // For now, acknowledge parameters until preview system is fully integrated
+    (void)entityId;   // Target entity for preview update
+    (void)operation;  // Operation type being previewed
+    
     updateHistoryControlsState();
 }
 
 void EditPreviewPanel::onPreviewFinished(EntityID entityId, Core::EditOperation operation, bool committed) {
+    // Parameters will be used for operation-specific cleanup when implemented
+    // For now, acknowledge parameters until preview system is fully integrated
+    (void)operation;  // Operation type that was finished
+    
     std::cout << "Preview " << (committed ? "committed" : "cancelled") << " for entity " << entityId << std::endl;
     updatePreviewControlsState();
     updateHistoryControlsState();

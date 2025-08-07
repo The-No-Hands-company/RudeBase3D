@@ -23,7 +23,7 @@ public:
     SelectionData pickComponent(float mouseX, float mouseY, int viewportWidth, int viewportHeight, 
                                ComponentType targetType, ::Entity* targetEntity = nullptr);
     
-    std::vector<SelectionData> pickComponentsInRegion(float x1, float y1, float x2, float y2,
+    ::std::vector<SelectionData> pickComponentsInRegion(float x1, float y1, float x2, float y2,
                                                      int viewportWidth, int viewportHeight,
                                                      ComponentType targetType, ::Entity* targetEntity = nullptr);
     

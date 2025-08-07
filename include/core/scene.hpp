@@ -10,10 +10,10 @@ namespace rude {
 class Scene {
 public:
     Scene();
-    Entity* createEntity(rude::PrimitiveType type, const std::string& name = "");
-    const std::vector<std::unique_ptr<Entity>>& getEntities() const;
+    Entity* createEntity(rude::PrimitiveType type, const ::std::string& name = "");
+    const ::std::vector<::std::unique_ptr<Entity>>& getEntities() const;
     // Get root entities (no parent)
-    std::vector<Entity*> getRootEntities() const;
+    ::std::vector<Entity*> getRootEntities() const;
     void draw(const glm::mat4& view, const glm::mat4& proj);
 
     // Entity removal and scene management
@@ -25,8 +25,8 @@ public:
     // Modern API additions
     void deleteEntity(Entity* entity);
     Entity* duplicateEntity(Entity* entity);
-    std::vector<Entity*> getAllEntities() const;
-    Entity* findEntityByName(const std::string& name) const;
+    ::std::vector<Entity*> getAllEntities() const;
+    Entity* findEntityByName(const ::std::string& name) const;
     Entity* findEntityByName(const QString& name) const;
     bool isEmpty() const;
     glm::vec3 getBoundingBoxCenter() const;
@@ -36,8 +36,8 @@ public:
 
 private:
     int nextId;
-    std::vector<std::unique_ptr<Entity>> entities;
-    std::unique_ptr<PrimitiveManager> m_primitiveManager;
+    ::std::vector<::std::unique_ptr<Entity>> entities;
+    ::std::unique_ptr<PrimitiveManager> m_primitiveManager;
 };
 
 } // namespace rude

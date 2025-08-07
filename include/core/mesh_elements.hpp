@@ -90,7 +90,14 @@ public:
     HalfEdgePtr halfEdge;  // One of the half-edges of this edge
 
     // Modified getHalfEdge to accept an index
-    HalfEdgePtr getHalfEdge(int index = 0) const { return halfEdge; }
+    HalfEdgePtr getHalfEdge(int index = 0) const { 
+        if (index == 0) {
+            return halfEdge;
+        } else if (index == 1 && halfEdge && halfEdge->twin) {
+            return halfEdge->twin;
+        }
+        return nullptr; // Invalid index or no twin
+    }
     void setHalfEdge(int index, HalfEdgePtr he) {
         if (index == 0) {
             halfEdge = he;

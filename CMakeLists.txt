@@ -15,6 +15,10 @@ if(MSVC)
     # Use the latest MSVC toolset and enable C++23 features
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
     set(CMAKE_GENERATOR_TOOLSET "host=x64")
+    
+    # Suppress deprecated iterator warnings from third-party libraries
+    add_definitions(-D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
+    add_definitions(-D_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS)
 endif()
 
 # Find required Qt components

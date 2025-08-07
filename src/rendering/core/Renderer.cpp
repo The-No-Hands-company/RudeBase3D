@@ -317,6 +317,11 @@ bool Renderer::createShaderProgram(const std::string& name, const std::string& v
 {
     // TODO: Temporarily commented out due to shader system architectural issues
     // Need to resolve Qt OpenGL vs raw OpenGL approach and fix ShaderProgram struct members
+    
+    // Acknowledge parameters until shader compilation is implemented
+    (void)vertexSource;   // Will be used for vertex shader compilation
+    (void)fragmentSource; // Will be used for fragment shader compilation
+    
     spdlog::warn("createShaderProgram temporarily disabled for shader: {}", name);
     /*
     auto shaderProgram = std::make_unique<ShaderProgram>();

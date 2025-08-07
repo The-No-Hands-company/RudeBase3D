@@ -1,4 +1,3 @@
-#define GLM_ENABLE_EXPERIMENTAL
 #include "gizmo/rotate_gizmo.hpp"
 #include "core/entity.hpp"
 #include "scene/Camera.h"
@@ -30,6 +29,8 @@ RotateGizmo::~RotateGizmo() {}
 void RotateGizmo::draw(const Camera& camera) const {
     if (!m_target) return;
     // Drawing logic will be implemented later
+    // Camera will provide view/projection matrices for rendering
+    (void)camera;
 }
 
 bool RotateGizmo::handleMousePressed(const event::MousePressEvent& e, const Camera& camera) {
@@ -59,6 +60,8 @@ bool RotateGizmo::handleMouseReleased(const event::MouseReleaseEvent& e, const C
     if (m_isDragging && e.isLeftButton) {
         m_isDragging = false;
         m_activeAxis = Axis::None;
+        // Camera could be used for coordinate system adjustments during release
+        (void)camera;
         return true;
     }
     return false;

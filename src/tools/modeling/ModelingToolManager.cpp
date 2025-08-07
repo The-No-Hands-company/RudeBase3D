@@ -155,6 +155,12 @@ bool ModelingToolManager::executeSubdivision(int levels) {
 
 bool ModelingToolManager::executeBevel(float amount, int segments) {
     // This would integrate with the BevelTool from EditContext when it's fully implemented
+    
+    // Parameters will be used for bevel operation when tool is implemented
+    // For now, acknowledge parameters for future bevel functionality
+    (void)amount;   // Bevel distance/amount
+    (void)segments; // Number of bevel segments
+    
     qDebug() << "ModelingToolManager: Bevel tool integration pending";
     return false;
 }

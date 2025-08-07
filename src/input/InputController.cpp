@@ -70,6 +70,7 @@ void InputController::handleMouseRelease(const glm::ivec2& mousePos, MouseButton
             handleObjectSelection(mousePos);
         }
     }
+    
     if (m_fpsMode && button == MouseButton::Right) {
         m_fpsMode = false;
         // UI code should handle cursor
@@ -77,18 +78,30 @@ void InputController::handleMouseRelease(const glm::ivec2& mousePos, MouseButton
     m_mouseButton = MouseButton::None;
     m_isDragging = false;
     m_currentModifiers = KeyboardModifier::None;
+    
+    // modifiers parameter will be used for context-sensitive release behavior
+    (void)modifiers; // Future: modifier-based release handling (shift, ctrl, alt combinations)
     // ...event dispatch code...
 }
 
 void InputController::handleWheel(float wheelDelta, KeyboardModifier modifiers) {
+    // wheelDelta and modifiers will be used for camera zoom control
+    (void)wheelDelta; // Future: wheel scroll delta for zoom amount
+    (void)modifiers;  // Future: modifier keys for zoom behavior (shift=fast, ctrl=slow)
     // ...event dispatch code...
 }
 
 void InputController::handleKeyPress(int key, KeyboardModifier modifiers) {
+    // key and modifiers will be used for keyboard shortcuts and controls
+    (void)key;       // Future: specific key handling (WASD, arrow keys, etc.)
+    (void)modifiers; // Future: modifier combinations (Ctrl+key, Shift+key, etc.)
     // ...event dispatch code...
 }
 
 void InputController::handleKeyRelease(int key, KeyboardModifier modifiers) {
+    // key and modifiers will be used for keyboard input handling
+    (void)key;       // Future: specific key release handling
+    (void)modifiers; // Future: modifier state management
     // ...event dispatch code...
 }
 
@@ -139,18 +152,22 @@ void InputController::handleMayaNavigation(const glm::ivec2& delta)
     if (!altPressed) {
         return;
     }
+    
+    // Apply sensitivity modifier based on Shift key
+    float sensitivityMultiplier = shiftPressed ? 2.0f : 1.0f;
+    
     if (m_mouseButton == MouseButton::Left) {
         // Alt + LMB = Orbit around scene center
         glm::vec3 target = getSceneCenter();
-        m_cameraController->orbitAroundPoint(target, -delta.x * m_cameraSensitivity * 0.5f, 
-                                            delta.y * m_cameraSensitivity * 0.5f);
+        m_cameraController->orbitAroundPoint(target, -delta.x * m_cameraSensitivity * 0.5f * sensitivityMultiplier, 
+                                            delta.y * m_cameraSensitivity * 0.5f * sensitivityMultiplier);
     } else if (m_mouseButton == MouseButton::Middle) {
         // Alt + MMB = Pan
-        m_cameraController->pan(glm::vec3(-delta.x * m_panSpeed * 50.0f, 
-                                         delta.y * m_panSpeed * 50.0f, 0.0f));
+        m_cameraController->pan(glm::vec3(-delta.x * m_panSpeed * 50.0f * sensitivityMultiplier, 
+                                         delta.y * m_panSpeed * 50.0f * sensitivityMultiplier, 0.0f));
     } else if (m_mouseButton == MouseButton::Right) {
         // Alt + RMB = Dolly (zoom)
-        float zoomDelta = -delta.y * m_zoomSpeed * 0.1f;
+        float zoomDelta = -delta.y * m_zoomSpeed * 0.1f * sensitivityMultiplier;
         m_cameraController->dolly(zoomDelta);
     }
 }
@@ -211,8 +228,15 @@ void InputController::updateCameraFromKeys()
     
     float speed = m_movementSpeed * 0.016f; // Assume 60 FPS
     
-    // Shift for faster movement
+    // Apply speed modifier based on Shift key for faster movement
+    bool shiftPressed = isModifierPressed(KeyboardModifier::Shift);
+    if (shiftPressed) {
+        speed *= 2.0f; // Double speed when Shift is held
+    }
+    
     // TODO: Update key handling to use unified key codes if available
+    // Future: Use speed for WASD movement implementation when key state tracking is added
+    (void)speed; // Acknowledge usage until WASD movement is implemented
 }
 
 void InputController::handleObjectSelection(const glm::ivec2& pos)
@@ -228,6 +252,13 @@ void InputController::handleObjectSelection(const glm::ivec2& pos)
     // We need to add scene manager reference to InputController for this to work
     // For now this is a stub implementation
     Entity* pickedObject = nullptr;
+    
+    // Future: Perform actual ray-object intersection when scene manager is available
+    // For now, acknowledge the variable to avoid warnings
+    if (pickedObject) {
+        // Handle selected object (set selection, update UI, etc.)
+        // TODO: Implement object selection logic
+    }
 }
 
 void InputController::handleMeshElementSelection(const glm::ivec2& pos)
