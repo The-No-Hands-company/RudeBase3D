@@ -955,7 +955,10 @@ void MainWindow::setupModernPanels()
     // Create the edit preview panel
     auto* editPreviewSystem = coreSystem.getEditPreviewSystem();
     if (editPreviewSystem) {
-        // Convert raw pointer to shared_ptr for EditPreviewPanel constructor
+        // Note: Using shared_ptr with no-op deleter is safe here because:
+        // 1. EditPreviewSystem is owned by CoreSystem singleton (same lifetime as application)
+        // 2. EditPreviewPanel is destroyed before CoreSystem during application shutdown
+        // 3. This avoids exposing raw pointer interface in EditPreviewPanel constructor
         std::shared_ptr<RudeBase3D::Core::EditPreviewSystem> sharedPreviewSystem(editPreviewSystem, [](RudeBase3D::Core::EditPreviewSystem*){});
         m_editPreviewPanel = new RudeBase3D::UI::EditPreviewPanel(sharedPreviewSystem, this);
         m_editPreviewPanel->setWindowTitle("Edit Preview");

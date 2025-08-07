@@ -375,22 +375,64 @@ bool Renderer::createShaderProgram(const std::string& name, const std::string& v
     glDeleteShader(fragmentShader);
     
     // Create and store shader program
-    auto shader = std::make_unique<ShaderProgram>();
-    shader->programID = shaderProgram;
+    auto shaderProgram_ptr = std::make_unique<ShaderProgram>();
+    shaderProgram_ptr->programID = shaderProgram;
     
-    // Get uniform locations
-    shader->mvpMatrixLoc = glGetUniformLocation(shaderProgram, "mvpMatrix");
-    shader->modelMatrixLoc = glGetUniformLocation(shaderProgram, "modelMatrix");
-    shader->viewMatrixLoc = glGetUniformLocation(shaderProgram, "viewMatrix");
-    shader->projectionMatrixLoc = glGetUniformLocation(shaderProgram, "projectionMatrix");
-    shader->normalMatrixLoc = glGetUniformLocation(shaderProgram, "normalMatrix");
-    shader->colorLoc = glGetUniformLocation(shaderProgram, "color");
-    shader->diffuseColorLoc = glGetUniformLocation(shaderProgram, "diffuseColor");
-    shader->lightDirectionLoc = glGetUniformLocation(shaderProgram, "lightDirection");
-    shader->lightColorLoc = glGetUniformLocation(shaderProgram, "lightColor");
-    shader->viewPosLoc = glGetUniformLocation(shaderProgram, "viewPos");
+    // Uniform name constants
+    constexpr const char* MVP_MATRIX_UNIFORM = "mvpMatrix";
+    constexpr const char* MODEL_MATRIX_UNIFORM = "modelMatrix";
+    constexpr const char* VIEW_MATRIX_UNIFORM = "viewMatrix";
+    constexpr const char* PROJECTION_MATRIX_UNIFORM = "projectionMatrix";
+    constexpr const char* NORMAL_MATRIX_UNIFORM = "normalMatrix";
+    constexpr const char* COLOR_UNIFORM = "color";
+    constexpr const char* DIFFUSE_COLOR_UNIFORM = "diffuseColor";
+    constexpr const char* LIGHT_DIRECTION_UNIFORM = "lightDirection";
+    constexpr const char* LIGHT_COLOR_UNIFORM = "lightColor";
+    constexpr const char* VIEW_POS_UNIFORM = "viewPos";
     
-    m_shaderPrograms[name] = std::move(shader);
+    // Get uniform locations and check for missing uniforms
+    shaderProgram_ptr->mvpMatrixLoc = glGetUniformLocation(shaderProgram, MVP_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->mvpMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", MVP_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->modelMatrixLoc = glGetUniformLocation(shaderProgram, MODEL_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->modelMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", MODEL_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->viewMatrixLoc = glGetUniformLocation(shaderProgram, VIEW_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->viewMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", VIEW_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->projectionMatrixLoc = glGetUniformLocation(shaderProgram, PROJECTION_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->projectionMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", PROJECTION_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->normalMatrixLoc = glGetUniformLocation(shaderProgram, NORMAL_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->normalMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", NORMAL_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->colorLoc = glGetUniformLocation(shaderProgram, COLOR_UNIFORM);
+    if (shaderProgram_ptr->colorLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", COLOR_UNIFORM, name);
+    }
+    shaderProgram_ptr->diffuseColorLoc = glGetUniformLocation(shaderProgram, DIFFUSE_COLOR_UNIFORM);
+    if (shaderProgram_ptr->diffuseColorLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", DIFFUSE_COLOR_UNIFORM, name);
+    }
+    shaderProgram_ptr->lightDirectionLoc = glGetUniformLocation(shaderProgram, LIGHT_DIRECTION_UNIFORM);
+    if (shaderProgram_ptr->lightDirectionLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", LIGHT_DIRECTION_UNIFORM, name);
+    }
+    shaderProgram_ptr->lightColorLoc = glGetUniformLocation(shaderProgram, LIGHT_COLOR_UNIFORM);
+    if (shaderProgram_ptr->lightColorLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", LIGHT_COLOR_UNIFORM, name);
+    }
+    shaderProgram_ptr->viewPosLoc = glGetUniformLocation(shaderProgram, VIEW_POS_UNIFORM);
+    if (shaderProgram_ptr->viewPosLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", VIEW_POS_UNIFORM, name);
+    }
+    
+    m_shaderPrograms[name] = std::move(shaderProgram_ptr);
     
     spdlog::info("Shader program '{}' compiled and linked successfully", name);
     return true;
