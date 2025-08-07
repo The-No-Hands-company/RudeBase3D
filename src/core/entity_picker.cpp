@@ -37,7 +37,7 @@
 EntityPicker::EntityPicker() {}
 void EntityPicker::setScene(rude::Scene* s) { scene = s; }
 void EntityPicker::setCamera(Camera* c) { camera = c; }
-Entity* EntityPicker::getSelectedEntity() const { return selectedEntity; }
+rude::Entity* EntityPicker::getSelectedEntity() const { return selectedEntity; }
 
 void EntityPicker::pickEntity(float mouseX, float mouseY, int viewportWidth, int viewportHeight) {
     if (!scene || !camera) return;

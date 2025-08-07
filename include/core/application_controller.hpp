@@ -66,9 +66,9 @@ public:
     rude::MeshOperationManager* getMeshOperationManager() const { return m_meshOperationManager.get(); }
 
     // High-level operations that coordinate multiple managers
-    Entity* createPrimitive(const std::string& primitiveType, const std::string& name = "");
+    rude::Entity* createPrimitive(const std::string& primitiveType, const std::string& name = "");
     bool executeOperation(const std::string& operationName);
-    void selectEntity(Entity* entity);
+    void selectEntity(rude::Entity* entity);
     void clearSelection();
 
     // File operations
@@ -83,13 +83,13 @@ public:
 
 signals:
     void sceneChanged();
-    void entityCreated(Entity* entity);
-    void entityDeleted(Entity* entity);
+    void entityCreated(rude::Entity* entity);
+    void entityDeleted(rude::Entity* entity);
     void selectionChanged();
 
 public slots:
-    void onEntityCreated(Entity* entity);
-    void onEntityDeleted(Entity* entity);
+    void onEntityCreated(rude::Entity* entity);
+    void onEntityDeleted(rude::Entity* entity);
     void onSelectionChanged();
 
 public:

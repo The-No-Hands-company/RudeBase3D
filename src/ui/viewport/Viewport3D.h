@@ -874,11 +874,7 @@ private:
     
     /// Currently pressed mouse button for interaction context
     Qt::MouseButton m_mouseButton;
-};
-
-/**
- * @}
- */
+    
     bool m_isDragging;
     
     // Transform gizmo
@@ -892,3 +888,7 @@ private:
     void renderTransformGizmo();
     void renderSelection(); // Selection visualization
 };
+
+/**
+ * @}
+ */

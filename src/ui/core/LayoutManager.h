@@ -29,6 +29,19 @@
  * ████████████████████████████████████████████████████████████████████████████████
  */
 
+#pragma once
+
+#include <QObject>
+#include <QMainWindow>
+#include <QDockWidget>
+#include <QString>
+#include <QStringList>
+#include <QMap>
+#include <QMatrix4x4>
+
+namespace rudebase3d {
+namespace ui {
+
 /**
  * @file LayoutManager.h
  * @brief Advanced Workspace Layout Management - Professional UI Organization System
@@ -854,7 +867,8 @@
  *       3D modeling workflows rivaling industry-leading applications.
  * 
  * ═══════════════════════════════════════════════════════════════════════════════════
- */
+ * 
+ * ## Panel Management Features
  * - **Dock Area Management**: Left, right, top, bottom dock area configuration
  * - **Panel Persistence**: Save and restore panel positions and sizes
  * - **Dynamic Resizing**: Automatic panel resizing for optimal screen usage

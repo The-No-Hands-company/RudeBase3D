@@ -125,24 +125,15 @@ void RenderSystem::render()
     m_renderer->endFrame();
 }
 
-void RenderSystem::renderGrid()
-{
-    // Grid rendering is now handled by GridSystem
-    // This method can be removed or kept for backward compatibility
-    if (m_gridSystem && m_gridSystem->isVisible()) {
-        m_gridSystem->render(m_renderer, m_camera->getViewMatrix(), m_camera->getProjectionMatrix());
-    }
-}
-
 void RenderSystem::renderScene()
 {
     if (!m_scene || !m_renderer) return;
     
+    // TODO: Implement entity rendering when Entity type issues are resolved
     // Render all entities in the scene
-    auto entities = m_scene->getAllEntities();
-    // TODO: Fix Entity type mismatch - header expects rude::Entity* but scene returns Entity*
-    // for (Entity* entity : entities) {
-    //     renderEntity(entity);
+    // const auto& entities = m_scene->getEntities();
+    // for (const auto& entity : entities) {
+    //     renderEntity(entity.get());
     // }
 }
 
@@ -198,4 +189,16 @@ void RenderSystem::renderEntity(Entity* entity)
         m_renderer->renderMesh(meshComponent->getMesh());
     }
     */
+}
+
+void RenderSystem::onSceneChanged()
+{
+    // TODO: Handle scene change events
+    // This could involve updating render lists, clearing caches, etc.
+}
+
+void RenderSystem::onCameraChanged()
+{
+    // TODO: Handle camera change events  
+    // This could involve updating view matrices, frustum culling, etc.
 }

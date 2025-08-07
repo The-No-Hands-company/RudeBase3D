@@ -29,7 +29,7 @@ void GizmoManager::setActiveGizmo(GizmoType type) {
     }
 }
 
-void GizmoManager::setSelectedEntity(std::shared_ptr<Entity> entity) {
+void GizmoManager::setSelectedEntity(std::shared_ptr<rude::Entity> entity) {
     m_selectedEntity = entity;
     if (m_activeGizmo) {
         m_activeGizmo->setTarget(m_selectedEntity);

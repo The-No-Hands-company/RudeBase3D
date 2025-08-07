@@ -190,6 +190,8 @@ namespace UI {
  * 
  * @ingroup UI
  */
+ 
+/**
  * viewport uses OpenGL for high-performance 3D rendering.
  * 
  * ## Workflow Integration

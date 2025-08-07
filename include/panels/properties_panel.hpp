@@ -1,8 +1,11 @@
 #pragma once
+
 #include <QDockWidget>
 #include <QWidget>
 
-class Entity;
+namespace rude {
+    class Entity;
+}
 
 namespace rude {
 

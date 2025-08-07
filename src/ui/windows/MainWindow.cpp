@@ -387,7 +387,7 @@ void MainWindow::saveScene()
         // Use SelectionManager to get selected entity
         auto& coreSystem = CoreSystem::getInstance();
         auto* selectionManager = coreSystem.getSelectionManager();
-        Entity* selectedEntity = nullptr;
+        rude::Entity* selectedEntity = nullptr;
         if (selectionManager) {
             const auto& selectedEntities = selectionManager->getSelectedEntities();
             if (!selectedEntities.empty()) {
@@ -422,7 +422,7 @@ void MainWindow::saveSceneAs()
     // Use SelectionManager to get selected entity
     auto& coreSystem = CoreSystem::getInstance();
     auto* selectionManager = coreSystem.getSelectionManager();
-    Entity* selectedEntity = nullptr;
+    rude::Entity* selectedEntity = nullptr;
     if (selectionManager) {
         const auto& selectedEntities = selectionManager->getSelectedEntities();
         if (!selectedEntities.empty()) {
@@ -770,7 +770,7 @@ void MainWindow::beginExtrude()
     // Use SelectionManager to get selected entity
     auto& coreSystem = CoreSystem::getInstance();
     auto* selectionManager = coreSystem.getSelectionManager();
-    Entity* selectedEntity = nullptr;
+    rude::Entity* selectedEntity = nullptr;
     if (selectionManager) {
         const auto& selectedEntities = selectionManager->getSelectedEntities();
         if (!selectedEntities.empty()) {
@@ -989,7 +989,7 @@ void MainWindow::setupModernPanels()
     m_outlinerPanel->raise();
     
     // Connect panel signals to appropriate slots
-    connect(m_outlinerPanel, &OutlinerPanel::selectionChanged, this, [this, selectionManager](Entity* entity) {
+    connect(m_outlinerPanel, &OutlinerPanel::selectionChanged, this, [this, selectionManager](rude::Entity* entity) {
         if (selectionManager && entity) {
             // Update selection in the selection manager
             // This is a temporary solution during the transition period
@@ -1002,8 +1002,7 @@ void MainWindow::setupModernPanels()
             
             // Also update properties panel
             if (m_modernPropertiesPanel) {
-                // TODO: Fix Entity type mismatch - modernPropertiesPanel expects rude::Entity* but we have Entity*
-                // m_modernPropertiesPanel->setEntity(entity);
+                m_modernPropertiesPanel->setEntity(entity);
             }
         }
     });

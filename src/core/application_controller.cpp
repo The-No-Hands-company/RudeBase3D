@@ -29,6 +29,7 @@
 
 
 #include "core/application_controller.hpp"
+#include "core/entity.hpp"
 #include <spdlog/spdlog.h>
 
 
@@ -81,7 +82,7 @@ void ApplicationController::setScene(std::shared_ptr<rude::Scene> scene)
     spdlog::info("[ApplicationController] Scene set on all managers");
 }
 
-Entity* ApplicationController::createPrimitive(const std::string& primitiveType, const std::string& name)
+rude::Entity* ApplicationController::createPrimitive(const std::string& primitiveType, const std::string& name)
 {
     if (!m_initialized) {
         spdlog::warn("[ApplicationController] Not initialized");
@@ -123,7 +124,7 @@ bool ApplicationController::executeOperation(const std::string& operationName)
     return success;
 }
 
-void ApplicationController::selectEntity(Entity* entity)
+void ApplicationController::selectEntity(rude::Entity* entity)
 {
     if (!m_initialized) {
         spdlog::warn("[ApplicationController] Not initialized");
@@ -197,14 +198,14 @@ bool ApplicationController::importMesh(const std::string& filePath)
     return entity != nullptr;
 }
 
-void ApplicationController::onEntityCreated(Entity* entity)
+void ApplicationController::onEntityCreated(rude::Entity* entity)
 {
     spdlog::info("[ApplicationController] Entity created signal received: {}", (entity ? entity->name : "null"));
     emit entityCreated(entity);
     emit sceneChanged();
 }
 
-void ApplicationController::onEntityDeleted(Entity* entity)
+void ApplicationController::onEntityDeleted(rude::Entity* entity)
 {
     spdlog::info("[ApplicationController] Entity deleted signal received");
     emit entityDeleted(entity);

@@ -49,9 +49,9 @@
 #include <memory>
 
 // Forward declarations
-class Entity; // Entity is in global namespace
 namespace rude { 
     class Scene; 
+    class Entity;
 }
 
 /**
@@ -293,7 +293,7 @@ public:
      * 
      * @see setSelectedObject() For traditional scene object editing
      */
-    void setEntity(Entity* entity);
+    void setEntity(rude::Entity* entity);
     
     /**
      * @brief Refreshes all property displays to reflect current object state

@@ -18,7 +18,7 @@ TranslateGizmo::TranslateGizmo()
     : Gizmo(), m_target(nullptr) {
 }
 
-TranslateGizmo::TranslateGizmo(std::shared_ptr<Entity> target)
+TranslateGizmo::TranslateGizmo(std::shared_ptr<rude::Entity> target)
     : Gizmo(), m_target(target) {
 }
 

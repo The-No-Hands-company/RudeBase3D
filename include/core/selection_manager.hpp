@@ -32,15 +32,15 @@
 #include <vector>
 #include <set>
 #include <map>
+#include "core/mesh_forward.hpp"
 #include <memory>
 #include <glm/glm.hpp>
 #include <QObject>
 #include <QRect>
 
 // Forward declarations
-class Entity;
-
 namespace rude {
+    class Entity;
     class Scene;
     class SceneManager;
 }
@@ -64,10 +64,10 @@ enum class ComponentType {
 
 struct SelectionData {
     ComponentType type = ComponentType::None;
-    VertexPtr vertex = nullptr;
-    EdgePtr edge = nullptr;
-    FacePtr face = nullptr;
-    Entity* entity = nullptr;
+    rude::VertexPtr vertex = nullptr;
+    rude::EdgePtr edge = nullptr;
+    rude::FacePtr face = nullptr;
+    rude::Entity* entity = nullptr;
     
     bool isValid() const {
         return type != ComponentType::None && 

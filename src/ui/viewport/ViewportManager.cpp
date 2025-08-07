@@ -893,6 +893,20 @@ ViewportWidget::ViewType ViewCube::getViewFromPosition(const QPoint& pos)
     return ViewportWidget::ViewType::Perspective;
 }
 
+void ViewCube::enterEvent(QEnterEvent* event)
+{
+    // TODO: Handle mouse enter for ViewCube highlighting
+    Q_UNUSED(event)
+    update(); // Trigger repaint for hover effect
+}
+
+void ViewCube::leaveEvent(QEvent* event)
+{
+    // TODO: Handle mouse leave for ViewCube unhighlighting  
+    Q_UNUSED(event)
+    update(); // Trigger repaint to remove hover effect
+}
+
 bool ViewportWidget::performSelection(int x, int y, rude::SelectionMode mode)
 {
     // This is a placeholder implementation for selection

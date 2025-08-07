@@ -26,39 +26,43 @@
 // IN THE SOFTWARE.
 //==============================================================================
 
-#include <algorithm>
 #include "core/entity.hpp"
 #include "core/qt_glm_utils.hpp"
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-Entity::Entity(int id, rude::PrimitiveType type, const std::string& name)
+rude::Entity::Entity(int id, rude::PrimitiveType type, const std::string& name)
     : id(id), name(name), primitiveType(type) {}
 
-int Entity::getId() const {
+int rude::Entity::getId() const {
     return id;
 }
 
-const std::string& Entity::getName() const {
+const std::string& rude::Entity::getName() const {
     return name;
 }
 
-Transform& Entity::getTransform() {
+Transform& rude::Entity::getTransform() {
     return transform;
 }
 
-rude::PrimitiveType Entity::getPrimitiveType() const {
+rude::PrimitiveType rude::Entity::getPrimitiveType() const {
     return primitiveType;
 }
 
 // Return the mesh pointer (rude::MeshPtr)
-rude::MeshPtr Entity::getMesh() const {
+rude::MeshPtr rude::Entity::getMesh() const {
     return mesh;
 }
 
-std::pair<glm::vec3, glm::vec3> Entity::getAABB() const {
+std::pair<glm::vec3, glm::vec3> rude::Entity::getAABB() const {
     return {aabb_min, aabb_max};
 }
 
-glm::mat4 Entity::getWorldTransform() const {
+glm::mat4 rude::Entity::getWorldTransform() const {
     if (parent) {
         return parent->getWorldTransform() * transform.getModelMatrix();
     } else {
@@ -66,7 +70,7 @@ glm::mat4 Entity::getWorldTransform() const {
     }
 }
 
-void Entity::draw(const glm::mat4& view, const glm::mat4& proj, const glm::mat4& parentTransform) const {
+void rude::Entity::draw(const glm::mat4& view, const glm::mat4& proj, const glm::mat4& parentTransform) const {
     glm::mat4 world = parentTransform * transform.getModelMatrix();
     // TODO: Use 'world' for rendering this entity's mesh
     // Example: mesh->draw(world, view, proj);
@@ -76,7 +80,7 @@ void Entity::draw(const glm::mat4& view, const glm::mat4& proj, const glm::mat4&
     }
 }
 
-void Entity::addChild(Entity* child) {
+void rude::Entity::addChild(Entity* child) {
     if (!child) return;
     // Remove from previous parent
     if (child->parent) {
@@ -86,7 +90,7 @@ void Entity::addChild(Entity* child) {
     child->parent = this;
 }
 
-void Entity::removeChild(Entity* child) {
+void rude::Entity::removeChild(Entity* child) {
     if (!child) return;
     auto it = std::find(children.begin(), children.end(), child);
     if (it != children.end()) {
@@ -95,7 +99,7 @@ void Entity::removeChild(Entity* child) {
     }
 }
 
-void Entity::setParent(Entity* newParent) {
+void rude::Entity::setParent(Entity* newParent) {
     if (parent) {
         parent->removeChild(this);
     }
@@ -104,4 +108,14 @@ void Entity::setParent(Entity* newParent) {
     } else {
         parent = nullptr;
     }
+}
+
+glm::vec3 rude::Entity::getWorldPosition() const {
+    // TODO: Implement proper world position calculation
+    // For now, return the local position as a placeholder
+    // In a complete implementation, this would:
+    // 1. Get local transform/position
+    // 2. Accumulate parent transforms up the hierarchy
+    // 3. Return the final world space position
+    return glm::vec3(0.0f, 0.0f, 0.0f);
 }

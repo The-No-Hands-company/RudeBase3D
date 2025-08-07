@@ -33,7 +33,9 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-class Entity; // Forward declaration for Entity in global scope
+namespace rude {
+    class Entity; // Forward declaration for Entity in rude namespace
+}
 
 namespace rude {
 
@@ -48,14 +50,12 @@ public:
     void setPickingTolerance(float tolerance) { m_pickingTolerance = tolerance; }
     
     // Picking operations
-    SelectionData pickComponent(float mouseX, float mouseY, int viewportWidth, int viewportHeight, 
-                               ComponentType targetType, ::Entity* targetEntity = nullptr);
+    SelectionData pickComponent(float mouseX, float mouseY, int viewportWidth, int viewportHeight,
+                               ComponentType targetType, Entity* targetEntity = nullptr);
     
     ::std::vector<SelectionData> pickComponentsInRegion(float x1, float y1, float x2, float y2,
                                                      int viewportWidth, int viewportHeight,
-                                                     ComponentType targetType, ::Entity* targetEntity = nullptr);
-    
-    // Ray-casting utilities
+                                                     ComponentType targetType, Entity* targetEntity = nullptr);    // Ray-casting utilities
     glm::vec3 screenToWorldRay(float mouseX, float mouseY, int viewportWidth, int viewportHeight) const;
     glm::vec3 getRayOrigin(float mouseX, float mouseY, int viewportWidth, int viewportHeight) const;
     glm::vec3 getRayDirection(float mouseX, float mouseY, int viewportWidth, int viewportHeight) const;
@@ -66,9 +66,9 @@ private:
     float m_pickingTolerance = 5.0f; // pixels
     
     // Component picking methods
-    SelectionData pickVertex(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, ::Entity* entity);
-    SelectionData pickEdge(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, ::Entity* entity);
-    SelectionData pickFace(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, ::Entity* entity);
+    SelectionData pickVertex(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, Entity* entity);
+    SelectionData pickEdge(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, Entity* entity);
+    SelectionData pickFace(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, Entity* entity);
     
     // Intersection tests
     float pointToRayDistance(const glm::vec3& point, const glm::vec3& rayOrigin, const glm::vec3& rayDirection) const;

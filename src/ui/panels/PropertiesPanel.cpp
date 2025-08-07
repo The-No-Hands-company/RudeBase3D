@@ -486,7 +486,7 @@ QDoubleSpinBox* PropertiesPanel::createDoubleSpinBox(double min, double max, dou
     return spinBox;
 }
 
-void PropertiesPanel::setEntity(Entity* entity)
+void PropertiesPanel::setEntity(rude::Entity* entity)
 {
     // TODO: Implement entity property editing
     // This is a stub implementation to resolve linking error

@@ -251,7 +251,7 @@ void InputController::handleObjectSelection(const glm::ivec2& pos)
     // Use scene manager to pick object using ray
     // We need to add scene manager reference to InputController for this to work
     // For now this is a stub implementation
-    Entity* pickedObject = nullptr;
+    rude::Entity* pickedObject = nullptr;
     
     // Future: Perform actual ray-object intersection when scene manager is available
     // For now, acknowledge the variable to avoid warnings

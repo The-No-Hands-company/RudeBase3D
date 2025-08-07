@@ -40,13 +40,16 @@
 #include <QPushButton>
 #include <QMenu>
 #include <QBrush>
+#include <QList>
+#include <QString>
+#include <QPoint>
 #include <memory>
 
 // Forward declarations
 namespace rude { 
     class Scene; 
+    class Entity;
 }
-class Entity;
 
 /**
  * @brief Professional scene hierarchy and outliner panel for 3D object management
@@ -301,7 +304,7 @@ public:
      * @note Automatically handles hierarchy changes and reparenting
      * @note No effect if entity is not currently displayed
      */
-    void updateEntity(Entity* entity);
+    void updateEntity(rude::Entity* entity);
     
     /**
      * @brief Add new entity to hierarchy display
@@ -319,7 +322,7 @@ public:
      * @note Placement determined by entity's parent relationship
      * @note New entity becomes immediately available for interaction
      */
-    void addEntity(Entity* entity);
+    void addEntity(rude::Entity* entity);
     
     /**
      * @brief Remove entity from hierarchy display
@@ -337,7 +340,7 @@ public:
      * @note Child handling depends on scene hierarchy implementation
      * @note No effect if entity is not currently displayed
      */
-    void removeEntity(Entity* entity);
+    void removeEntity(rude::Entity* entity);
 
     // ========================================================================
     // Selection Management
@@ -359,7 +362,7 @@ public:
      * @note Entities not in hierarchy are ignored silently
      * @note Expands tree branches to show selected entities if needed
      */
-    void setSelectedEntities(const QList<Entity*>& entities);
+    void setSelectedEntities(const QList<rude::Entity*>& entities);
     
     /**
      * @brief Get currently selected entities from hierarchy
@@ -370,7 +373,7 @@ public:
      * @note Use for synchronization with other components
      * @note Selection order matches tree order, not selection order
      */
-    QList<Entity*> getSelectedEntities() const;
+    QList<rude::Entity*> getSelectedEntities() const;
     
     /**
      * @brief Clear all selection in hierarchy
@@ -404,7 +407,7 @@ signals:
      * @note Multiple selections may emit multiple signals
      * @note nullptr indicates selection was cleared
      */
-    void entitySelected(Entity* entity);
+    void entitySelected(rude::Entity* entity);
     
     /**
      * @brief Signal emitted when multiple entities are selected
@@ -418,7 +421,7 @@ signals:
      * @note Emitted for both user selection and programmatic selection
      * @note Empty list indicates all selection was cleared
      */
-    void entitiesSelected(const QList<Entity*>& entities);
+    void entitiesSelected(const QList<rude::Entity*>& entities);
 
     // ========================================================================
     // Object Management Signals
@@ -437,7 +440,7 @@ signals:
      * @note Name validation should be performed by receiving component
      * @note Operation is undoable through command system integration
      */
-    void entityRenamed(Entity* entity, const QString& newName);
+    void entityRenamed(rude::Entity* entity, const QString& newName);
     
     /**
      * @brief Signal emitted when entity deletion is requested
@@ -451,7 +454,7 @@ signals:
      * @note Deletion confirmation may be handled by receiving component
      * @note Operation should be undoable through command system
      */
-    void entityDeleted(Entity* entity);
+    void entityDeleted(rude::Entity* entity);
     
     /**
      * @brief Signal emitted when entity duplication is requested
@@ -465,7 +468,7 @@ signals:
      * @note New entity typically created near original entity
      * @note Duplication includes all entity properties and relationships
      */
-    void entityDuplicated(Entity* entity);
+    void entityDuplicated(rude::Entity* entity);
     
     /**
      * @brief Signal emitted when entity hierarchy changes
@@ -480,7 +483,7 @@ signals:
      * @note Hierarchy changes affect transformation inheritance
      * @note Operation should be undoable through command system
      */
-    void entityReparented(Entity* entity, Entity* newParent);
+    void entityReparented(rude::Entity* entity, rude::Entity* newParent);
 
 private slots:
     // ========================================================================
@@ -712,7 +715,7 @@ private:
      * @note Returns nullptr for invalid items or items without entity data
      * @note Essential for mapping tree interactions to scene objects
      */
-    Entity* getEntityFromItem(QTreeWidgetItem* item);
+    rude::Entity* getEntityFromItem(QTreeWidgetItem* item);
     
     /**
      * @brief Update tree item to reflect entity state
@@ -731,7 +734,7 @@ private:
      * @note Handles all visual aspects of entity representation
      * @note Updates are optimized to only change what's necessary
      */
-    void updateItemFromEntity(QTreeWidgetItem* item, Entity* entity);
+    void updateItemFromEntity(QTreeWidgetItem* item, rude::Entity* entity);
     
     /**
      * @brief Create tree item for entity with proper configuration
@@ -752,7 +755,7 @@ private:
      * @note All entity properties are reflected in initial item state
      * @note Item supports inline editing and context menu operations
      */
-    QTreeWidgetItem* createItemForEntity(Entity* entity, QTreeWidgetItem* parent = nullptr);
+    QTreeWidgetItem* createItemForEntity(rude::Entity* entity, QTreeWidgetItem* parent = nullptr);
     
     /**
      * @brief Build complete tree hierarchy from scene
@@ -787,7 +790,7 @@ private:
      * @note Maintains entity relationships during tree construction
      * @note Called by buildTreeFromScene for complete hierarchy building
      */
-    void buildTreeBranch(Entity* entity, QTreeWidgetItem* parentItem);
+    void buildTreeBranch(rude::Entity* entity, QTreeWidgetItem* parentItem);
     
     /**
      * @brief Apply theme-appropriate styling to tree widget
@@ -821,5 +824,3 @@ private:
      */
     void updateContextMenuForSelection();
 };
-
-#endif // SCENEHIERARCHYPANEL_H

@@ -20,7 +20,7 @@ RotateGizmo::RotateGizmo()
     : Gizmo(), m_target(nullptr) {
 }
 
-RotateGizmo::RotateGizmo(std::shared_ptr<Entity> target)
+RotateGizmo::RotateGizmo(std::shared_ptr<rude::Entity> target)
     : Gizmo(), m_target(target) {
 }
 

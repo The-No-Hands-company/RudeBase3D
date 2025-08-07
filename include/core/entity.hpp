@@ -81,7 +81,6 @@ namespace rude {
     };
     
     class Mesh; ///< Forward declaration for mesh class
-}
 
 /**
  * @brief Individual 3D object in the scene with transform hierarchy
@@ -570,4 +569,4 @@ private:
 /**
  * @}
  */
-};
+} // namespace rude

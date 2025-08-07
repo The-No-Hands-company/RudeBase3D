@@ -1082,6 +1082,8 @@
  * 
  * ═══════════════════════════════════════════════════════════════════════════════════
  */
+
+/**
  * ### Theme Integration
  * Seamless integration with the application theme system:
  * - **Automatic Color Adaptation**: Colors update automatically with theme changes
@@ -1225,6 +1227,20 @@
  * @version 1.0
  * @since 1.0
  */
+
+#pragma once
+
+#include "BaseComponent.h"
+#include <QWidget>
+#include <QPushButton>
+#include <QIcon>
+#include <QString>
+#include <QSize>
+#include <memory>
+
+namespace rudebase3d {
+namespace ui {
+
 class ThemedButton : public BaseComponent
 {
     Q_OBJECT

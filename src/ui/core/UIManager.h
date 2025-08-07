@@ -1309,5 +1309,3 @@ private:
     /// Theme selector widget for appearance customization
     rudebase3d::ui::ThemeSelector* m_themeSelector;
 };
-
-#endif // UIMANAGER_H

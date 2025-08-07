@@ -271,7 +271,7 @@ QString ThemeManager::currentTheme() const
     return m_currentTheme;
 }
 
-void ThemeManager::applyTheme(const QString& themeId)
+void ThemeManager::applyTheme(const QString& themeId, bool animated)
 {
     if (!m_themes.contains(themeId)) {
         qWarning() << "Theme not found:" << themeId;
@@ -286,6 +286,9 @@ void ThemeManager::applyTheme(const QString& themeId)
     if (QApplication* app = qobject_cast<QApplication*>(QApplication::instance())) {
         app->setStyleSheet(styleSheet);
     }
+    
+    // TODO: Use animated parameter for smooth transitions if needed
+    (void)animated; // Suppress unused parameter warning for now
     
     emit themeChanged(themeId);
 }
