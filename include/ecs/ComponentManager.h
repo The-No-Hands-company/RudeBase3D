@@ -1,3 +1,34 @@
+/*
+ * ██████╗ ██╗   ██╗██████╗ ███████╗██████╗  █████╗ ███████╗███████╗██████╗ ██████╗ 
+ * ██╔══██╗██║   ██║██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝╚════██╗██╔══██╗
+ * ██████╔╝██║   ██║██║  ██║█████╗  ██████╔╝███████║███████╗█████╗   █████╔╝██║  ██║
+ * ██╔══██╗██║   ██║██║  ██║██╔══╝  ██╔══██╗██╔══██║╚════██║██╔══╝   ╚═══██╗██║  ██║
+ * ██║  ██║╚██████╔╝██████╔╝███████╗██████╔╝██║  ██║███████║███████╗██████╔╝██████╔╝
+ * ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═════╝ ╚═════╝ 
+ * 
+ * Professional 3D Modeling & Animation Software
+ * 
+ * ████████████████████████████████████████████████████████████████████████████████
+ * █                                                                              █
+ * █  FILE: ComponentManager.h                                                    █
+ * █  DESCRIPTION: ECS Component Registration & Lifecycle Management             █
+ * █                                                                              █
+ * █  PART OF: RudeBase3D - Professional 3D Modeling & Animation Suite            █
+ * █  VERSION: 1.0.0                                                              █
+ * █  CREATED: 2024                                                               █
+ * █  UPDATED: August 7, 2025                                                     █
+ * █                                                                              █
+ * █  LICENSE: MIT License                                                        █
+ * █  COMPANY: The No Hands Company                                               █
+ * █  AUTHOR: RudeBase3D Development Team                                         █
+ * █                                                                              █
+ * █  This file contains the ComponentManager class providing registration       █
+ * █  and lifecycle management for all component types in the Entity             █
+ * █  Component System architecture used throughout RudeBase3D.                  █
+ * █                                                                              █
+ * ████████████████████████████████████████████████████████████████████████████████
+ */
+
 #pragma once
 
 #include "Component.h"

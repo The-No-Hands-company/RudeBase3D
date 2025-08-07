@@ -120,3 +120,6 @@ config.json
 
 # Community documentation (not part of codebase)
 docs/DISCORD_SETUP.md
+# Personal documentation and workflow files
+documentation_report.md
+scripts/doc_automation.py

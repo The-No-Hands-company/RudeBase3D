@@ -1,3 +1,34 @@
+/*
+ * ██████╗ ██╗   ██╗██████╗ ███████╗██████╗  █████╗ ███████╗███████╗██████╗ ██████╗ 
+ * ██╔══██╗██║   ██║██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝╚════██╗██╔══██╗
+ * ██████╔╝██║   ██║██║  ██║█████╗  ██████╔╝███████║███████╗█████╗   █████╔╝██║  ██║
+ * ██╔══██╗██║   ██║██║  ██║██╔══╝  ██╔══██╗██╔══██║╚════██║██╔══╝   ╚═══██╗██║  ██║
+ * ██║  ██║╚██████╔╝██████╔╝███████╗██████╔╝██║  ██║███████║███████╗██████╔╝██████╔╝
+ * ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═════╝ ╚═════╝ 
+ * 
+ * Professional 3D Modeling & Animation Software
+ * 
+ * ████████████████████████████████████████████████████████████████████████████████
+ * █                                                                              █
+ * █  FILE: ThemeSelector.h                                                       █
+ * █  DESCRIPTION: UI Theme Selection Component & Style Management               █
+ * █                                                                              █
+ * █  PART OF: RudeBase3D - Professional 3D Modeling & Animation Suite            █
+ * █  VERSION: 1.0.0                                                              █
+ * █  CREATED: 2024                                                               █
+ * █  UPDATED: August 7, 2025                                                     █
+ * █                                                                              █
+ * █  LICENSE: MIT License                                                        █
+ * █  COMPANY: The No Hands Company                                               █
+ * █  AUTHOR: RudeBase3D Development Team                                         █
+ * █                                                                              █
+ * █  This file contains the ThemeSelector component providing user interface    █
+ * █  for theme selection and style management in the professional 3D            █
+ * █  modeling application environment.                                           █
+ * █                                                                              █
+ * ████████████████████████████████████████████████████████████████████████████████
+ */
+
 #pragma once
 
 #include "BaseComponent.h"
