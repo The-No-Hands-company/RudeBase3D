@@ -44,6 +44,12 @@ class OutlinerPanel;
 class SelectionPanel;
 class ToolbarManager;
 
+namespace RudeBase3D {
+namespace UI {
+    class EditPreviewPanel;
+}
+}
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -129,6 +135,7 @@ private:
     OutlinerPanel* m_outlinerPanel = nullptr;
     PropertiesPanel* m_modernPropertiesPanel = nullptr;
     SelectionPanel* m_selectionPanel = nullptr;
+    RudeBase3D::UI::EditPreviewPanel* m_editPreviewPanel = nullptr;
     std::unique_ptr<ToolbarManager> m_toolbarManager;
     
     // Legacy components during transition

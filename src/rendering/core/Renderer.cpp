@@ -3,6 +3,7 @@
 #include "Mesh.h"
 #include "core/mesh.hpp"
 #include "Material.h"
+#include "core/shader_utils.hpp"
 #include <glm/gtc/type_ptr.hpp>
 #include <spdlog/spdlog.h>
 // Removed Qt includes
@@ -315,60 +316,126 @@ void Renderer::setClearColor(const glm::vec4& color)
 
 bool Renderer::createShaderProgram(const std::string& name, const std::string& vertexSource, const std::string& fragmentSource)
 {
-    // TODO: Temporarily commented out due to shader system architectural issues
-    // Need to resolve Qt OpenGL vs raw OpenGL approach and fix ShaderProgram struct members
-    
-    // Acknowledge parameters until shader compilation is implemented
-    (void)vertexSource;   // Will be used for vertex shader compilation
-    (void)fragmentSource; // Will be used for fragment shader compilation
-    
-    spdlog::warn("createShaderProgram temporarily disabled for shader: {}", name);
-    /*
-    auto shaderProgram = std::make_unique<ShaderProgram>();
-    shaderProgram->program = std::make_unique<QOpenGLShaderProgram>();
+    // Create a simple OpenGL shader compilation
     
     // Compile vertex shader
-    if (!shaderProgram->program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexSource)) {
-        qDebug() << "Failed to compile vertex shader for" << name;
-        qDebug() << shaderProgram->program->log();
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    const char* vertexSrc = vertexSource.c_str();
+    glShaderSource(vertexShader, 1, &vertexSrc, nullptr);
+    glCompileShader(vertexShader);
+    
+    // Check vertex shader compilation
+    GLint success;
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog);
+        spdlog::error("Vertex shader compilation failed for {}: {}", name, infoLog);
+        glDeleteShader(vertexShader);
         return false;
     }
     
     // Compile fragment shader
-    if (!shaderProgram->program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentSource)) {
-        qDebug() << "Failed to compile fragment shader for" << name;
-        qDebug() << shaderProgram->program->log();
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    const char* fragmentSrc = fragmentSource.c_str();
+    glShaderSource(fragmentShader, 1, &fragmentSrc, nullptr);
+    glCompileShader(fragmentShader);
+    
+    // Check fragment shader compilation
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetShaderInfoLog(fragmentShader, 512, nullptr, infoLog);
+        spdlog::error("Fragment shader compilation failed for {}: {}", name, infoLog);
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
         return false;
     }
     
-    // Link program
-    if (!shaderProgram->program->link()) {
-        qDebug() << "Failed to link shader program for" << name;
-        qDebug() << shaderProgram->program->log();
+    // Create shader program
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+    
+    // Check program linking
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
+        spdlog::error("Shader program linking failed for {}: {}", name, infoLog);
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+        glDeleteProgram(shaderProgram);
         return false;
     }
     
-    // Get uniform locations
-    shaderProgram->mvpMatrixLoc = shaderProgram->program->uniformLocation("mvpMatrix");
-    shaderProgram->modelMatrixLoc = shaderProgram->program->uniformLocation("modelMatrix");
-    shaderProgram->viewMatrixLoc = shaderProgram->program->uniformLocation("viewMatrix");
-    shaderProgram->projectionMatrixLoc = shaderProgram->program->uniformLocation("projectionMatrix");
-    shaderProgram->normalMatrixLoc = shaderProgram->program->uniformLocation("normalMatrix");
+    // Clean up shaders
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
     
-    shaderProgram->diffuseColorLoc = shaderProgram->program->uniformLocation("material.diffuseColor");
-    shaderProgram->specularColorLoc = shaderProgram->program->uniformLocation("material.specularColor");
-    shaderProgram->ambientColorLoc = shaderProgram->program->uniformLocation("material.ambientColor");
-    shaderProgram->shininessLoc = shaderProgram->program->uniformLocation("material.shininess");
+    // Create and store shader program
+    auto shaderProgram_ptr = std::make_unique<ShaderProgram>();
+    shaderProgram_ptr->programID = shaderProgram;
     
-    shaderProgram->lightDirectionLoc = shaderProgram->program->uniformLocation("lightDirection");
-    shaderProgram->lightColorLoc = shaderProgram->program->uniformLocation("lightColor");
-    shaderProgram->viewPosLoc = shaderProgram->program->uniformLocation("viewPos");
+    // Uniform name constants
+    constexpr const char* MVP_MATRIX_UNIFORM = "mvpMatrix";
+    constexpr const char* MODEL_MATRIX_UNIFORM = "modelMatrix";
+    constexpr const char* VIEW_MATRIX_UNIFORM = "viewMatrix";
+    constexpr const char* PROJECTION_MATRIX_UNIFORM = "projectionMatrix";
+    constexpr const char* NORMAL_MATRIX_UNIFORM = "normalMatrix";
+    constexpr const char* COLOR_UNIFORM = "color";
+    constexpr const char* DIFFUSE_COLOR_UNIFORM = "diffuseColor";
+    constexpr const char* LIGHT_DIRECTION_UNIFORM = "lightDirection";
+    constexpr const char* LIGHT_COLOR_UNIFORM = "lightColor";
+    constexpr const char* VIEW_POS_UNIFORM = "viewPos";
     
-    shaderProgram->colorLoc = shaderProgram->program->uniformLocation("color");
+    // Get uniform locations and check for missing uniforms
+    shaderProgram_ptr->mvpMatrixLoc = glGetUniformLocation(shaderProgram, MVP_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->mvpMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", MVP_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->modelMatrixLoc = glGetUniformLocation(shaderProgram, MODEL_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->modelMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", MODEL_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->viewMatrixLoc = glGetUniformLocation(shaderProgram, VIEW_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->viewMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", VIEW_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->projectionMatrixLoc = glGetUniformLocation(shaderProgram, PROJECTION_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->projectionMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", PROJECTION_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->normalMatrixLoc = glGetUniformLocation(shaderProgram, NORMAL_MATRIX_UNIFORM);
+    if (shaderProgram_ptr->normalMatrixLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", NORMAL_MATRIX_UNIFORM, name);
+    }
+    shaderProgram_ptr->colorLoc = glGetUniformLocation(shaderProgram, COLOR_UNIFORM);
+    if (shaderProgram_ptr->colorLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", COLOR_UNIFORM, name);
+    }
+    shaderProgram_ptr->diffuseColorLoc = glGetUniformLocation(shaderProgram, DIFFUSE_COLOR_UNIFORM);
+    if (shaderProgram_ptr->diffuseColorLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", DIFFUSE_COLOR_UNIFORM, name);
+    }
+    shaderProgram_ptr->lightDirectionLoc = glGetUniformLocation(shaderProgram, LIGHT_DIRECTION_UNIFORM);
+    if (shaderProgram_ptr->lightDirectionLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", LIGHT_DIRECTION_UNIFORM, name);
+    }
+    shaderProgram_ptr->lightColorLoc = glGetUniformLocation(shaderProgram, LIGHT_COLOR_UNIFORM);
+    if (shaderProgram_ptr->lightColorLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", LIGHT_COLOR_UNIFORM, name);
+    }
+    shaderProgram_ptr->viewPosLoc = glGetUniformLocation(shaderProgram, VIEW_POS_UNIFORM);
+    if (shaderProgram_ptr->viewPosLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", VIEW_POS_UNIFORM, name);
+    }
     
-    m_shaderPrograms[name] = std::move(shaderProgram);
-    */
-    return false; // Return false to indicate shader creation failed
+    m_shaderPrograms[name] = std::move(shaderProgram_ptr);
+    
+    spdlog::info("Shader program '{}' compiled and linked successfully", name);
+    return true;
 }
 
 void Renderer::updateUniforms()

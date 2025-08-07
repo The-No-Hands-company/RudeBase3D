@@ -2,6 +2,7 @@
 #include "core/scene_manager.hpp"
 #include "core/primitive_manager.hpp"
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <fstream>
 #include <spdlog/spdlog.h>
 

@@ -15,7 +15,6 @@
 #include <ranges>
 #include <expected>
 #include <span>
-#include <glm/glm.hpp>
 #include "core/mesh_forward.hpp"
 
 // Conversion utilities between Qt and GLM types (deprecated, to be removed)

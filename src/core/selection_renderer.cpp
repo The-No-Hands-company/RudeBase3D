@@ -3,6 +3,7 @@
 #include "mesh.hpp"
 #include "core/math/Transform.h"
 #include <QOpenGLFunctions_3_3_Core>
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 

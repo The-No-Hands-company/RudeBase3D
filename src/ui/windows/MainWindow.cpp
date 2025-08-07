@@ -29,6 +29,7 @@
 #include "toolbars/selection_toolbar.hpp"
 #include "toolbars/transform_toolbar.hpp"
 #include "gizmo/gizmo_manager.hpp"
+#include "ui/edit_preview_panel.hpp"
 
 #include <QFileDialog>
 #include <QApplication>
@@ -187,6 +188,20 @@ void MainWindow::connectSignals()
         (void)mode; // Suppress unused parameter warning
         // TODO: Implement transform mode on ViewportManager
         // For now, this will be handled per viewport
+    });
+    
+    // Panel visibility connections
+    connect(m_uiManager.get(), &UIManager::showOutlinerPanel, this, [this](bool show) {
+        if (m_outlinerPanel) m_outlinerPanel->setVisible(show);
+    });
+    connect(m_uiManager.get(), &UIManager::showPropertiesPanel, this, [this](bool show) {
+        if (m_modernPropertiesPanel) m_modernPropertiesPanel->setVisible(show);
+    });
+    connect(m_uiManager.get(), &UIManager::showSelectionPanel, this, [this](bool show) {
+        if (m_selectionPanel) m_selectionPanel->setVisible(show);
+    });
+    connect(m_uiManager.get(), &UIManager::showEditPreviewPanel, this, [this](bool show) {
+        if (m_editPreviewPanel) m_editPreviewPanel->setVisible(show);
     });
     
     // Scene and viewport connections
@@ -937,6 +952,19 @@ void MainWindow::setupModernPanels()
     m_selectionPanel->setWindowTitle("Selection");
     m_selectionPanel->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     
+    // Create the edit preview panel
+    auto* editPreviewSystem = coreSystem.getEditPreviewSystem();
+    if (editPreviewSystem) {
+        // Note: Using shared_ptr with no-op deleter is safe here because:
+        // 1. EditPreviewSystem is owned by CoreSystem singleton (same lifetime as application)
+        // 2. EditPreviewPanel is destroyed before CoreSystem during application shutdown
+        // 3. This avoids exposing raw pointer interface in EditPreviewPanel constructor
+        std::shared_ptr<RudeBase3D::Core::EditPreviewSystem> sharedPreviewSystem(editPreviewSystem, [](RudeBase3D::Core::EditPreviewSystem*){});
+        m_editPreviewPanel = new RudeBase3D::UI::EditPreviewPanel(sharedPreviewSystem, this);
+        m_editPreviewPanel->setWindowTitle("Edit Preview");
+        m_editPreviewPanel->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    }
+    
     // Connect the selection panel to the core system's selection manager
     if (selectionManager) {
         m_selectionPanel->setSelectionManager(selectionManager);
@@ -946,10 +974,16 @@ void MainWindow::setupModernPanels()
     addDockWidget(Qt::RightDockWidgetArea, m_outlinerPanel);
     addDockWidget(Qt::RightDockWidgetArea, m_modernPropertiesPanel);
     addDockWidget(Qt::RightDockWidgetArea, m_selectionPanel);
+    if (m_editPreviewPanel) {
+        addDockWidget(Qt::RightDockWidgetArea, m_editPreviewPanel);
+    }
     
     // Tabify the panels
     tabifyDockWidget(m_outlinerPanel, m_modernPropertiesPanel);
     tabifyDockWidget(m_modernPropertiesPanel, m_selectionPanel);
+    if (m_editPreviewPanel) {
+        tabifyDockWidget(m_selectionPanel, m_editPreviewPanel);
+    }
     
     // Ensure outliner is visible by default
     m_outlinerPanel->raise();

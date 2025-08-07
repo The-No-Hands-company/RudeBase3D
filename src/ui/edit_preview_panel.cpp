@@ -579,5 +579,3 @@ void EditPreviewPanel::onPreviewFinished(EntityID entityId, Core::EditOperation 
 
 } // namespace UI
 } // namespace RudeBase3D
-
-#include "edit_preview_panel.moc"
