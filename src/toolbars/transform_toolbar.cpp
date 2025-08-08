@@ -15,10 +15,122 @@ TransformToolbar::TransformToolbar(QMainWindow* parent)
 
 void TransformToolbar::createActions()
 {
-    createModeActions();
-    createCoordinateActions();
-    createConstraintActions();
-    createOptionActions();
+    // Transform modes
+    QAction* move = new QAction("Move", this);
+    move->setObjectName("mode_move");
+    move->setToolTip("Move selected objects (G)");
+    move->setCheckable(true);
+    move->setChecked(true);
+    move->setShortcut(QKeySequence("G"));
+    addAction(move);
+    QAction* rotate = new QAction("Rotate", this);
+    rotate->setObjectName("mode_rotate");
+    rotate->setToolTip("Rotate selected objects (R)");
+    rotate->setCheckable(true);
+    rotate->setShortcut(QKeySequence("R"));
+    addAction(rotate);
+    QAction* scale = new QAction("Scale", this);
+    scale->setObjectName("mode_scale");
+    scale->setToolTip("Scale selected objects (S)");
+    scale->setCheckable(true);
+    scale->setShortcut(QKeySequence("S"));
+    addAction(scale);
+    QAction* free = new QAction("Free", this);
+    free->setObjectName("mode_free");
+    free->setToolTip("Free transform with gizmo");
+    free->setCheckable(true);
+    addAction(free);
+    addSeparator();
+    // Coordinate systems
+    QAction* global = new QAction("Global", this);
+    global->setObjectName("coord_global");
+    global->setToolTip("Use global coordinate system");
+    global->setCheckable(true);
+    global->setChecked(true);
+    addAction(global);
+    QAction* local = new QAction("Local", this);
+    local->setObjectName("coord_local");
+    local->setToolTip("Use local coordinate system");
+    local->setCheckable(true);
+    addAction(local);
+    QAction* view = new QAction("View", this);
+    view->setObjectName("coord_view");
+    view->setToolTip("Use view coordinate system");
+    view->setCheckable(true);
+    addAction(view);
+    QAction* normal = new QAction("Normal", this);
+    normal->setObjectName("coord_normal");
+    normal->setToolTip("Use surface normal coordinate system");
+    normal->setCheckable(true);
+    addAction(normal);
+    addSeparator();
+    // Axis constraints
+    QAction* none = new QAction("Free", this);
+    none->setObjectName("constraint_none");
+    none->setToolTip("No axis constraint");
+    none->setCheckable(true);
+    none->setChecked(true);
+    addAction(none);
+    QAction* x = new QAction("X", this);
+    x->setObjectName("constraint_x");
+    x->setToolTip("Constrain to X-axis");
+    x->setCheckable(true);
+    x->setShortcut(QKeySequence("X"));
+    addAction(x);
+    QAction* y = new QAction("Y", this);
+    y->setObjectName("constraint_y");
+    y->setToolTip("Constrain to Y-axis");
+    y->setCheckable(true);
+    y->setShortcut(QKeySequence("Y"));
+    addAction(y);
+    QAction* z = new QAction("Z", this);
+    z->setObjectName("constraint_z");
+    z->setToolTip("Constrain to Z-axis");
+    z->setCheckable(true);
+    z->setShortcut(QKeySequence("Z"));
+    addAction(z);
+    QAction* xy = new QAction("XY", this);
+    xy->setObjectName("constraint_xy");
+    xy->setToolTip("Constrain to XY-plane");
+    xy->setCheckable(true);
+    addAction(xy);
+    QAction* xz = new QAction("XZ", this);
+    xz->setObjectName("constraint_xz");
+    xz->setToolTip("Constrain to XZ-plane");
+    xz->setCheckable(true);
+    addAction(xz);
+    QAction* yz = new QAction("YZ", this);
+    yz->setObjectName("constraint_yz");
+    yz->setToolTip("Constrain to YZ-plane");
+    yz->setCheckable(true);
+    addAction(yz);
+    addSeparator();
+    // Options
+    QAction* snap = new QAction("Snap", this);
+    snap->setObjectName("option_snap");
+    snap->setToolTip("Enable/disable snapping");
+    snap->setCheckable(true);
+    snap->setChecked(false);
+    addAction(snap);
+    QAction* prop = new QAction("Proportional", this);
+    prop->setObjectName("option_proportional");
+    prop->setToolTip("Enable/disable proportional editing");
+    prop->setCheckable(true);
+    prop->setChecked(false);
+    prop->setShortcut(QKeySequence("O"));
+    addAction(prop);
+    QAction* snapSettings = new QAction("Snap Settings", this);
+    snapSettings->setObjectName("option_snap_settings");
+    snapSettings->setToolTip("Configure snap settings");
+    addAction(snapSettings);
+    QAction* orientation = new QAction("Orientation", this);
+    orientation->setObjectName("option_orientation");
+    orientation->setToolTip("Transform orientation settings");
+    addAction(orientation);
+    QAction* pivot = new QAction("Pivot", this);
+    pivot->setObjectName("option_pivot");
+    pivot->setToolTip("Set transform pivot point");
+    addAction(pivot);
 }
 
 void TransformToolbar::setupLayout()
@@ -74,131 +186,6 @@ void TransformToolbar::connectSignals()
             connect(action.get(), &QAction::toggled, this, &TransformToolbar::onProportionalEditingToggled);
         }
     }
-}
-
-void TransformToolbar::createModeActions()
-{
-    // Create action group for exclusive selection
-    auto modeGroup = new QActionGroup(this);
-    
-    // Move mode
-    auto moveAction = createAction("mode_move", "Move", "Move selected objects (G)", true);
-    moveAction->setCheckable(true);
-    moveAction->setChecked(true);
-    moveAction->setShortcut(QKeySequence("G"));
-    modeGroup->addAction(moveAction);
-    
-    // Rotate mode
-    auto rotateAction = createAction("mode_rotate", "Rotate", "Rotate selected objects (R)", true);
-    rotateAction->setCheckable(true);
-    rotateAction->setShortcut(QKeySequence("R"));
-    modeGroup->addAction(rotateAction);
-    
-    // Scale mode
-    auto scaleAction = createAction("mode_scale", "Scale", "Scale selected objects (S)", true);
-    scaleAction->setCheckable(true);
-    scaleAction->setShortcut(QKeySequence("S"));
-    modeGroup->addAction(scaleAction);
-    
-    // Free transform mode
-    auto freeAction = createAction("mode_free", "Free", "Free transform with gizmo", true);
-    freeAction->setCheckable(true);
-    modeGroup->addAction(freeAction);
-}
-
-void TransformToolbar::createCoordinateActions()
-{
-    // Create action group for exclusive selection
-    auto coordGroup = new QActionGroup(this);
-    
-    // Global coordinates
-    auto globalAction = createAction("coord_global", "Global", "Use global coordinate system", true);
-    globalAction->setCheckable(true);
-    globalAction->setChecked(true);
-    coordGroup->addAction(globalAction);
-    
-    // Local coordinates
-    auto localAction = createAction("coord_local", "Local", "Use local coordinate system", true);
-    localAction->setCheckable(true);
-    coordGroup->addAction(localAction);
-    
-    // View coordinates
-    auto viewAction = createAction("coord_view", "View", "Use view coordinate system", true);
-    viewAction->setCheckable(true);
-    coordGroup->addAction(viewAction);
-    
-    // Normal coordinates (for face/surface alignment)
-    auto normalAction = createAction("coord_normal", "Normal", "Use surface normal coordinate system", true);
-    normalAction->setCheckable(true);
-    coordGroup->addAction(normalAction);
-}
-
-void TransformToolbar::createConstraintActions()
-{
-    // Create action group for exclusive selection (including None)
-    auto constraintGroup = new QActionGroup(this);
-    
-    // No constraint
-    auto noneAction = createAction("constraint_none", "Free", "No axis constraint", true);
-    noneAction->setCheckable(true);
-    noneAction->setChecked(true);
-    constraintGroup->addAction(noneAction);
-    
-    // X-axis constraint
-    auto xAction = createAction("constraint_x", "X", "Constrain to X-axis", true);
-    xAction->setCheckable(true);
-    xAction->setShortcut(QKeySequence("X"));
-    constraintGroup->addAction(xAction);
-    
-    // Y-axis constraint
-    auto yAction = createAction("constraint_y", "Y", "Constrain to Y-axis", true);
-    yAction->setCheckable(true);
-    yAction->setShortcut(QKeySequence("Y"));
-    constraintGroup->addAction(yAction);
-    
-    // Z-axis constraint
-    auto zAction = createAction("constraint_z", "Z", "Constrain to Z-axis", true);
-    zAction->setCheckable(true);
-    zAction->setShortcut(QKeySequence("Z"));
-    constraintGroup->addAction(zAction);
-    
-    // XY-plane constraint
-    auto xyAction = createAction("constraint_xy", "XY", "Constrain to XY-plane", true);
-    xyAction->setCheckable(true);
-    constraintGroup->addAction(xyAction);
-    
-    // XZ-plane constraint
-    auto xzAction = createAction("constraint_xz", "XZ", "Constrain to XZ-plane", true);
-    xzAction->setCheckable(true);
-    constraintGroup->addAction(xzAction);
-    
-    // YZ-plane constraint
-    auto yzAction = createAction("constraint_yz", "YZ", "Constrain to YZ-plane", true);
-    yzAction->setCheckable(true);
-    constraintGroup->addAction(yzAction);
-}
-
-void TransformToolbar::createOptionActions()
-{
-    // Snap toggle
-    auto snapAction = createAction("option_snap", "Snap", "Enable/disable snapping", false);
-    snapAction->setCheckable(true);
-    snapAction->setChecked(false);
-    
-    // Proportional editing toggle
-    auto propAction = createAction("option_proportional", "Proportional", "Enable/disable proportional editing", false);
-    propAction->setCheckable(true);
-    propAction->setChecked(false);
-    propAction->setShortcut(QKeySequence("O"));
-    
-    // Snap settings (opens snap settings dialog)
-    auto snapSettingsAction = createAction("option_snap_settings", "Snap Settings", "Configure snap settings", false);
-    
-    // Transform orientation settings
-    auto orientationAction = createAction("option_orientation", "Orientation", "Transform orientation settings", false);
-    
-    // Pivot settings
-    auto pivotAction = createAction("option_pivot", "Pivot", "Set transform pivot point", false);
 }
 
 void TransformToolbar::setTransformMode(const QString& mode)

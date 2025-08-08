@@ -10,11 +10,59 @@ PrimitivesToolbar::PrimitivesToolbar(QMainWindow* parent)
 
 void PrimitivesToolbar::createActions()
 {
-    createBasicPrimitives();
-    addToolbarSeparator();
-    createAdvancedPrimitives();
-    addToolbarSeparator();
-    createCurveTools();
+    // Basic primitives
+    QAction* cube = new QAction("Cube", this);
+    cube->setObjectName("cube");
+    cube->setToolTip("Create a new cube primitive");
+    addAction(cube);
+    QAction* sphere = new QAction("Sphere", this);
+    sphere->setObjectName("sphere");
+    sphere->setToolTip("Create a new sphere primitive");
+    addAction(sphere);
+    QAction* cylinder = new QAction("Cylinder", this);
+    cylinder->setObjectName("cylinder");
+    cylinder->setToolTip("Create a new cylinder primitive");
+    addAction(cylinder);
+    QAction* plane = new QAction("Plane", this);
+    plane->setObjectName("plane");
+    plane->setToolTip("Create a new plane primitive");
+    addAction(plane);
+    QAction* cone = new QAction("Cone", this);
+    cone->setObjectName("cone");
+    cone->setToolTip("Create a new cone primitive");
+    addAction(cone);
+    addSeparator();
+    // Advanced primitives
+    QAction* torus = new QAction("Torus", this);
+    torus->setObjectName("torus");
+    torus->setToolTip("Create a new torus primitive");
+    addAction(torus);
+    QAction* icosphere = new QAction("Icosphere", this);
+    icosphere->setObjectName("icosphere");
+    icosphere->setToolTip("Create a new icosphere primitive");
+    addAction(icosphere);
+    QAction* uvSphere = new QAction("UV Sphere", this);
+    uvSphere->setObjectName("uv_sphere");
+    uvSphere->setToolTip("Create a new UV sphere primitive");
+    addAction(uvSphere);
+    QAction* monkey = new QAction("Monkey", this);
+    monkey->setObjectName("monkey");
+    monkey->setToolTip("Create Suzanne (monkey head) primitive");
+    addAction(monkey);
+    addSeparator();
+    // Curve tools
+    QAction* bezier = new QAction("Bezier Curve", this);
+    bezier->setObjectName("bezier_curve");
+    bezier->setToolTip("Create a new Bezier curve");
+    addAction(bezier);
+    QAction* circle = new QAction("Circle", this);
+    circle->setObjectName("circle");
+    circle->setToolTip("Create a new circle curve");
+    addAction(circle);
+    QAction* path = new QAction("Path", this);
+    path->setObjectName("path");
+    path->setToolTip("Create a new path curve");
+    addAction(path);
 }
 
 void PrimitivesToolbar::setupLayout()
@@ -70,31 +118,4 @@ void PrimitivesToolbar::onCurveToolRequested()
         emit curveToolRequested(curveType);
         qDebug() << "[PrimitivesToolbar] Curve tool requested:" << curveType;
     }
-}
-
-void PrimitivesToolbar::createBasicPrimitives()
-{
-    // Basic 3D primitives
-    createAction("cube", "Cube", "Create a new cube primitive", true);
-    createAction("sphere", "Sphere", "Create a new sphere primitive", true);
-    createAction("cylinder", "Cylinder", "Create a new cylinder primitive", true);
-    createAction("plane", "Plane", "Create a new plane primitive", true);
-    createAction("cone", "Cone", "Create a new cone primitive", true);
-}
-
-void PrimitivesToolbar::createAdvancedPrimitives()
-{
-    // Advanced primitives
-    createAction("torus", "Torus", "Create a new torus primitive", true);
-    createAction("icosphere", "Icosphere", "Create a new icosphere primitive", true);
-    createAction("uv_sphere", "UV Sphere", "Create a new UV sphere primitive", true);
-    createAction("monkey", "Monkey", "Create Suzanne (monkey head) primitive", true);
-}
-
-void PrimitivesToolbar::createCurveTools()
-{
-    // Curve and surface tools
-    createAction("bezier_curve", "Bezier Curve", "Create a new Bezier curve", true);
-    createAction("circle", "Circle", "Create a new circle curve", true);
-    createAction("path", "Path", "Create a new path curve", true);
 }

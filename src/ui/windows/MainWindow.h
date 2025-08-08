@@ -414,6 +414,7 @@ private:
     
     // Helper methods
     void createPrimitiveHelper(const QString& primitiveType);
+    void addTestPrimitive();
     
     // UI Setup methods
     void setupUI();

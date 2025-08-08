@@ -1,4 +1,5 @@
 #include "ViewportManager.h"
+#include "GLFWViewport.h"
 #include "ICameraController.h"
 #include "MayaCameraController.h"
 #include "input/EventDrivenCameraController.hpp"
@@ -10,6 +11,7 @@
 #include "core/core_system.hpp"
 #include "gizmo/gizmo_manager.hpp"
 #include "rendering/core/RenderSystem.h"
+#include "rendering/core/Renderer.h"
 #include "rendering/effects/LightingSystem.h"
 #include "ui/viewport/GridSystem.h"
 #include <glm/glm.hpp>
@@ -30,6 +32,7 @@ ViewportWidget::ViewportWidget(QWidget* parent)
     , m_isActive(false)
     , m_renderMode(RenderMode::Solid)
     , m_showGizmos(true)
+    , m_isDragging(false)
 {
     qDebug() << "ViewportWidget constructor called";
     setFocusPolicy(Qt::StrongFocus);
@@ -44,6 +47,10 @@ ViewportWidget::ViewportWidget(QWidget* parent)
     // TODO: Fix GizmoManager to support setSelectionManager method
     // m_gizmoManager->setSelectionManager(CoreSystem::getInstance().getSelectionManager());
     
+    // Create a dedicated renderer for grid and debug rendering
+    m_renderer = std::make_shared<Renderer>();
+    qDebug() << "Created dedicated renderer for grid system:" << (m_renderer ? "success" : "failed");
+    
     // Connect event-driven camera controller to our camera
     m_eventCameraController->setCamera(m_camera);
     
@@ -56,6 +63,8 @@ ViewportWidget::ViewportWidget(QWidget* parent)
     glm::vec3 defaultCameraPos(10.0f, 8.0f, 10.0f);  // Further back and higher up
     m_camera->getTransform().setPosition(defaultCameraPos);
     m_camera->lookAt(glm::vec3(0, 0, 0));             // Look at origin
+    
+    qDebug() << "Camera initialized to position:" << defaultCameraPos.x << defaultCameraPos.y << defaultCameraPos.z;
 
     // Connect to the core system's scene
     auto* sceneManager = CoreSystem::getInstance().getSceneManager();
@@ -99,7 +108,14 @@ void ViewportWidget::setLightingSystem(std::shared_ptr<LightingSystem> lightingS
 
 void ViewportWidget::setGridSystem(std::shared_ptr<GridSystem> gridSystem)
 {
+    printf("[GRID DEBUG] ViewportWidget::setGridSystem() called with gridSystem: %s\n", (gridSystem ? "valid" : "null"));
     m_gridSystem = gridSystem;
+    if (m_gridSystem) {
+    qDebug() << "[GRID DEBUG] ViewportWidget::setGridSystem() called with gridSystem:" << (gridSystem ? "valid" : "null");
+    m_gridSystem = gridSystem;
+    if (m_gridSystem) {
+        qDebug() << "[GRID DEBUG] GridSystem set successfully, visible:" << m_gridSystem->isVisible();
+    }
 }
 
 void ViewportWidget::setRenderSystem(std::shared_ptr<RenderSystem> renderSystem)
@@ -219,6 +235,16 @@ void ViewportWidget::initializeGL()
         qDebug() << "WARNING: No render system in viewport!";
     }
     
+    // Initialize the dedicated renderer for grid and debug rendering
+    if (m_renderer) {
+        qDebug() << "Initializing dedicated renderer for grid and debug drawing";
+        if (!m_renderer->initialize()) {
+            qDebug() << "ERROR: Failed to initialize dedicated renderer!";
+        } else {
+            qDebug() << "Dedicated renderer initialized successfully";
+        }
+    }
+    
     qDebug() << "ViewportWidget OpenGL initialization complete";
 }
 
@@ -241,30 +267,31 @@ void ViewportWidget::resizeGL(int w, int h)
 
 void ViewportWidget::paintGL()
 {
-    qDebug() << "ViewportWidget::paintGL() called, render system:" << (m_renderSystem ? "available" : "NULL");
+    // Ensure we have the correct OpenGL context
+    makeCurrent();
     
+    // Professional viewport background (Maya/Blender style)
+    glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // Subtle professional dark gray
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
+    // Enable professional OpenGL settings
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // Render the professional 3D scene
     if (m_renderSystem) {
-        qDebug() << "Calling renderSystem->render()";
         m_renderSystem->render();
-        qDebug() << "RenderSystem render completed";
-    } else {
-        qDebug() << "ERROR: No render system available for rendering!";
     }
-
-    // Draw Gizmo
+    
+    // Draw professional gizmos
     if (m_gizmoManager && m_showGizmos) {
-        // This is a temporary solution. The camera object needs to be consistent.
-        // We will need to refactor the Camera class to be independent of Qt.
-        Camera tempCam = *m_camera; // This will slice, but works for now
+        Camera tempCam = *m_camera;
         m_gizmoManager->draw(tempCam);
     }
 
     // Paint viewport overlay
     paintViewportOverlay();
-    
-    qDebug() << "ViewportWidget::paintGL() completed";
 }
 
 void ViewportWidget::mousePressEvent(QMouseEvent* event)
@@ -315,13 +342,9 @@ void ViewportWidget::mousePressEvent(QMouseEvent* event)
         m_mouseHandler->handleMousePress(event);
     }
     
-    // Fallback to legacy camera controller if event wasn't handled
-    if (m_cameraController.get()) {
-        // TODO: Fix MouseEvent conversion - ICameraController expects MouseEvent but we have QMouseEvent*
-        // if (m_cameraController->handleMousePress(event)) {
-        //     return;
-        // }
-    }
+    // Store mouse position for camera control
+    m_lastMousePos = event->pos();
+    m_isDragging = true;
     
     QOpenGLWidget::mousePressEvent(event);
 }
@@ -345,13 +368,49 @@ void ViewportWidget::mouseMoveEvent(QMouseEvent* event)
         m_mouseHandler->handleMouseMove(event);
     }
     
-    // Fallback to legacy camera controller if event wasn't handled
-    if (m_cameraController.get()) {
-        // TODO: Fix MouseEvent conversion - ICameraController expects MouseEvent but we have QMouseEvent*
-        // if (m_cameraController->handleMouseMove(event)) {
-        //     update();
-        //     return;
-        // }
+    // Basic camera controls (Maya-style)
+    if (m_isDragging) {
+        QPoint delta = event->pos() - m_lastMousePos;
+        m_lastMousePos = event->pos();
+        
+        if (event->buttons() & Qt::MiddleButton) {
+            // Pan camera
+            float sensitivity = 0.01f;
+            glm::vec3 right = m_camera->getRight();
+            glm::vec3 up = m_camera->getUp();
+            glm::vec3 panDelta = -right * static_cast<float>(delta.x()) * sensitivity + 
+                                 up * static_cast<float>(delta.y()) * sensitivity;
+            m_camera->getTransform().translate(panDelta);
+            emit cameraChanged();
+            update();
+        } else if (event->buttons() & Qt::RightButton) {
+            // Rotate camera around target (orbit)
+            float sensitivity = 0.01f;
+            glm::vec3 target(0, 0, 0); // Looking at origin for now
+            glm::vec3 position = m_camera->getTransform().getPosition();
+            
+            // Calculate spherical coordinates
+            glm::vec3 toCamera = position - target;
+            float radius = glm::length(toCamera);
+            
+            // Apply rotation
+            float yaw = -delta.x() * sensitivity;
+            float pitch = -delta.y() * sensitivity;
+            
+            // Rotate around Y axis (yaw)
+            glm::mat4 yawRotation = glm::rotate(glm::mat4(1.0f), yaw, glm::vec3(0, 1, 0));
+            // Rotate around right vector (pitch)
+            glm::vec3 right = m_camera->getRight();
+            glm::mat4 pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, right);
+            
+            glm::vec3 newToCamera = glm::vec3(pitchRotation * yawRotation * glm::vec4(toCamera, 1.0f));
+            glm::vec3 newPosition = target + newToCamera;
+            
+            m_camera->getTransform().setPosition(newPosition);
+            m_camera->lookAt(target);
+            emit cameraChanged();
+            update();
+        }
     }
     
     QOpenGLWidget::mouseMoveEvent(event);
@@ -376,13 +435,7 @@ void ViewportWidget::mouseReleaseEvent(QMouseEvent* event)
         m_mouseHandler->handleMouseRelease(event);
     }
     
-    // Fallback to legacy camera controller if event wasn't handled
-    if (m_cameraController.get()) {
-        // TODO: Fix MouseEvent conversion - ICameraController expects MouseEvent but we have QMouseEvent*
-        // if (m_cameraController->handleMouseRelease(event)) {
-        //     return;
-        // }
-    }
+    m_isDragging = false;
     
     QOpenGLWidget::mouseReleaseEvent(event);
 }
@@ -394,13 +447,18 @@ void ViewportWidget::wheelEvent(QWheelEvent* event)
         m_mouseHandler->handleWheel(event);
     }
     
-    // Fallback to legacy camera controller if event wasn't handled
-    if (m_cameraController.get()) {
-        // TODO: Fix WheelEvent conversion - ICameraController expects WheelEvent but we have QWheelEvent*
-        // if (m_cameraController->handleWheel(event)) {
-        //     update();
-        //     return;
-        // }
+    // Zoom camera (Maya-style)
+    if (m_camera) {
+        float zoomFactor = event->angleDelta().y() > 0 ? 0.9f : 1.1f;
+        glm::vec3 target(0, 0, 0); // Looking at origin for now
+        glm::vec3 position = m_camera->getTransform().getPosition();
+        
+        glm::vec3 toTarget = target - position;
+        glm::vec3 newPosition = position + toTarget * (1.0f - zoomFactor);
+        
+        m_camera->getTransform().setPosition(newPosition);
+        emit cameraChanged();
+        update();
     }
     
     QOpenGLWidget::wheelEvent(event);
@@ -601,9 +659,20 @@ void ViewportManager::setLightingSystem(std::shared_ptr<LightingSystem> lighting
 
 void ViewportManager::setGridSystem(std::shared_ptr<GridSystem> gridSystem)
 {
+    printf("[VIEWPORT_MGR] ViewportManager::setGridSystem() called with: %p\n", gridSystem.get());
     m_gridSystem = gridSystem;
+    printf("[VIEWPORT_MGR] Stored grid system, now iterating %zu viewports\n", m_viewports.size());
     for (auto* viewport : m_viewports) {
+        printf("[VIEWPORT_MGR] Calling setGridSystem on viewport: %p\n", viewport);
         viewport->setGridSystem(gridSystem);
+        printf("[VIEWPORT_MGR] setGridSystem call completed for viewport: %p\n", viewport);
+    }
+    
+    // Enable grid by default for professional 3D modeling
+    if (m_gridSystem) {
+        m_gridSystem->setVisible(true);
+        m_gridSystem->setGridStyle(GridSystem::GridStyle::Maya); // Use Maya-style professional grid
+        qDebug() << "Grid system enabled with Maya style";
     }
 }
 
@@ -778,15 +847,19 @@ void ViewportManager::clearLayout()
 
 ViewportWidget* ViewportManager::createViewport(ViewportWidget::ViewType type, const QString& name)
 {
+    // Create regular ViewportWidget for now to test if this fixes the crash
     auto* viewport = new ViewportWidget(this);
     viewport->setViewType(type);
     viewport->setViewName(name);
     
+    // Apply defaults
     setupViewportDefaults(viewport);
-    connectViewportSignals(viewport);
     
+    // Add to viewport collection for management
     m_viewports.append(viewport);
+    printf("[VIEWPORT_MGR] Added viewport to collection, now have %zu viewports\n", m_viewports.size());
     
+    qDebug() << "Created ViewportWidget for" << name;
     return viewport;
 }
 

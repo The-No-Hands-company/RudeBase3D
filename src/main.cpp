@@ -102,30 +102,38 @@ CoreSystem& core() {
  */
 int main(int argc, char *argv[])
 {
+    printf("[MAIN] Starting application\n");
     QApplication app(argc, argv);
     
+    printf("[MAIN] QApplication created\n");
     // Set application properties
     app.setApplicationName("RudeBase3D");
     app.setApplicationVersion("2.0.0");  // Version 2.0 with modern hybrid geometry
     app.setOrganizationName("RudeBase3D");
     app.setApplicationDisplayName("RudeBase3D - Professional 3D Modeling Suite");
     
+    printf("[MAIN] Application properties set\n");
     // Initialize theme system and apply system theme
     auto* themeManager = rudebase3d::ui::ThemeManager::instance();
     themeManager->applySystemTheme(); // Auto-detect and apply dark/light mode
     
+    printf("[MAIN] Theme system initialized\n");
     // Initialize the core system
     qDebug() << "Initializing core systems...";
     CoreSystem& coreSys = core();
     coreSys.initialize();
     
+    printf("[MAIN] Core systems initialized\n");
     qDebug() << "Creating main window...";
     
     // Create and show main window
+    printf("[MAIN] About to create MainWindow\n");
     MainWindow window;
+    printf("[MAIN] MainWindow created successfully\n");
     
     qDebug() << "Showing main window...";
     window.show();
+    printf("[MAIN] MainWindow shown\n");
     
     qDebug() << "Window shown, starting event loop...";
     int result = app.exec();

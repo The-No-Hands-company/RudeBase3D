@@ -874,7 +874,7 @@ private:
      * @note Called recursively for entity hierarchies
      * @note Applies entity transform and material state
      */
-    void renderEntity(Entity* entity);
+    void renderEntity(rude::Entity* entity);
     
 signals:
     /**

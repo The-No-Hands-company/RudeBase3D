@@ -3,13 +3,13 @@
 #include "base_toolbar.hpp"
 
 /**
- * @brief Main toolbar with primary application tools
+ * @brief Main toolbar with file operations and viewport controls
  * 
- * Contains the most commonly used tools:
- * - Selection tools
- * - Transform tools (Move, Rotate, Scale)
- * - View controls
- * - Basic operations
+ * Contains essential application operations:
+ * - File operations (New, Open, Save, Undo, Redo)
+ * - View modes (Solid, Wireframe, Material, Rendered)
+ * - Camera controls (Reset, Frame Selected/Scene, Grid)
+ * - Primary viewport controls
  */
 class MainToolbar : public BaseToolbar
 {
@@ -20,18 +20,18 @@ public:
     
     // BaseToolbar interface
     QString getToolbarId() const override { return "main_toolbar"; }
-    QString getToolbarDescription() const override { return "Main application tools"; }
+    QString getToolbarDescription() const override { return "File operations and viewport controls"; }
 
-    // Tool state management
-    void setActiveSelectionTool(const QString& tool);
-    void setActiveTransformTool(const QString& tool);
-    QString getActiveSelectionTool() const { return m_activeSelectionTool; }
-    QString getActiveTransformTool() const { return m_activeTransformTool; }
+    // View mode management
+    void setActiveViewMode(const QString& mode);
+    QString getActiveViewMode() const { return m_activeViewMode; }
 
 signals:
-    void selectionToolChanged(const QString& tool);
-    void transformToolChanged(const QString& tool);
     void viewModeChanged(const QString& mode);
+    void cameraResetRequested();
+    void frameSelectedRequested();
+    void frameSceneRequested();
+    void gridToggleRequested();
 
 protected:
     void createActions() override;
@@ -39,17 +39,14 @@ protected:
     void connectSignals() override;
 
 private slots:
-    void onSelectionToolTriggered();
-    void onTransformToolTriggered();
     void onViewModeTriggered();
+    void onCameraActionTriggered();
 
 private:
-    void createSelectionActions();
-    void createTransformActions();
+    void createFileActions();
     void createViewActions();
-    void updateToolStates();
+    void createCameraActions();
+    void updateViewModeStates();
     
-    QString m_activeSelectionTool;
-    QString m_activeTransformTool;
     QString m_activeViewMode;
 };

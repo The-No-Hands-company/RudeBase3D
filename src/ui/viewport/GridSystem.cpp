@@ -148,52 +148,72 @@ void GridSystem::render(std::shared_ptr<Renderer> renderer, const glm::mat4& vie
         return;
     }
 
-    qDebug() << "GridSystem::render() - Rendering grid and axes";
-    
-    // CRITICAL: Set up matrices before rendering
+    // PROFESSIONAL GRID RENDERING
     renderer->setViewMatrix(viewMatrix);
     renderer->setProjectionMatrix(projMatrix);
-    renderer->setModelMatrix(glm::mat4(1.0f)); // Identity for world coordinates
+    renderer->setModelMatrix(glm::mat4(1.0f));
     
-    // Set up basic rendering state for grid rendering
-    renderer->enableDepthTest(false); // Grid always renders behind objects
-    renderer->setLineWidth(20.0f);    // EXTREMELY thick lines for visibility
+    // Professional grid settings
+    renderer->enableDepthTest(false);
     
-    // Draw world axes with HIGH CONTRAST colors
-    qDebug() << "Rendering world axes...";
+    // === PROFESSIONAL WORLD AXES ===
+    float axisLength = 100.0f;
+    float axisThickness = 2.0f;
     
-    // X axis (BRIGHT RED) - spans entire world
-    renderer->renderLine(glm::vec3(-1000.0f, 0.0f, 0.0f), glm::vec3(1000.0f, 0.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    // World axes with professional colors (like Maya/Blender)
+    // X-axis: Red
+    renderer->renderLine(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(axisLength, 0.0f, 0.0f), 
+                        glm::vec4(0.9f, 0.2f, 0.2f, 0.9f));
     
-    // Y axis (BRIGHT GREEN) - spans entire world  
-    renderer->renderLine(glm::vec3(0.0f, -1000.0f, 0.0f), glm::vec3(0.0f, 1000.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    // Y-axis: Green  
+    renderer->renderLine(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, axisLength, 0.0f), 
+                        glm::vec4(0.4f, 0.8f, 0.2f, 0.9f));
     
-    // Z axis (BRIGHT BLUE) - spans entire world
-    renderer->renderLine(glm::vec3(0.0f, 0.0f, -1000.0f), glm::vec3(0.0f, 0.0f, 1000.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    // Z-axis: Blue
+    renderer->renderLine(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, axisLength), 
+                        glm::vec4(0.2f, 0.4f, 0.9f, 0.9f));
     
-    // Draw a test cross right at the origin for reference
-    float crossSize = 5.0f;
-    renderer->renderLine(glm::vec3(-crossSize, 0.0f, 0.0f), glm::vec3(crossSize, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
-    renderer->renderLine(glm::vec3(0.0f, -crossSize, 0.0f), glm::vec3(0.0f, crossSize, 0.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
-    renderer->renderLine(glm::vec3(0.0f, 0.0f, -crossSize), glm::vec3(0.0f, 0.0f, crossSize), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
+    // === PROFESSIONAL GRID SYSTEM ===
+    float majorGridSize = 10.0f;     // Major grid lines every 10 units
+    float minorGridSize = 1.0f;      // Minor grid lines every 1 unit
+    float gridExtent = 100.0f;       // Grid extends 100 units in each direction
     
-    // Draw grid lines on XZ plane (ground plane)
-    qDebug() << "Rendering grid lines...";
-    float gridExtent = 100.0f;
-    float gridSpacing = 5.0f;
-    glm::vec4 gridColor(0.5f, 0.5f, 0.5f, 1.0f); // Gray grid lines
+    // Professional color scheme
+    glm::vec4 majorGridColor(0.4f, 0.4f, 0.4f, 0.6f);  // Subtle gray for major lines
+    glm::vec4 minorGridColor(0.25f, 0.25f, 0.25f, 0.3f); // Very subtle for minor lines
+    glm::vec4 originColor(0.6f, 0.6f, 0.6f, 0.8f);     // Slightly brighter for origin lines
     
-    // Grid lines parallel to X axis (running along Z)
-    for (float z = -gridExtent; z <= gridExtent; z += gridSpacing) {
-        renderer->renderLine(glm::vec3(-gridExtent, 0.0f, z), glm::vec3(gridExtent, 0.0f, z), gridColor);
+    // Draw minor grid lines (every 1 unit)
+    for (float i = -gridExtent; i <= gridExtent; i += minorGridSize) {
+        if (fmod(i, majorGridSize) == 0.0f) continue; // Skip major grid positions
+        
+        // Lines parallel to X-axis
+        renderer->renderLine(glm::vec3(-gridExtent, 0.0f, i), 
+                           glm::vec3(gridExtent, 0.0f, i), minorGridColor);
+        
+        // Lines parallel to Z-axis
+        renderer->renderLine(glm::vec3(i, 0.0f, -gridExtent), 
+                           glm::vec3(i, 0.0f, gridExtent), minorGridColor);
     }
     
-    // Grid lines parallel to Z axis (running along X)
-    for (float x = -gridExtent; x <= gridExtent; x += gridSpacing) {
-        renderer->renderLine(glm::vec3(x, 0.0f, -gridExtent), glm::vec3(x, 0.0f, gridExtent), gridColor);
+    // Draw major grid lines (every 10 units)
+    for (float i = -gridExtent; i <= gridExtent; i += majorGridSize) {
+        if (i == 0.0f) continue; // Skip origin lines
+        
+        // Lines parallel to X-axis
+        renderer->renderLine(glm::vec3(-gridExtent, 0.0f, i), 
+                           glm::vec3(gridExtent, 0.0f, i), majorGridColor);
+        
+        // Lines parallel to Z-axis
+        renderer->renderLine(glm::vec3(i, 0.0f, -gridExtent), 
+                           glm::vec3(i, 0.0f, gridExtent), majorGridColor);
     }
     
-    qDebug() << "GridSystem::render() - Grid rendering complete";
+    // Draw origin lines (X=0 and Z=0) with special highlighting
+    renderer->renderLine(glm::vec3(-gridExtent, 0.0f, 0.0f), 
+                        glm::vec3(gridExtent, 0.0f, 0.0f), originColor);
+    renderer->renderLine(glm::vec3(0.0f, 0.0f, -gridExtent), 
+                        glm::vec3(0.0f, 0.0f, gridExtent), originColor);
 }
 
 void GridSystem::updateGrid()
@@ -241,12 +261,13 @@ void GridSystem::applyGridStyle()
 
 void GridSystem::setupMayaStyle()
 {
-    // Maya-style: Much brighter for testing
-    m_mainAxisColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);      // Very bright main axes
-    m_gridLineColor = glm::vec4(0.8f, 0.8f, 0.8f, 0.9f);      // Very bright grid lines
-    m_subdivisionColor = glm::vec4(0.6f, 0.6f, 0.6f, 0.8f);   // Bright subdivisions
-    m_lineWidth = 2.0f;  // Thicker lines for visibility
-    m_depthFading = false;  // Disable fading for testing
+    // Professional Maya-style grid settings
+    m_mainAxisColor = glm::vec4(0.6f, 0.6f, 0.6f, 0.8f);      // Subtle main axes
+    m_gridLineColor = glm::vec4(0.3f, 0.3f, 0.3f, 0.5f);      // Professional subtle grid
+    m_subdivisionColor = glm::vec4(0.2f, 0.2f, 0.2f, 0.3f);   // Very subtle subdivisions
+    m_lineWidth = 1.0f;          // Professional thin lines
+    m_depthFading = true;        // Enable depth fading for realism
+    m_adaptiveGrid = true;       // Adaptive grid based on zoom level
 }
 
 void GridSystem::setupBlenderStyle()

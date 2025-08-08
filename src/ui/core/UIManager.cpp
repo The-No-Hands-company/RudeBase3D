@@ -3,6 +3,7 @@
 #include "SceneHierarchyPanel.h"
 #include "PropertiesPanel.h"
 #include "../components/ThemeSelector.h"
+#include "ui/dialogs/SettingsDialog.h"
 #include <QMainWindow>
 #include <QSplitter>
 #include <QVBoxLayout>
@@ -25,6 +26,7 @@ UIManager::UIManager(QMainWindow* mainWindow, QObject* parent)
     , m_sceneHierarchy(nullptr)
     , m_propertiesPanel(nullptr)
     , m_themeSelector(nullptr)
+    , m_settingsDialog(nullptr)
 {
 }
 
@@ -146,6 +148,11 @@ void UIManager::createActions()
     m_deselectAllAction = new QAction("&Deselect All", this);
     m_deselectAllAction->setShortcut(QKeySequence("Ctrl+Shift+A"));
     m_deselectAllAction->setStatusTip("Deselect all objects");
+    
+    m_settingsAction = new QAction("&Settings...", this);
+    m_settingsAction->setShortcut(QKeySequence("Ctrl+,"));
+    m_settingsAction->setStatusTip("Open application settings and preferences");
+    m_settingsAction->setIcon(QIcon(":/icons/settings.png"));
     
     // Modeling actions
     m_extrudeAction = new QAction("&Extrude", this);
@@ -302,6 +309,8 @@ void UIManager::createEditMenu()
     m_editMenu->addAction(m_selectAllAction);
     m_editMenu->addAction(m_deselectAllAction);
     m_editMenu->addSeparator();
+    m_editMenu->addAction(m_settingsAction);
+    m_editMenu->addSeparator();
     
     // Modeling tools submenu
     QMenu* modelingMenu = m_editMenu->addMenu("&Modeling");
@@ -411,10 +420,10 @@ void UIManager::createMainToolbar()
     m_mainToolBar->addAction(m_createSphereAction);
     m_mainToolBar->addAction(m_createPlaneAction);
     
-    // Add theme selector to the main toolbar
-    m_mainToolBar->addSeparator();
-    m_themeSelector = new rudebase3d::ui::ThemeSelector(m_mainWindow);
-    m_mainToolBar->addWidget(m_themeSelector);
+    // Theme selector moved to Settings dialog for better UX
+    // m_mainToolBar->addSeparator();
+    // m_themeSelector = new rudebase3d::ui::ThemeSelector(m_mainWindow);
+    // m_mainToolBar->addWidget(m_themeSelector);
 }
 
 void UIManager::createViewToolbar()
@@ -459,6 +468,7 @@ void UIManager::connectSignals()
     connect(m_duplicateAction, &QAction::triggered, this, &UIManager::duplicateSelected);
     connect(m_selectAllAction, &QAction::triggered, this, &UIManager::selectAll);
     connect(m_deselectAllAction, &QAction::triggered, this, &UIManager::deselectAll);
+    connect(m_settingsAction, &QAction::triggered, this, &UIManager::openSettings);
     
     // Modeling operations
     connect(m_extrudeAction, &QAction::triggered, this, &UIManager::extrudeSelected);
@@ -582,4 +592,15 @@ void UIManager::onRecentFileTriggered()
         // TODO: Open the recent file
         showStatusMessage(QString("Opening: %1").arg(fileName));
     }
+}
+
+void UIManager::openSettings()
+{
+    if (!m_settingsDialog) {
+        m_settingsDialog = new SettingsDialog(m_mainWindow);
+    }
+    
+    m_settingsDialog->show();
+    m_settingsDialog->raise();
+    m_settingsDialog->activateWindow();
 }

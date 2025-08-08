@@ -58,6 +58,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_gridSystem(std::make_shared<GridSystem>())
     , m_sceneModified(false)
 {
+    qDebug() << "[CONSTRUCTOR] MainWindow constructor started";
     qDebug() << "MainWindow constructor started";
     
     // Use CoreSystem for scene management instead of local scene manager
@@ -102,25 +103,36 @@ MainWindow::MainWindow(QWidget* parent)
     qDebug() << "Updating UI...";
     updateUI();
     
+    // Add a test cube to verify viewport is working
+    qDebug() << "Adding test cube to scene...";
+    addTestPrimitive();
+    
     qDebug() << "MainWindow constructor completed";
 }
 
 void MainWindow::setupUI()
 {
+    printf("[MAIN DEBUG] setupUI() called\n");
     // Set up UI using UIManager
     m_uiManager->setupUI();
     
     // Get the viewport manager and panels from UIManager
     m_viewportManager = m_uiManager->getViewportManager();
+    printf("[MAIN DEBUG] ViewportManager obtained: %p\n", m_viewportManager);
+    
     m_hierarchyPanel = m_uiManager->getSceneHierarchy();
     // TODO: Fix type mismatch - UIManager returns PropertiesPanel* but we need rude::PropertiesPanel*
     // m_propertiesPanel = m_uiManager->getPropertiesPanel();
     
     // Set up component integrations with ViewportManager
+    printf("[MAIN DEBUG] Setting scene, lighting, grid, and render systems\n");
     m_viewportManager->setScene(m_scene);
     m_viewportManager->setLightingSystem(m_lightingSystem);
+    printf("[MAIN DEBUG] About to call setGridSystem with: %p\n", m_gridSystem.get());
     m_viewportManager->setGridSystem(m_gridSystem);
+    printf("[MAIN DEBUG] setGridSystem completed\n");
     m_viewportManager->setRenderSystem(m_renderSystem);
+    printf("[MAIN DEBUG] All systems set\n");
     
     // Set camera controller type (Maya style by default)
     m_viewportManager->setCameraControllerType("Maya");
@@ -1057,47 +1069,88 @@ void MainWindow::setupModernToolbars()
     auto* selectionToolbar = m_toolbarManager->getSelectionToolbar();
     auto* transformToolbar = m_toolbarManager->getTransformToolbar();
     
-    // Connect main toolbar signals
+    // Connect main toolbar signals (view modes and camera controls)
     if (mainToolbar) {
-        connect(mainToolbar, &MainToolbar::selectionToolChanged, this, [this](const QString& tool) {
-            qDebug() << "Selection tool changed to:" << tool;
-            // Update selection mode in core system
-            auto* selectionManager = CoreSystem::getInstance().getSelectionManager();
-            if (selectionManager) {
-                // Map tool name to selection component type
-                rude::ComponentType componentType = rude::ComponentType::Entity;
-                if (tool == "vertex") componentType = rude::ComponentType::Vertex;
-                else if (tool == "edge") componentType = rude::ComponentType::Edge;
-                else if (tool == "face") componentType = rude::ComponentType::Face;
-                
-                // Update selection panel to reflect the change
-                if (m_selectionPanel) {
-                    m_selectionPanel->setCurrentMode(componentType);
-                }
-            }
-        });
-        
-        connect(mainToolbar, &MainToolbar::transformToolChanged, this, [this](const QString& tool) {
-            qDebug() << "Transform tool changed to:" << tool;
-            // Update gizmo type in viewport
+        connect(mainToolbar, &MainToolbar::viewModeChanged, this, [this](const QString& mode) {
+            qDebug() << "View mode changed to:" << mode;
+            // Update viewport rendering mode
             if (m_viewportManager) {
-                // Map tool name to gizmo type
-                GizmoType gizmoType = GizmoType::Translate;
-                if (tool == "rotate") gizmoType = GizmoType::Rotate;
-                else if (tool == "scale") gizmoType = GizmoType::Scale;
+                // Map string mode to RenderMode enum
+                RenderMode renderMode = RenderMode::Solid;
+                if (mode == "wireframe") {
+                    renderMode = RenderMode::Wireframe;
+                } else if (mode == "solid") {
+                    renderMode = RenderMode::Solid;
+                } else if (mode == "material" || mode == "rendered") {
+                    renderMode = RenderMode::SolidWireframe;  // Use combined mode for advanced views
+                }
                 
-                // Update all viewports with new gizmo type
                 for (int i = 0; i < m_viewportManager->getViewportCount(); ++i) {
                     auto* viewport = m_viewportManager->getViewport(i);
                     if (viewport) {
-                        auto* gizmoManager = viewport->getGizmoManager();
-                        if (gizmoManager) {
-                            gizmoManager->setActiveGizmo(gizmoType);
-                        }
+                        viewport->setRenderMode(renderMode);
                     }
                 }
             }
         });
+        
+        connect(mainToolbar, &MainToolbar::cameraResetRequested, this, [this]() {
+            qDebug() << "Camera reset requested";
+            if (m_viewportManager) {
+                auto* viewport = m_viewportManager->getActiveViewport();
+                if (viewport) {
+                    viewport->resetCamera();
+                }
+            }
+        });
+        
+        connect(mainToolbar, &MainToolbar::frameSelectedRequested, this, [this]() {
+            qDebug() << "Frame selected requested";
+            if (m_viewportManager) {
+                auto* viewport = m_viewportManager->getActiveViewport();
+                if (viewport) {
+                    viewport->frameSelection();
+                }
+            }
+        });
+        
+        connect(mainToolbar, &MainToolbar::frameSceneRequested, this, [this]() {
+            qDebug() << "Frame scene requested";
+            if (m_viewportManager) {
+                auto* viewport = m_viewportManager->getActiveViewport();
+                if (viewport) {
+                    viewport->frameScene();
+                }
+            }
+        });
+        
+        connect(mainToolbar, &MainToolbar::gridToggleRequested, this, [this]() {
+            qDebug() << "Grid toggle requested";
+            if (m_viewportManager) {
+                for (int i = 0; i < m_viewportManager->getViewportCount(); ++i) {
+                    auto* viewport = m_viewportManager->getViewport(i);
+                    if (viewport) {
+                        // Toggle grid visibility - need to track current state
+                        static bool gridVisible = true;
+                        gridVisible = !gridVisible;
+                        viewport->setShowGrid(gridVisible);
+                    }
+                }
+            }
+        });
+    }
+    
+    // Connect selection toolbar signals (selection and component modes)
+    if (selectionToolbar) {
+        // These connections will be implemented once SelectionToolbar is refactored
+        // connect(selectionToolbar, &SelectionToolbar::selectionModeChanged, ...);
+        // connect(selectionToolbar, &SelectionToolbar::selectionToolChanged, ...);
+    }
+    
+    // Connect transform toolbar signals (transformation tools)
+    if (transformToolbar) {
+        // These connections will be implemented once TransformToolbar is refactored
+        // connect(transformToolbar, &TransformToolbar::transformToolChanged, ...);
     }
     
     // Connect primitives toolbar to create functions
@@ -1169,4 +1222,20 @@ void MainWindow::updateSystems() {
     
     // You could also update other systems here if needed
     // For example, viewport updates, UI animations, etc.
+}
+
+void MainWindow::addTestPrimitive()
+{
+    // Add a test cube to the scene to verify viewport functionality
+    auto* coreSceneManager = CoreSystem::getInstance().getSceneManager();
+    if (coreSceneManager) {
+        auto* testCube = coreSceneManager->createPrimitive("cube", "TestCube");
+        if (testCube) {
+            qDebug() << "Test cube created successfully - Entity ID:" << testCube->getId();
+        } else {
+            qDebug() << "Failed to create test cube";
+        }
+    } else {
+        qDebug() << "No scene manager available for test cube";
+    }
 }
