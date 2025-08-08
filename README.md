@@ -55,6 +55,9 @@ Ru## 📊 Current Status
 - **Performance**: Optimized rendering pipeline with spatial data structures
 - **Theme System**: Professional theming with multiple dark modes and auto-detection
 
+<img width="1920" height="1032" alt="Screenshot 2025-08-08 025315" src="https://github.com/user-attachments/assets/684fc8fe-15ed-405e-8215-235def0fbe87" />
+<img width="934" height="684" alt="2025-08-07 15_50_04-Material h - rudebase3d (Workspace) - Visual Studio Code" src="https://github.com/user-attachments/assets/5d11b562-1f65-47fe-893a-dd11d684bee3" />
+
 ## 🏗️ Building
 
 ### Prerequisites
