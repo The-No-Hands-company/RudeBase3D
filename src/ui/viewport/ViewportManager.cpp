@@ -111,7 +111,10 @@ void ViewportWidget::setGridSystem(std::shared_ptr<GridSystem> gridSystem)
     printf("[GRID DEBUG] ViewportWidget::setGridSystem() called with gridSystem: %s\n", (gridSystem ? "valid" : "null"));
     m_gridSystem = gridSystem;
     if (m_gridSystem) {
-        printf("[GRID DEBUG] GridSystem set successfully, visible: %d\n", m_gridSystem->isVisible());
+    qDebug() << "[GRID DEBUG] ViewportWidget::setGridSystem() called with gridSystem:" << (gridSystem ? "valid" : "null");
+    m_gridSystem = gridSystem;
+    if (m_gridSystem) {
+        qDebug() << "[GRID DEBUG] GridSystem set successfully, visible:" << m_gridSystem->isVisible();
     }
 }
 
