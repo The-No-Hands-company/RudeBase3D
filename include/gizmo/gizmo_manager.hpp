@@ -28,7 +28,7 @@ public:
     GizmoManager();
 
     void setActiveGizmo(GizmoType type);
-    void setSelectedEntity(std::shared_ptr<Entity> entity);
+    void setSelectedEntity(std::shared_ptr<rude::Entity> entity);
 
     // Event handling
     bool handleMousePress(const event::MousePressEvent& e, const Camera& camera);
@@ -38,7 +38,7 @@ public:
     void draw(const Camera& camera) const;
 
 private:
-    std::shared_ptr<Entity> m_selectedEntity;
+    std::shared_ptr<rude::Entity> m_selectedEntity;
     GizmoType m_activeGizmoType = GizmoType::None;
 
     std::unique_ptr<TranslateGizmo> m_translateGizmo;

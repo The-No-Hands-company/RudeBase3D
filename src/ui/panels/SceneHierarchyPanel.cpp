@@ -35,10 +35,10 @@ void SceneHierarchyPanel::refreshHierarchy()
     }
     
     // Use the new ECS API
-    auto entities = m_scene->getAllEntities();
-    for (auto* entity : entities) {
+    const auto& entities = m_scene->getEntities();
+    for (const auto& entity : entities) {
         auto item = new QTreeWidgetItem(m_treeWidget);
-        updateItemFromEntity(item, entity);
+        updateItemFromEntity(item, entity.get());
     }
     
     m_treeWidget->expandAll();
@@ -180,12 +180,14 @@ void SceneHierarchyPanel::onDuplicateSelectedObject()
     
     auto entity = getEntityFromItem(selectedItems.first());
     if (entity) {
-        // Use the scene's duplicate method
-        auto duplicatedEntity = m_scene->duplicateEntity(entity);
-        if (duplicatedEntity) {
-            refreshHierarchy();
-            emit entitySelected(duplicatedEntity);
-        }
+        // TODO: Implement entity duplication in Scene class
+        // For now, just show a placeholder message
+        qDebug() << "Entity duplication not yet implemented for entity:" << entity;
+        // auto duplicatedEntity = m_scene->duplicateEntity(entity);
+        // if (duplicatedEntity) {
+        //     refreshHierarchy();
+        //     emit entitySelected(duplicatedEntity);
+        // }
     }
 }
 
@@ -200,7 +202,7 @@ QTreeWidgetItem* SceneHierarchyPanel::findItemByEntityId(unsigned int entityId)
     return nullptr;
 }
 
-Entity* SceneHierarchyPanel::getEntityFromItem(QTreeWidgetItem* item)
+rude::Entity* SceneHierarchyPanel::getEntityFromItem(QTreeWidgetItem* item)
 {
     if (!item || !m_scene) {
         return nullptr;
@@ -210,7 +212,7 @@ Entity* SceneHierarchyPanel::getEntityFromItem(QTreeWidgetItem* item)
     return m_scene->findEntityById(entityId);
 }
 
-void SceneHierarchyPanel::updateItemFromEntity(QTreeWidgetItem* item, Entity* entity)
+void SceneHierarchyPanel::updateItemFromEntity(QTreeWidgetItem* item, rude::Entity* entity)
 {
     if (!item || !entity) {
         return;

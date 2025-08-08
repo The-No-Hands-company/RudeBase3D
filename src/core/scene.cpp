@@ -29,35 +29,36 @@
 
 #include "core/scene.hpp"
 #include "core/entity.hpp"
-#include "core/primitive_manager.hpp"
 #include <algorithm>
 #include <string>
 #include <memory>
+#include <vector>
+#include <limits>
+#include <utility>
 #include <glm/glm.hpp>
 
-rude::Scene::Scene() : nextId(0) {
-    // Initialize primitive manager
-    m_primitiveManager = std::make_unique<PrimitiveManager>();
+rude::Scene::Scene() : nextEntityId_(0), entityNameCounter_(0) {
+    // Scene is now initialized without PrimitiveManager - that's handled by SceneManager
 }
 
-Entity* rude::Scene::createEntity(rude::PrimitiveType type, const std::string& name) {
+rude::Entity* rude::Scene::createEntity(rude::PrimitiveType type, const std::string& name) {
     // Create entity with ID and type
-    auto entity = std::make_unique<Entity>(nextId++, type, name);
+    auto entity = std::make_unique<rude::Entity>(nextEntityId_++, type, name);
     
     // Note: Primitive mesh creation and assignment is now handled by SceneManager via PrimitiveManager
     // This follows better separation of concerns by removing direct primitive creation from Scene class
-    Entity* ptr = entity.get();
-    entities.push_back(std::move(entity));
+    rude::Entity* ptr = entity.get();
+    entities_.push_back(std::move(entity));
     return ptr;
 }
 
-const std::vector<std::unique_ptr<Entity>>& rude::Scene::getEntities() const {
-    return entities;
+const std::vector<std::unique_ptr<rude::Entity>>& rude::Scene::getEntities() const {
+    return entities_;
 }
 
-std::vector<Entity*> rude::Scene::getRootEntities() const {
-    std::vector<Entity*> roots;
-    for (const auto& entity : entities) {
+std::vector<rude::Entity*> rude::Scene::getRootEntities() const {
+    std::vector<rude::Entity*> roots;
+    for (const auto& entity : entities_) {
         if (entity && entity->getParent() == nullptr) {
             roots.push_back(entity.get());
         }
@@ -71,14 +72,14 @@ void rude::Scene::draw(const glm::mat4& view, const glm::mat4& proj) {
     }
 }
 
-Entity* rude::Scene::findEntityById(int id) const {
-    for (const auto& entity : entities) {
+rude::Entity* rude::Scene::findEntityById(int id) const {
+    for (const auto& entity : entities_) {
         if (entity && entity->getId() == id) return entity.get();
     }
     return nullptr;
 }
 
-void rude::Scene::removeEntity(Entity* entity) {
+void rude::Scene::removeEntity(rude::Entity* entity) {
     if (!entity) return;
     // Remove from parent if needed
     if (entity->getParent()) {
@@ -89,21 +90,21 @@ void rude::Scene::removeEntity(Entity* entity) {
         removeEntity(child);
     }
     // Remove from entities vector
-    entities.erase(std::remove_if(entities.begin(), entities.end(),
-        [entity](const std::unique_ptr<Entity>& e) { return e.get() == entity; }), entities.end());
+    entities_.erase(std::remove_if(entities_.begin(), entities_.end(),
+        [entity](const std::unique_ptr<Entity>& e) { return e.get() == entity; }), entities_.end());
 }
 
 void rude::Scene::clear() {
-    entities.clear();
-    nextId = 0;
+    entities_.clear();
+    nextEntityId_ = 0;
 }
 
 glm::vec3 rude::Scene::getSceneBoundingBoxCenter() const {
-    if (entities.empty()) return glm::vec3(0.0f);
+    if (entities_.empty()) return glm::vec3(0.0f);
     glm::vec3 minPt( std::numeric_limits<float>::max() );
     glm::vec3 maxPt(-std::numeric_limits<float>::max() );
     bool found = false;
-    for (const auto& entity : entities) {
+    for (const auto& entity : entities_) {
         if (!entity) continue;
         // Use Entity::getAABB() which returns (min, max)
         auto [eMin, eMax] = entity->getAABB();
@@ -115,58 +116,46 @@ glm::vec3 rude::Scene::getSceneBoundingBoxCenter() const {
     return (minPt + maxPt) * 0.5f;
 }
 
-
-namespace rude {
-
-void Scene::deleteEntity(Entity* entity) {
-    removeEntity(entity);
-}
-
-Entity* Scene::duplicateEntity(Entity* entity) {
-    if (!entity) return nullptr;
-    // Simple shallow copy: create new entity with same type and name + _copy
-    std::string newName = entity->getName();
-    newName += "_copy";
-    Entity* copy = createEntity(entity->getPrimitiveType(), newName);
-    // TODO: Deep copy components, children, etc.
-    return copy;
-}
-
-std::vector<Entity*> Scene::getAllEntities() const {
-    std::vector<Entity*> result;
-    for (const auto& e : entities) {
-        if (e) result.push_back(e.get());
-    }
-    return result;
-}
-
-Entity* Scene::findEntityByName(const QString& name) const {
-    for (const auto& e : entities) {
-        if (e && QString::fromStdString(e->getName()) == name) return e.get();
-    }
-    return nullptr;
-}
-
-Entity* Scene::findEntityByName(const std::string& name) const {
-    for (const auto& e : entities) {
+rude::Entity* rude::Scene::findEntityByName(const std::string& name) const {
+    for (const auto& e : entities_) {
         if (e && e->getName() == name) return e.get();
     }
     return nullptr;
 }
 
-Entity* Scene::findEntityById(uint32_t id) const {
-    for (const auto& entity : entities) {
-        if (entity && static_cast<uint32_t>(entity->getId()) == id) return entity.get();
+std::pair<glm::vec3, glm::vec3> rude::Scene::getSceneBoundingBox() const {
+    if (entities_.empty()) return {glm::vec3(0.0f), glm::vec3(0.0f)};
+    glm::vec3 minPt( std::numeric_limits<float>::max() );
+    glm::vec3 maxPt(-std::numeric_limits<float>::max() );
+    bool found = false;
+    for (const auto& entity : entities_) {
+        if (!entity) continue;
+        auto [eMin, eMax] = entity->getAABB();
+        minPt = glm::min(minPt, eMin);
+        maxPt = glm::max(maxPt, eMax);
+        found = true;
     }
-    return nullptr;
+    if (!found) return {glm::vec3(0.0f), glm::vec3(0.0f)};
+    return {minPt, maxPt};
 }
 
-bool Scene::isEmpty() const {
-    return entities.empty();
+bool rude::Scene::isEmpty() const {
+    return entities_.empty();
 }
 
-glm::vec3 Scene::getBoundingBoxCenter() const {
-    return getSceneBoundingBoxCenter();
+size_t rude::Scene::getEntityCount() const {
+    return entities_.size();
 }
 
-} // namespace rude
+std::string rude::Scene::generateEntityName(rude::PrimitiveType type) {
+    std::string baseName;
+    switch(type) {
+        case rude::PrimitiveType::Cube: baseName = "Cube"; break;
+        case rude::PrimitiveType::Sphere: baseName = "Sphere"; break;
+        case rude::PrimitiveType::Cylinder: baseName = "Cylinder"; break;
+        case rude::PrimitiveType::Plane: baseName = "Plane"; break;
+        case rude::PrimitiveType::Icosphere: baseName = "Icosphere"; break;
+        default: baseName = "Entity"; break;
+    }
+    return baseName + "_" + std::to_string(++entityNameCounter_);
+}

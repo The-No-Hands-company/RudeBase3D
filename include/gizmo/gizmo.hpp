@@ -5,7 +5,9 @@
 #include <glm/glm.hpp>
 #include <string>
 
-class Entity;
+namespace rude {
+    class Entity;
+}
 namespace event {
     class MousePressEvent;
     class MouseReleaseEvent;
@@ -56,8 +58,8 @@ public:
     virtual bool isActive() const = 0;
 
     // Target entity management
-    virtual void setTarget(std::shared_ptr<Entity> target) = 0;
-    virtual std::shared_ptr<Entity> getTarget() const = 0;
+    virtual void setTarget(std::shared_ptr<rude::Entity> target) = 0;
+    virtual std::shared_ptr<rude::Entity> getTarget() const = 0;
 
     // Visual feedback settings
     void setColors(const glm::vec3& xColor, const glm::vec3& yColor, const glm::vec3& zColor);

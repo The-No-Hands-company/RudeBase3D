@@ -52,6 +52,8 @@
 #include <QSplitter>
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
+#include <QMatrix4x4>
+#include <QEnterEvent>
 #include <memory>
 
 class ICameraController;
@@ -2104,7 +2106,7 @@ protected:
      * @note Provides clear indication of interactive capability
      * @note Enhances user experience with responsive feedback
      */
-    void enterEvent(QEvent* event) override;
+    void enterEvent(QEnterEvent* event) override;
     
     /**
      * @brief Handle mouse leave events to clear interaction feedback

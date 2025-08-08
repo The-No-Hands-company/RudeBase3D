@@ -292,8 +292,8 @@ void Viewport3D::renderScene()
     // Available methods: getEntities(), getAllEntities(), getRootEntities()
     
     // Render all entities in the scene
-    auto entities = m_scene->getAllEntities();
-    for (auto entity : entities) {
+    const auto& entities = m_scene->getEntities();
+    for (const auto& entity : entities) {
         if (!entity) {
             continue;
         }

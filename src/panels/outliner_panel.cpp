@@ -30,10 +30,10 @@ void OutlinerPanel::updateEntityList() {
     }
 }
 
-void OutlinerPanel::setSelectedEntity(Entity* entity) {
+void OutlinerPanel::setSelectedEntity(rude::Entity* entity) {
     for (int i = 0; i < treeWidget->topLevelItemCount(); ++i) {
         QTreeWidgetItem* item = treeWidget->topLevelItem(i);
-        if (reinterpret_cast<Entity*>(item->data(0, Qt::UserRole).value<quintptr>()) == entity) {
+        if (reinterpret_cast<rude::Entity*>(item->data(0, Qt::UserRole).value<quintptr>()) == entity) {
             treeWidget->setCurrentItem(item);
             return;
         }
@@ -47,7 +47,7 @@ void OutlinerPanel::onItemSelectionChanged() {
         emit selectionChanged(nullptr);
         return;
     }
-    Entity* entity = reinterpret_cast<Entity*>(item->data(0, Qt::UserRole).value<quintptr>());
+    rude::Entity* entity = reinterpret_cast<rude::Entity*>(item->data(0, Qt::UserRole).value<quintptr>());
     emit selectionChanged(entity);
 }
 
@@ -58,6 +58,6 @@ void OutlinerPanel::onItemDoubleClicked(QTreeWidgetItem* item, int column) {
     // For now, acknowledge parameter until column-specific actions are implemented
     (void)column;
     
-    Entity* entity = reinterpret_cast<Entity*>(item->data(0, Qt::UserRole).value<quintptr>());
+    rude::Entity* entity = reinterpret_cast<rude::Entity*>(item->data(0, Qt::UserRole).value<quintptr>());
     emit zoomToEntity(entity);
 }

@@ -1111,5 +1111,3 @@ private:
 
 } // namespace ui
 } // namespace rudebase3d
-
-#endif // THEMEMANAGER_H

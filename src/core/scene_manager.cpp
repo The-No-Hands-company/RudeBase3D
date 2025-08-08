@@ -95,7 +95,7 @@ Entity* SceneManager::importMesh(const std::string& filePath, const std::string&
 
 void SceneManager::deleteEntity(Entity* entity) {
     if (!m_scene || !entity) return;
-    m_scene->deleteEntity(entity);
+    m_scene->removeEntity(entity);
     emit entityDeleted(entity);
 }
 
@@ -108,7 +108,10 @@ void SceneManager::deleteSelectedEntities() {
 
 void SceneManager::duplicateEntity(Entity* entity) {
     if (!m_scene || !entity) return;
-    Entity* copy = m_scene->duplicateEntity(entity);
+    // Since Scene doesn't have duplicateEntity, we'll implement it here
+    std::string newName = entity->getName() + "_copy";
+    Entity* copy = m_scene->createEntity(entity->getPrimitiveType(), newName);
+    // TODO: Copy other properties like transform, mesh, etc.
     connectEntitySignals(copy);
     emit entityCreated(copy);
 }
@@ -142,7 +145,12 @@ bool SceneManager::loadScene(const std::string& filePath) {
 
 std::vector<Entity*> SceneManager::getAllEntities() const {
     if (!m_scene) return {};
-    return m_scene->getAllEntities();
+    // Convert from getEntities() to raw pointers
+    std::vector<Entity*> result;
+    for (const auto& entity : m_scene->getEntities()) {
+        if (entity) result.push_back(entity.get());
+    }
+    return result;
 }
 
 Entity* SceneManager::findEntityByName(const std::string& name) const {
@@ -152,7 +160,7 @@ Entity* SceneManager::findEntityByName(const std::string& name) const {
 
 Entity* SceneManager::findEntityById(uint32_t id) const {
     if (!m_scene) return nullptr;
-    return m_scene->findEntityById(id);
+    return m_scene->findEntityById(static_cast<int>(id));
 }
 
 Entity* SceneManager::pickObject(const glm::vec3& rayOrigin, const glm::vec3& rayDirection) const {
@@ -173,7 +181,7 @@ bool SceneManager::isEmpty() const {
 
 glm::vec3 SceneManager::getSceneBoundingBoxCenter() const {
     if (!m_scene) return glm::vec3();
-    return m_scene->getBoundingBoxCenter();
+    return m_scene->getSceneBoundingBoxCenter();
 }
 
 std::string SceneManager::generateEntityName(const std::string& baseName) const {

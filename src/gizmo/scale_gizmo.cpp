@@ -18,7 +18,7 @@ ScaleGizmo::ScaleGizmo()
     : Gizmo(), m_target(nullptr) {
 }
 
-ScaleGizmo::ScaleGizmo(std::shared_ptr<Entity> target)
+ScaleGizmo::ScaleGizmo(std::shared_ptr<rude::Entity> target)
     : Gizmo(), m_target(target) {
 }
 

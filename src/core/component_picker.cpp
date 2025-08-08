@@ -2,6 +2,9 @@
 // RudeBase3D Engine - component_picker.cpp
 //==============================================================================
 // Professional 3D Modeling & Animation Suite
+// RudeBase3D Engine - component_picker.cpp
+//==============================================================================
+// Professional 3D Modeling & Animation Suite
 // https://github.com/The-No-Hands-company/RudeBase3D
 //
 // Copyright (c) 2025 The-No-Hands-company
@@ -49,7 +52,7 @@ ComponentPicker::ComponentPicker() {
 }
 
 SelectionData ComponentPicker::pickComponent(float mouseX, float mouseY, int viewportWidth, int viewportHeight,
-                                           ComponentType targetType, ::Entity* targetEntity) {
+                                           ComponentType targetType, Entity* targetEntity) {
     if (!m_camera) return SelectionData{};
     
     glm::vec3 rayOrigin = getRayOrigin(mouseX, mouseY, viewportWidth, viewportHeight);
@@ -92,7 +95,7 @@ SelectionData ComponentPicker::pickComponent(float mouseX, float mouseY, int vie
 
 std::vector<SelectionData> ComponentPicker::pickComponentsInRegion(float x1, float y1, float x2, float y2,
                                                                   int viewportWidth, int viewportHeight,
-                                                                  ComponentType targetType, ::Entity* targetEntity) {
+                                                                  ComponentType targetType, Entity* targetEntity) {
     std::vector<SelectionData> selections;
     
     if (!targetEntity) return selections;
@@ -239,7 +242,7 @@ glm::vec3 ComponentPicker::getRayDirection(float mouseX, float mouseY, int viewp
     return glm::normalize(rayWorld);
 }
 
-SelectionData ComponentPicker::pickVertex(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, ::Entity* entity) {
+SelectionData ComponentPicker::pickVertex(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, Entity* entity) {
     SelectionData result;
     
     auto mesh = entity->getMesh();
@@ -271,7 +274,7 @@ SelectionData ComponentPicker::pickVertex(const glm::vec3& rayOrigin, const glm:
     return result;
 }
 
-SelectionData ComponentPicker::pickEdge(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, ::Entity* entity) {
+SelectionData ComponentPicker::pickEdge(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, Entity* entity) {
     SelectionData result;
     
     auto mesh = entity->getMesh();
@@ -312,7 +315,7 @@ SelectionData ComponentPicker::pickEdge(const glm::vec3& rayOrigin, const glm::v
     return result;
 }
 
-SelectionData ComponentPicker::pickFace(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, ::Entity* entity) {
+SelectionData ComponentPicker::pickFace(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, Entity* entity) {
     SelectionData result;
     
     auto mesh = entity->getMesh();

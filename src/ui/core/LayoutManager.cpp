@@ -8,6 +8,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
+#include <QLabel>
 #include <QDebug>
 
 namespace rudebase3d {

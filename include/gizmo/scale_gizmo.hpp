@@ -16,11 +16,11 @@ class ScaleGizmo : public Gizmo {
 
 public:
     ScaleGizmo();
-    explicit ScaleGizmo(std::shared_ptr<Entity> target);
+    explicit ScaleGizmo(std::shared_ptr<rude::Entity> target);
     ~ScaleGizmo() override;
 
-    void setTarget(std::shared_ptr<Entity> target) { m_target = target; }
-    std::shared_ptr<Entity> getTarget() const { return m_target; }
+    void setTarget(std::shared_ptr<rude::Entity> target) { m_target = target; }
+    std::shared_ptr<rude::Entity> getTarget() const { return m_target; }
 
     void draw(const Camera& camera) const override;
     
@@ -38,7 +38,7 @@ private:
     float distanceToCube(const glm::vec3& point, const glm::vec3& center, const glm::vec3& direction, float size) const;
     void screenToWorldRay(float x, float y, const Camera& camera, glm::vec3& outOrigin, glm::vec3& outDir) const;
 
-    std::shared_ptr<Entity> m_target = nullptr;
+    std::shared_ptr<rude::Entity> m_target = nullptr;
     Axis m_activeAxis = Axis::None;
     glm::vec3 m_startScale;
     glm::vec3 m_currentScale;
