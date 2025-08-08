@@ -80,6 +80,17 @@ else()
     set(GLEW_FOUND TRUE)
 endif()
 
+# Find GLFW
+message(STATUS "Looking for GLFW...")
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+
+# Add GLFW subdirectory
+add_subdirectory(third_party/glfw/glfw-3.4)
+message(STATUS "Found GLFW in third_party/glfw/glfw-3.4")
+
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -218,6 +229,7 @@ target_link_libraries(RudeBase3D
     Qt6::OpenGLWidgets
     OpenGL::GL
     ${GLEW_LIBRARIES}
+    glfw
     core
     ecs
     gizmo

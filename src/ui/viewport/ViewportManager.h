@@ -63,6 +63,7 @@ class Camera;
 class LightingSystem;
 class GridSystem;
 class RenderSystem;
+class Renderer;
 class GizmoManager;
 
 // Forward declarations for event system
@@ -833,6 +834,9 @@ private:
     /// Render system for graphics pipeline management
     std::shared_ptr<RenderSystem> m_renderSystem;
 
+    /// Direct renderer for grid and debug drawing
+    std::shared_ptr<Renderer> m_renderer;
+
     // ========================================================================
     // Event System Components
     // ========================================================================
@@ -867,6 +871,16 @@ private:
     
     /// Whether transform gizmos are visible
     bool m_showGizmos;
+
+    // ========================================================================
+    // Mouse Interaction State
+    // ========================================================================
+    
+    /// Last mouse position for drag calculations
+    QPoint m_lastMousePos;
+    
+    /// Whether mouse dragging is currently active
+    bool m_isDragging;
 
     // ========================================================================
     // Rendering and Display Helper Methods
@@ -1588,6 +1602,9 @@ private:
     
     /// List of all viewports in current layout
     QList<ViewportWidget*> m_viewports;
+    
+    /// List of active GLFW viewports (temporary for testing)
+    QList<class GLFWViewport*> m_activeGLFWViewports;
     
     /// Currently active viewport receiving input
     ViewportWidget* m_activeViewport;

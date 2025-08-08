@@ -58,6 +58,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_gridSystem(std::make_shared<GridSystem>())
     , m_sceneModified(false)
 {
+    printf("[CONSTRUCTOR] MainWindow constructor started\n");
     qDebug() << "MainWindow constructor started";
     
     // Use CoreSystem for scene management instead of local scene manager
@@ -102,25 +103,36 @@ MainWindow::MainWindow(QWidget* parent)
     qDebug() << "Updating UI...";
     updateUI();
     
+    // Add a test cube to verify viewport is working
+    qDebug() << "Adding test cube to scene...";
+    addTestPrimitive();
+    
     qDebug() << "MainWindow constructor completed";
 }
 
 void MainWindow::setupUI()
 {
+    printf("[MAIN DEBUG] setupUI() called\n");
     // Set up UI using UIManager
     m_uiManager->setupUI();
     
     // Get the viewport manager and panels from UIManager
     m_viewportManager = m_uiManager->getViewportManager();
+    printf("[MAIN DEBUG] ViewportManager obtained: %p\n", m_viewportManager);
+    
     m_hierarchyPanel = m_uiManager->getSceneHierarchy();
     // TODO: Fix type mismatch - UIManager returns PropertiesPanel* but we need rude::PropertiesPanel*
     // m_propertiesPanel = m_uiManager->getPropertiesPanel();
     
     // Set up component integrations with ViewportManager
+    printf("[MAIN DEBUG] Setting scene, lighting, grid, and render systems\n");
     m_viewportManager->setScene(m_scene);
     m_viewportManager->setLightingSystem(m_lightingSystem);
+    printf("[MAIN DEBUG] About to call setGridSystem with: %p\n", m_gridSystem.get());
     m_viewportManager->setGridSystem(m_gridSystem);
+    printf("[MAIN DEBUG] setGridSystem completed\n");
     m_viewportManager->setRenderSystem(m_renderSystem);
+    printf("[MAIN DEBUG] All systems set\n");
     
     // Set camera controller type (Maya style by default)
     m_viewportManager->setCameraControllerType("Maya");
@@ -1210,4 +1222,20 @@ void MainWindow::updateSystems() {
     
     // You could also update other systems here if needed
     // For example, viewport updates, UI animations, etc.
+}
+
+void MainWindow::addTestPrimitive()
+{
+    // Add a test cube to the scene to verify viewport functionality
+    auto* coreSceneManager = CoreSystem::getInstance().getSceneManager();
+    if (coreSceneManager) {
+        auto* testCube = coreSceneManager->createPrimitive("cube", "TestCube");
+        if (testCube) {
+            qDebug() << "Test cube created successfully - Entity ID:" << testCube->getId();
+        } else {
+            qDebug() << "Failed to create test cube";
+        }
+    } else {
+        qDebug() << "No scene manager available for test cube";
+    }
 }

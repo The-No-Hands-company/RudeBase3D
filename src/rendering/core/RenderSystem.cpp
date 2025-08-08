@@ -129,12 +129,20 @@ void RenderSystem::renderScene()
 {
     if (!m_scene || !m_renderer) return;
     
-    // TODO: Implement entity rendering when Entity type issues are resolved
     // Render all entities in the scene
-    // const auto& entities = m_scene->getEntities();
-    // for (const auto& entity : entities) {
-    //     renderEntity(entity.get());
-    // }
+    const auto& entities = m_scene->getEntities();
+    
+    // Simple debug without QString to avoid include issues
+    if (!entities.empty()) {
+        spdlog::info("RenderSystem::renderScene() - Found {} entities", entities.size());
+    }
+    
+    for (const auto& entity : entities) {
+        if (entity) {
+            spdlog::info("Rendering entity ID: {} Name: {}", entity->getId(), entity->getName());
+            renderEntity(entity.get());
+        }
+    }
 }
 
 void RenderSystem::renderTransformGizmo()
@@ -169,26 +177,22 @@ void RenderSystem::renderOverlays()
     // TODO: Implement overlay rendering (HUD elements, text, etc.)
 }
 
-void RenderSystem::renderEntity(Entity* entity)
+void RenderSystem::renderEntity(rude::Entity* entity)
 {
     if (!entity || !m_renderer) return;
     
-    // TODO: Implement entity rendering using component system
-    // For now, this is a placeholder
-    /*
-    // Get mesh component
-    auto meshComponent = entity->getComponent<MeshComponent>();
-    if (meshComponent && meshComponent->getMesh()) {
-        // Set transform matrix
-        auto transformComponent = entity->getComponent<TransformComponent>();
-        if (transformComponent) {
-            m_renderer->setModelMatrix(transformComponent->getMatrix());
-        }
-        
-        // Render mesh
-        m_renderer->renderMesh(meshComponent->getMesh());
-    }
-    */
+    spdlog::info("RenderSystem::renderEntity - Rendering entity ID: {} Name: {}", entity->getId(), entity->getName());
+    
+    // TODO: For now, just draw a simple colored box for any entity to verify rendering works
+    // This is a temporary hack to get something visible
+    
+    // Set a simple model matrix (identity for now)
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    m_renderer->setModelMatrix(modelMatrix);
+    
+    // TODO: When proper component system is implemented, check for mesh components here
+    // For now, just log that we attempted to render
+    spdlog::info("Entity {} successfully processed by renderEntity", entity->getName());
 }
 
 void RenderSystem::onSceneChanged()

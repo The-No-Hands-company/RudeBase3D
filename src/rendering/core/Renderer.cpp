@@ -218,11 +218,50 @@ void Renderer::renderMesh(rude::MeshPtr mesh, RenderMode mode)
 
 void Renderer::renderLine(const glm::vec3& start, const glm::vec3& end, const glm::vec4& color)
 {
-    // TODO: Temporarily commented out due to shader system architectural issues
-    // Need to resolve Qt OpenGL vs raw OpenGL approach and fix ShaderProgram member access
-    spdlog::debug("Renderer::renderLine() called but temporarily disabled - Start: ({}, {}, {}) End: ({}, {}, {}) Color: ({}, {}, {}, {})", 
-                  start.x, start.y, start.z, end.x, end.y, end.z, color.x, color.y, color.z, color.w);
+    // PROFESSIONAL LINE RENDERING with proper thickness control
+    
+    // Save current OpenGL state
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    
+    // Professional line rendering settings
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_LINE_SMOOTH);           // Smooth antialiased lines
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST); // Best quality
+    
+    // Professional line width - thin and crisp like Maya/Blender
+    glLineWidth(1.5f);
+    
+    // Set up matrices properly for immediate mode
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadMatrixf(glm::value_ptr(m_projectionMatrix));
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glm::mat4 modelView = m_viewMatrix * m_modelMatrix;
+    glLoadMatrixf(glm::value_ptr(modelView));
+    
+    // Render the line with immediate mode OpenGL
+    glBegin(GL_LINES);
+    glColor4f(color.x, color.y, color.z, color.w);
+    glVertex3f(start.x, start.y, start.z);
+    glVertex3f(end.x, end.y, end.z);
+    glEnd();
+    
+    // Restore matrices
+    glPopMatrix(); // modelview
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix(); // projection
+    glMatrixMode(GL_MODELVIEW);
+    
+    // Restore OpenGL state
+    glPopAttrib();
+    
     /*
+    // TODO: Original shader-based implementation (currently disabled due to architectural issues)
     useShaderProgram("line");
     if (!m_currentShader) {
         spdlog::error("No line shader available!");
