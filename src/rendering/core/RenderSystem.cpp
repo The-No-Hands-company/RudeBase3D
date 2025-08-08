@@ -1,6 +1,7 @@
 #include "RenderSystem.h"
 #include "core/scene.hpp"
 #include "core/entity.hpp"
+#include "core/transform.hpp"
 #include "Camera.h"
 #include "Renderer.h"
 #include "SceneObject.h"
@@ -10,6 +11,8 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLContext>
 #include <spdlog/spdlog.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 RenderSystem::RenderSystem(QObject* parent)
     : QObject(parent)
@@ -99,6 +102,9 @@ void RenderSystem::render()
     m_renderer->setViewMatrix(m_camera->getViewMatrix());
     m_renderer->setProjectionMatrix(m_camera->getProjectionMatrix());
     
+    // Set camera position for lighting calculations
+    m_renderer->setViewPosition(m_camera->getWorldPosition());
+    
     // Apply lighting from LightingSystem
     if (m_lightingSystem) {
         m_lightingSystem->applyLighting(m_renderer, m_camera->getWorldPosition());
@@ -183,16 +189,31 @@ void RenderSystem::renderEntity(rude::Entity* entity)
     
     spdlog::info("RenderSystem::renderEntity - Rendering entity ID: {} Name: {}", entity->getId(), entity->getName());
     
-    // TODO: For now, just draw a simple colored box for any entity to verify rendering works
-    // This is a temporary hack to get something visible
+    // Get the entity's mesh
+    auto mesh = entity->getMesh();
+    if (!mesh) {
+        spdlog::warn("Entity {} has no mesh - skipping render", entity->getName());
+        return;
+    }
     
-    // Set a simple model matrix (identity for now)
-    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    // Set the model matrix based on entity's world transform
+    glm::mat4 modelMatrix = entity->getWorldTransform();
     m_renderer->setModelMatrix(modelMatrix);
     
-    // TODO: When proper component system is implemented, check for mesh components here
-    // For now, just log that we attempted to render
-    spdlog::info("Entity {} successfully processed by renderEntity", entity->getName());
+    // DEBUG: Log the entity's transform details
+    const Transform& transform = entity->getTransform();
+    const glm::vec3& pos = transform.getPosition();
+    const glm::vec3& scl = transform.getScale();
+    spdlog::info("Entity {} transform - Position: ({:.3f}, {:.3f}, {:.3f}), Scale: ({:.3f}, {:.3f}, {:.3f})", 
+                 entity->getName(), pos.x, pos.y, pos.z, scl.x, scl.y, scl.z);
+    
+    // Render the mesh using the Renderer's renderMesh method
+    try {
+        m_renderer->renderMesh(mesh, RenderMode::Solid);
+        spdlog::info("Entity {} successfully rendered with mesh", entity->getName());
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to render entity {}: {}", entity->getName(), e.what());
+    }
 }
 
 void RenderSystem::onSceneChanged()

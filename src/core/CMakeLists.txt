@@ -19,6 +19,7 @@ target_include_directories(core PUBLIC
     $<INSTALL_INTERFACE:include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../dependencies/glm/glm> # For glm usage in core
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/spdlog/include> # For spdlog
+    ${GLEW_INCLUDE_DIRS} # For GLEW
 )
 
 target_link_libraries(core PUBLIC
@@ -27,6 +28,8 @@ target_link_libraries(core PUBLIC
     Qt6::Widgets
     Qt6::OpenGL # For QOpenGLFunctions_3_3_Core
     Qt6::OpenGLWidgets
+    ${GLEW_LIBRARIES} # For GLEW
+    OpenGL::GL # For OpenGL
 )
 
 set_property(TARGET core PROPERTY AUTOMOC ON)

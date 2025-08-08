@@ -8,6 +8,7 @@ PropertiesPanel::PropertiesPanel(QWidget* parent)
     : QDockWidget("Properties", parent)
     , m_mainLayout(nullptr)
     , m_updateInProgress(false)
+    , m_currentEntity(nullptr)
 {
     // Create a central widget for the dock widget
     QWidget* centralWidget = new QWidget(this);
@@ -113,6 +114,10 @@ void PropertiesPanel::setupTransformGroup()
     m_scaleX = createDoubleSpinBox(0.001, 1000, 0.1, 3);
     m_scaleY = createDoubleSpinBox(0.001, 1000, 0.1, 3);
     m_scaleZ = createDoubleSpinBox(0.001, 1000, 0.1, 3);
+    // Set default scale values to 1.0 instead of minimum value (0.001)
+    m_scaleX->setValue(1.0);
+    m_scaleY->setValue(1.0);
+    m_scaleZ->setValue(1.0);
     layout->addWidget(new QLabel("X:"), 2, 1);
     layout->addWidget(m_scaleX, 2, 2);
     layout->addWidget(new QLabel("Y:"), 2, 3);
@@ -266,6 +271,10 @@ void PropertiesPanel::updateTransformProperties()
     // Scale
     const glm::vec3& scl = transform.getScale();
     QVector3D scale(scl.x, scl.y, scl.z);
+    
+    // DEBUG: Print the actual transform values
+    qDebug() << "[PropertiesPanel] Entity Transform Scale Values: X=" << scl.x << "Y=" << scl.y << "Z=" << scl.z;
+    
     m_scaleX->setValue(scale.x());
     m_scaleY->setValue(scale.y());
     m_scaleZ->setValue(scale.z());
@@ -488,24 +497,72 @@ QDoubleSpinBox* PropertiesPanel::createDoubleSpinBox(double min, double max, dou
 
 void PropertiesPanel::setEntity(rude::Entity* entity)
 {
-    // TODO: Implement entity property editing
-    // This is a stub implementation to resolve linking error
-    (void)entity; // Suppress unused parameter warning
+    qDebug() << "[PropertiesPanel] setEntity() called with entity:" << entity;
+    if (entity) {
+        qDebug() << "[PropertiesPanel] Entity name:" << QString::fromStdString(entity->getName()) << "ID:" << entity->getId();
+    }
     
-    // Clear current properties
-    if (m_nameEdit) m_nameEdit->clear();
-    if (m_visibleCheckBox) m_visibleCheckBox->setChecked(true);
+    // Convert from rude::Entity* to SceneObjectPtr for compatibility
+    // This is a temporary adapter during the ECS transition
+    if (entity) {
+        // Create a temporary adapter to use the existing Properties panel logic
+        // For now, we'll create a minimal SceneObject-like wrapper
+        // TODO: This should be replaced with direct ECS entity property editing
+        
+        // Set the entity directly and update properties
+        m_currentEntity = entity;
+        
+        // Enable the properties panel
+        setEnabled(true);
+        
+        // Update all property displays using the entity's actual data
+        updateEntityProperties();
+    } else {
+        m_currentEntity = nullptr;
+        setEnabled(false);
+    }
+}
+
+void PropertiesPanel::updateEntityProperties()
+{
+    if (!m_currentEntity) {
+        return;
+    }
     
-    // Reset transform values
-    if (m_positionX) m_positionX->setValue(0.0);
-    if (m_positionY) m_positionY->setValue(0.0);
-    if (m_positionZ) m_positionZ->setValue(0.0);
-    if (m_rotationX) m_rotationX->setValue(0.0);
-    if (m_rotationY) m_rotationY->setValue(0.0);
-    if (m_rotationZ) m_rotationZ->setValue(0.0);
-    if (m_scaleX) m_scaleX->setValue(1.0);
-    if (m_scaleY) m_scaleY->setValue(1.0);
-    if (m_scaleZ) m_scaleZ->setValue(1.0);
+    m_updateInProgress = true;
     
-    // TODO: Load actual entity properties when Entity class is properly integrated
+    // Update name
+    if (m_nameEdit) {
+        m_nameEdit->setText(QString::fromStdString(m_currentEntity->getName()));
+    }
+    
+    // Update visibility (assume visible for now)
+    if (m_visibleCheckBox) {
+        m_visibleCheckBox->setChecked(true);
+    }
+    
+    // Update transform properties using the entity's actual transform
+    const Transform& transform = m_currentEntity->getTransform();
+    
+    // Position
+    const glm::vec3& pos = transform.getPosition();
+    if (m_positionX) m_positionX->setValue(pos.x);
+    if (m_positionY) m_positionY->setValue(pos.y);
+    if (m_positionZ) m_positionZ->setValue(pos.z);
+    
+    // Rotation (Euler angles)
+    const glm::vec3& rot = transform.getEulerAngles();
+    if (m_rotationX) m_rotationX->setValue(rot.x);
+    if (m_rotationY) m_rotationY->setValue(rot.y);
+    if (m_rotationZ) m_rotationZ->setValue(rot.z);
+    
+    // Scale - this is where our issue was!
+    const glm::vec3& scl = transform.getScale();
+    qDebug() << "[PropertiesPanel] Reading entity transform scale values: X=" << scl.x << "Y=" << scl.y << "Z=" << scl.z;
+    
+    if (m_scaleX) m_scaleX->setValue(scl.x);
+    if (m_scaleY) m_scaleY->setValue(scl.y);
+    if (m_scaleZ) m_scaleZ->setValue(scl.z);
+    
+    m_updateInProgress = false;
 }
