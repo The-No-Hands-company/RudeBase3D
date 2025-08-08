@@ -4,7 +4,7 @@ A professional-grade 3D modeling application built with modern C++23 and Qt6, fo
 
 ## 🎯 Project Vision
 
-Ru## 📊 Current Status
+## 📊 Current Status
 
 - ✅ Basic 3D viewport and rendering
 - ✅ Scene management system  
