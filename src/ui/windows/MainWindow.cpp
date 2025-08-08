@@ -58,7 +58,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_gridSystem(std::make_shared<GridSystem>())
     , m_sceneModified(false)
 {
-    printf("[CONSTRUCTOR] MainWindow constructor started\n");
+    qDebug() << "[CONSTRUCTOR] MainWindow constructor started";
     qDebug() << "MainWindow constructor started";
     
     // Use CoreSystem for scene management instead of local scene manager
