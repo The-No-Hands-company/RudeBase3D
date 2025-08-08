@@ -26,6 +26,7 @@ class ViewportManager;
 class SceneHierarchyPanel;
 class PropertiesPanel;
 class SceneManager;
+class SettingsDialog;
 
 namespace rudebase3d {
 namespace ui {
@@ -958,6 +959,22 @@ private slots:
      * @note Handles non-existent files gracefully with user notification
      */
     void onRecentFileTriggered();
+    
+    /**
+     * @brief Open application settings dialog
+     * 
+     * Opens the comprehensive settings dialog for user experience customization.
+     * Provides access to appearance, workflow, viewport, keyboard, performance,
+     * and advanced configuration options.
+     * 
+     * @post Settings dialog is displayed modally
+     * @post Current settings are loaded and displayed
+     * @post User can modify and apply settings
+     * 
+     * @note Modal dialog ensures settings focus
+     * @note Changes are applied immediately or on confirmation
+     */
+    void openSettings();
 
 private:
     // ========================================================================
@@ -1133,6 +1150,9 @@ private:
     /// Properties panel for object editing
     PropertiesPanel* m_propertiesPanel;
     
+    /// Application settings dialog
+    SettingsDialog* m_settingsDialog;
+    
     // Menu system components
     /// File operations menu
     QMenu* m_fileMenu;
@@ -1206,6 +1226,9 @@ private:
     
     /// Deselect all objects action
     QAction* m_deselectAllAction;
+    
+    /// Open application settings dialog action
+    QAction* m_settingsAction;
     
     // ========================================================================
     // Modeling Operation Actions

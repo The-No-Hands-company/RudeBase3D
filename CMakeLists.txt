@@ -93,6 +93,7 @@ file(GLOB_RECURSE SOURCES
 # Collect header files from organized directories  
 file(GLOB_RECURSE HEADERS
     "src/*.h"
+    "include/*.h"
     "include/*.hpp"
 )
 
