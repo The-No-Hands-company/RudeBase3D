@@ -5,7 +5,11 @@
 #include "Material.h"
 #include "core/shader_utils.hpp"
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <spdlog/spdlog.h>
+#include <fstream>
+#include <sstream>
+#include <vector>
 // Removed Qt includes
 
 Renderer::Renderer()
@@ -42,8 +46,9 @@ bool Renderer::initialize()
     // Set default OpenGL state
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    // Temporarily disable face culling to debug cube visibility
+    // glEnable(GL_CULL_FACE);
+    // glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
     
     setClearColor(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
@@ -71,9 +76,20 @@ void Renderer::cleanup()
 
 bool Renderer::loadShaders()
 {
-    // Load default solid shader
-    if (!createShaderProgram("default", getDefaultVertexShader(), getDefaultFragmentShader())) {
-        return false;
+    // Load default solid shader from files
+    std::string vertSource = readShaderFile("assets/shaders/basic.vert");
+    std::string fragSource = readShaderFile("assets/shaders/basic.frag");
+    
+    if (vertSource.empty() || fragSource.empty()) {
+        spdlog::error("Failed to load basic shader files, falling back to hardcoded shaders");
+        // Fallback to hardcoded shaders
+        if (!createShaderProgram("default", getDefaultVertexShader(), getDefaultFragmentShader())) {
+            return false;
+        }
+    } else {
+        if (!createShaderProgram("default", vertSource, fragSource)) {
+            return false;
+        }
     }
     
     // Load wireframe shader
@@ -179,8 +195,14 @@ void Renderer::setLighting(const glm::vec3& lightDir, const glm::vec4& lightColo
 void Renderer::renderMesh(rude::MeshPtr mesh, RenderMode mode)
 {
     if (!mesh) {
+        spdlog::warn("renderMesh called with null mesh");
         return;
     }
+    
+    // DEBUG: Log mesh data info
+    spdlog::info("renderMesh: mode={}, mesh has data={}", 
+                 (mode == RenderMode::Solid ? "Solid" : mode == RenderMode::Wireframe ? "Wireframe" : "SolidWireframe"),
+                 (mesh ? "yes" : "no"));
     
     switch (mode) {
         case RenderMode::Wireframe:
@@ -417,17 +439,19 @@ bool Renderer::createShaderProgram(const std::string& name, const std::string& v
     auto shaderProgram_ptr = std::make_unique<ShaderProgram>();
     shaderProgram_ptr->programID = shaderProgram;
     
-    // Uniform name constants
-    constexpr const char* MVP_MATRIX_UNIFORM = "mvpMatrix";
-    constexpr const char* MODEL_MATRIX_UNIFORM = "modelMatrix";
-    constexpr const char* VIEW_MATRIX_UNIFORM = "viewMatrix";
-    constexpr const char* PROJECTION_MATRIX_UNIFORM = "projectionMatrix";
+    // Uniform name constants - updated to match basic.vert/basic.frag
+    constexpr const char* MVP_MATRIX_UNIFORM = "mvpMatrix";  // Legacy, may not be used
+    constexpr const char* MODEL_MATRIX_UNIFORM = "model";
+    constexpr const char* VIEW_MATRIX_UNIFORM = "view";
+    constexpr const char* PROJECTION_MATRIX_UNIFORM = "projection";
     constexpr const char* NORMAL_MATRIX_UNIFORM = "normalMatrix";
     constexpr const char* COLOR_UNIFORM = "color";
     constexpr const char* DIFFUSE_COLOR_UNIFORM = "diffuseColor";
     constexpr const char* LIGHT_DIRECTION_UNIFORM = "lightDirection";
     constexpr const char* LIGHT_COLOR_UNIFORM = "lightColor";
     constexpr const char* VIEW_POS_UNIFORM = "viewPos";
+    constexpr const char* OBJECT_COLOR_UNIFORM = "objectColor";  // Added for basic.frag
+    constexpr const char* LIGHT_POS_UNIFORM = "lightPos";  // Added for basic.frag
     
     // Get uniform locations and check for missing uniforms
     shaderProgram_ptr->mvpMatrixLoc = glGetUniformLocation(shaderProgram, MVP_MATRIX_UNIFORM);
@@ -470,6 +494,14 @@ bool Renderer::createShaderProgram(const std::string& name, const std::string& v
     if (shaderProgram_ptr->viewPosLoc == -1) {
         spdlog::warn("Uniform '{}' not found in shader '{}'", VIEW_POS_UNIFORM, name);
     }
+    shaderProgram_ptr->objectColorLoc = glGetUniformLocation(shaderProgram, OBJECT_COLOR_UNIFORM);
+    if (shaderProgram_ptr->objectColorLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", OBJECT_COLOR_UNIFORM, name);
+    }
+    shaderProgram_ptr->lightPosLoc = glGetUniformLocation(shaderProgram, LIGHT_POS_UNIFORM);
+    if (shaderProgram_ptr->lightPosLoc == -1) {
+        spdlog::warn("Uniform '{}' not found in shader '{}'", LIGHT_POS_UNIFORM, name);
+    }
     
     m_shaderPrograms[name] = std::move(shaderProgram_ptr);
     
@@ -479,48 +511,87 @@ bool Renderer::createShaderProgram(const std::string& name, const std::string& v
 
 void Renderer::updateUniforms()
 {
-    // TODO: Temporarily commented out due to shader system architectural issues
-    // Need to resolve Qt vs glm matrix types and Qt OpenGL vs raw OpenGL approach
     if (!m_currentShader) {
         return;
     }
-    /*
-    auto& shader = *m_currentShader;
-    QMatrix4x4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix;
-    QMatrix3x3 normalMatrix = m_modelMatrix.normalMatrix();
     
-    if (shader.mvpMatrixLoc >= 0) {
-        shader.program->setUniformValue(shader.mvpMatrixLoc, mvpMatrix);
+    // Use raw OpenGL calls to set uniforms with correct names matching the shaders
+    GLuint program = m_currentShader->programID;
+    glUseProgram(program);
+    
+    // Set transformation matrices with names that match the shaders
+    GLint modelLoc = glGetUniformLocation(program, "model");
+    if (modelLoc >= 0) {
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
     }
     
-    if (shader.modelMatrixLoc >= 0) {
-        shader.program->setUniformValue(shader.modelMatrixLoc, m_modelMatrix);
+    GLint viewLoc = glGetUniformLocation(program, "view");
+    if (viewLoc >= 0) {
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(m_viewMatrix));
     }
     
-    if (shader.viewMatrixLoc >= 0) {
-        shader.program->setUniformValue(shader.viewMatrixLoc, m_viewMatrix);
+    GLint projectionLoc = glGetUniformLocation(program, "projection");
+    if (projectionLoc >= 0) {
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(m_projectionMatrix));
     }
     
-    if (shader.projectionMatrixLoc >= 0) {
-        shader.program->setUniformValue(shader.projectionMatrixLoc, m_projectionMatrix);
+    // Set lighting uniforms for the fragment shader
+    GLint lightPosLoc = glGetUniformLocation(program, "lightPos");
+    if (lightPosLoc >= 0) {
+        // Set a default light position (above and to the right of origin)
+        glm::vec3 lightPos(10.0f, 10.0f, 10.0f);
+        glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
     }
     
-    if (shader.normalMatrixLoc >= 0) {
-        shader.program->setUniformValue(shader.normalMatrixLoc, normalMatrix);
+    GLint lightColorLoc = glGetUniformLocation(program, "lightColor");
+    if (lightColorLoc >= 0) {
+        // Set a bright white light
+        glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+        glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
     }
     
-    if (shader.lightDirectionLoc >= 0) {
-        shader.program->setUniformValue(shader.lightDirectionLoc, m_lightDirection);
+    GLint objectColorLoc = glGetUniformLocation(program, "objectColor");
+    if (objectColorLoc >= 0) {
+        // Set a nice orange color for the cube
+        glm::vec3 objectColor(1.0f, 0.5f, 0.2f);
+        glUniform3fv(objectColorLoc, 1, glm::value_ptr(objectColor));
     }
     
-    if (shader.lightColorLoc >= 0) {
-        shader.program->setUniformValue(shader.lightColorLoc, m_lightColor);
+    GLint viewPosLoc = glGetUniformLocation(program, "viewPos");
+    if (viewPosLoc >= 0) {
+        glUniform3fv(viewPosLoc, 1, glm::value_ptr(m_viewPosition));
+    }
+}
+
+std::string Renderer::readShaderFile(const std::string& filePath)
+{
+    // Try multiple possible paths for the shader files
+    std::vector<std::string> possiblePaths = {
+        filePath,  // Original path
+        std::string("../") + filePath,  // One level up (if running from build dir)
+        std::string("../../") + filePath,  // Two levels up
+        std::string("d:/dev/rudebase3d/") + filePath  // Absolute path as fallback
+    };
+    
+    for (const auto& path : possiblePaths) {
+        std::ifstream file(path);
+        if (file.is_open()) {
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            file.close();
+            
+            std::string content = buffer.str();
+            if (content.empty()) {
+                spdlog::warn("Shader file is empty: {}", path);
+            } else {
+                spdlog::info("Successfully loaded shader file: {} ({} bytes)", path, content.size());
+                return content;
+            }
+        }
     }
     
-    if (shader.viewPosLoc >= 0) {
-        shader.program->setUniformValue(shader.viewPosLoc, m_viewPosition);
-    }
-    */
+    spdlog::error("Failed to open shader file at any of the attempted paths for: {}", filePath);
+    return "";
 }
 
 void Renderer::initializeLineRenderer()
@@ -538,11 +609,9 @@ const std::string& Renderer::getDefaultVertexShader()
 "layout (location = 1) in vec3 aNormal;\n"
 "layout (location = 2) in vec2 aTexCoord;\n"
 "\n"
-"uniform mat4 mvpMatrix;\n"
-"uniform mat4 modelMatrix;\n"
-"uniform mat4 viewMatrix;\n"
-"uniform mat4 projectionMatrix;\n"
-"uniform mat3 normalMatrix;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
 "\n"
 "out vec3 FragPos;\n"
 "out vec3 Normal;\n"
@@ -550,10 +619,11 @@ const std::string& Renderer::getDefaultVertexShader()
 "\n"
 "void main()\n"
 "{\n"
-"    FragPos = vec3(modelMatrix * vec4(aPos, 1.0));\n"
-"    Normal = normalMatrix * aNormal;\n"
+"    FragPos = vec3(model * vec4(aPos, 1.0));\n"
+"    Normal = mat3(transpose(inverse(model))) * aNormal;\n"
 "    TexCoord = aTexCoord;\n"
-"    gl_Position = mvpMatrix * vec4(aPos, 1.0);\n"
+"    \n"
+"    gl_Position = projection * view * vec4(FragPos, 1.0);\n"
 "}\n";
     return shader;
 }
@@ -563,45 +633,38 @@ const std::string& Renderer::getDefaultFragmentShader()
     static std::string shader = 
 "#version 330 core\n"
 "\n"
-"struct Material {\n"
-"    vec4 diffuseColor;\n"
-"    vec4 specularColor;\n"
-"    vec4 ambientColor;\n"
-"    float shininess;\n"
-"};\n"
-"\n"
 "in vec3 FragPos;\n"
 "in vec3 Normal;\n"
 "in vec2 TexCoord;\n"
 "\n"
-"uniform Material material;\n"
-"uniform vec3 lightDirection;\n"
-"uniform vec4 lightColor;\n"
-"uniform vec3 viewPos;\n"
-"\n"
 "out vec4 FragColor;\n"
+"\n"
+"uniform vec3 lightPos;\n"
+"uniform vec3 lightColor;\n"
+"uniform vec3 objectColor;\n"
+"uniform vec3 viewPos;\n"
 "\n"
 "void main()\n"
 "{\n"
-"    // Normalize vectors\n"
-"    vec3 norm = normalize(Normal);\n"
-"    vec3 lightDir = normalize(-lightDirection);\n"
-"    vec3 viewDir = normalize(viewPos - FragPos);\n"
-"    \n"
 "    // Ambient\n"
-"    vec3 ambient = material.ambientColor.rgb * lightColor.rgb;\n"
+"    float ambientStrength = 0.1;\n"
+"    vec3 ambient = ambientStrength * lightColor;\n"
 "    \n"
 "    // Diffuse\n"
+"    vec3 norm = normalize(Normal);\n"
+"    vec3 lightDir = normalize(lightPos - FragPos);\n"
 "    float diff = max(dot(norm, lightDir), 0.0);\n"
-"    vec3 diffuse = diff * material.diffuseColor.rgb * lightColor.rgb;\n"
+"    vec3 diffuse = diff * lightColor;\n"
 "    \n"
 "    // Specular\n"
+"    float specularStrength = 0.5;\n"
+"    vec3 viewDir = normalize(viewPos - FragPos);\n"
 "    vec3 reflectDir = reflect(-lightDir, norm);\n"
-"    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);\n"
-"    vec3 specular = spec * material.specularColor.rgb * lightColor.rgb;\n"
+"    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
+"    vec3 specular = specularStrength * spec * lightColor;\n"
 "    \n"
-"    vec3 result = ambient + diffuse + specular;\n"
-"    FragColor = vec4(result, material.diffuseColor.a);\n"
+"    vec3 result = (ambient + diffuse + specular) * objectColor;\n"
+"    FragColor = vec4(result, 1.0);\n"
 "}\n";
     return shader;
 }
@@ -613,11 +676,13 @@ const std::string& Renderer::getWireframeVertexShader()
 "\n"
 "layout (location = 0) in vec3 aPos;\n"
 "\n"
-"uniform mat4 mvpMatrix;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
 "\n"
 "void main()\n"
 "{\n"
-"    gl_Position = mvpMatrix * vec4(aPos, 1.0);\n"
+"    gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
 "}\n";
     return shader;
 }
@@ -627,13 +692,13 @@ const std::string& Renderer::getWireframeFragmentShader()
     static std::string shader = 
 "#version 330 core\n"
 "\n"
-"uniform vec4 color;\n"
+"uniform vec3 objectColor;\n"
 "\n"
 "out vec4 FragColor;\n"
 "\n"
 "void main()\n"
 "{\n"
-"    FragColor = color;\n"
+"    FragColor = vec4(objectColor, 1.0);\n"
 "}\n";
     return shader;
 }

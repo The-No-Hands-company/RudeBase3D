@@ -26,9 +26,9 @@
 // IN THE SOFTWARE.
 //==============================================================================
 
-#include "core/mesh.hpp"
+#include <GL/glew.h>
+#include "../../include/core/mesh.hpp"
 #include "core/qt_glm_utils.hpp"
-
 #include "Common.h"
 #include <spdlog/spdlog.h>
 #include <algorithm>
@@ -202,9 +202,47 @@ void Mesh::setData(const std::vector<rude::Vertex>& vertices, const std::vector<
 
 void Mesh::uploadToGPU()
 {
-    // This would be implemented to upload data to GPU
-    // Implementation would depend on the OpenGL context
+    // Clean up existing buffers if they exist
+    if (m_VAO != 0) {
+        cleanupGL();
+    }
+    
+    // Generate OpenGL objects
+    glGenVertexArrays(1, &m_VAO);
+    glGenBuffers(1, &m_VBO);
+    glGenBuffers(1, &m_EBO);
+    
+    // Bind VAO first
+    glBindVertexArray(m_VAO);
+    
+    // Upload vertex data
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+    glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(rude::Vertex), m_vertices.data(), GL_STATIC_DRAW);
+    
+    // Upload index data
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), m_indices.data(), GL_STATIC_DRAW);
+    
+    // Set up vertex attributes
+    // Position attribute (location = 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(rude::Vertex), (void*)offsetof(rude::Vertex, position));
+    glEnableVertexAttribArray(0);
+    
+    // Normal attribute (location = 1)
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(rude::Vertex), (void*)offsetof(rude::Vertex, normal));
+    glEnableVertexAttribArray(1);
+    
+    // Texture coordinate attribute (location = 2)
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(rude::Vertex), (void*)offsetof(rude::Vertex, texCoord));
+    glEnableVertexAttribArray(2);
+    
+    // Unbind VAO
+    glBindVertexArray(0);
+    
     m_uploaded = true;
+    
+    spdlog::info("Mesh uploaded to GPU: VAO={}, VBO={}, EBO={}, vertices={}, indices={}", 
+                 m_VAO, m_VBO, m_EBO, m_vertices.size(), m_indices.size());
 }
 
 void Mesh::bind()
@@ -225,7 +263,13 @@ void Mesh::render()
     if (!m_uploaded) {
         uploadToGPU();
     }
+    
     // Render the mesh
+    if (m_VAO != 0 && !m_indices.empty()) {
+        glBindVertexArray(m_VAO);
+        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(m_indices.size()), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+    }
 }
 
 glm::vec3 Mesh::getBoundingBoxMin() const
@@ -299,8 +343,21 @@ void Mesh::initializeGL()
 
 void Mesh::cleanupGL()
 {
-    // This would clean up OpenGL objects
+    if (m_VAO != 0) {
+        glDeleteVertexArrays(1, &m_VAO);
+        m_VAO = 0;
+    }
+    if (m_VBO != 0) {
+        glDeleteBuffers(1, &m_VBO);
+        m_VBO = 0;
+    }
+    if (m_EBO != 0) {
+        glDeleteBuffers(1, &m_EBO);
+        m_EBO = 0;
+    }
     m_uploaded = false;
+    
+    spdlog::debug("Mesh OpenGL resources cleaned up");
 }
 
 } // namespace rude

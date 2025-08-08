@@ -1098,6 +1098,12 @@ private:
         
         /// Generic color uniform location (for lines, wireframes)
         int colorLoc;
+        
+        /// Object color uniform location (for basic.frag)
+        int objectColorLoc;
+        
+        /// Light position uniform location (for basic.frag)
+        int lightPosLoc;
     };
     
     // ========================================================================
@@ -1186,6 +1192,21 @@ private:
      * @note Optimized to skip redundant uploads
      */
     void updateUniforms();
+    
+    /**
+     * @brief Read shader source code from file
+     * 
+     * Internal method that reads GLSL shader source code from
+     * disk files with error handling and logging.
+     * 
+     * @param filePath Path to shader file relative to application
+     * 
+     * @return String containing shader source code, empty on error
+     * 
+     * @note Logs detailed error messages on file read failures
+     * @note Supports both relative and absolute file paths
+     */
+    std::string readShaderFile(const std::string& filePath);
     
     /**
      * @brief Initialize line rendering vertex buffers

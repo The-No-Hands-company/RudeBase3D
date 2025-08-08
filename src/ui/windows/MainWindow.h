@@ -57,6 +57,7 @@
 #include <QLabel>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QDateTime>
 #include <memory>
 
 // Forward declarations
@@ -262,6 +263,9 @@ private slots:
     void createCone();
     void createTorus();
     void createIcosphere();
+    
+    // Toolbar connections
+    void onPrimitiveRequested(const QString& primitiveType);
     
     // View menu
     void resetCamera();

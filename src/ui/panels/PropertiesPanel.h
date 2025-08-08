@@ -631,6 +631,15 @@ private:
      */
     SceneObjectPtr m_selectedObject;
     
+    /**
+     * @brief Pointer to the currently selected ECS entity
+     * 
+     * Holds a reference to the ECS entity whose properties are currently being
+     * displayed and edited. Used during the transition from SceneObject to ECS.
+     * This can be nullptr when no entity is selected.
+     */
+    rude::Entity* m_currentEntity;
+    
     // === Layout Management ===
     
     /**
@@ -928,6 +937,15 @@ private:
      * matrix decomposition and unit conversion as needed.
      */
     void updateTransformProperties();
+    
+    /**
+     * @brief Updates all entity property displays to reflect current entity
+     * 
+     * Refreshes all property controls with values from the currently selected
+     * ECS entity. This includes object properties, transform properties, and
+     * any entity-specific attributes.
+     */
+    void updateEntityProperties();
     
     /**
      * @brief Updates material property displays to reflect current material

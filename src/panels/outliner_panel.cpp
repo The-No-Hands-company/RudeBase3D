@@ -4,6 +4,7 @@
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVBoxLayout>
+#include <QDebug>
 
 OutlinerPanel::OutlinerPanel(QWidget* parent)
     : QDockWidget("Outliner", parent), treeWidget(new QTreeWidget(this))
@@ -44,10 +45,12 @@ void OutlinerPanel::setSelectedEntity(rude::Entity* entity) {
 void OutlinerPanel::onItemSelectionChanged() {
     QTreeWidgetItem* item = treeWidget->currentItem();
     if (!item) {
+        qDebug() << "[OutlinerPanel] Selection cleared - no item selected";
         emit selectionChanged(nullptr);
         return;
     }
     rude::Entity* entity = reinterpret_cast<rude::Entity*>(item->data(0, Qt::UserRole).value<quintptr>());
+    qDebug() << "[OutlinerPanel] Item selected:" << item->text(0) << "Entity ptr:" << entity;
     emit selectionChanged(entity);
 }
 

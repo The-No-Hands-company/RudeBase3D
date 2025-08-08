@@ -29,10 +29,12 @@
 
 #include "core/scene_manager.hpp"
 #include "core/primitive_manager.hpp"
+#include "geometry/primitives/MeshGenerator.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <fstream>
 #include <spdlog/spdlog.h>
+#include <QDebug>
 
 namespace rude {
 
@@ -64,6 +66,7 @@ Entity* SceneManager::createPrimitive(const std::string& primitiveType, const st
     else if (typeStr == "torus") type = rude::PrimitiveType::Torus;
     else if (typeStr == "icosphere") type = rude::PrimitiveType::Icosphere;
     // Add more as needed
+    
     std::string entityName = name.empty() ? typeStr : name;
     Entity* entity = nullptr;
     if (type != rude::PrimitiveType::Unknown) {
@@ -71,6 +74,47 @@ Entity* SceneManager::createPrimitive(const std::string& primitiveType, const st
     } else {
         entity = m_scene ? m_scene->createEntity(rude::PrimitiveType::Unknown, entityName) : nullptr;
     }
+    
+    // Now create and assign the actual mesh using MeshGenerator (which returns rude::MeshPtr)
+    if (entity && type != rude::PrimitiveType::Unknown) {
+        rude::MeshPtr mesh = nullptr;
+        
+        // Create mesh based on primitive type using MeshGenerator
+        switch (type) {
+            case rude::PrimitiveType::Cube:
+                mesh = MeshGenerator::generateCube(1.0f);
+                break;
+            case rude::PrimitiveType::Sphere:
+                mesh = MeshGenerator::generateSphere(1.0f, 32, 16);
+                break;
+            case rude::PrimitiveType::Cylinder:
+                mesh = MeshGenerator::generateCylinder(1.0f, 2.0f, 32);
+                break;
+            case rude::PrimitiveType::Plane:
+                mesh = MeshGenerator::generatePlane(2.0f, 2.0f, 1, 1);
+                break;
+            case rude::PrimitiveType::Cone:
+                mesh = MeshGenerator::generateCone(1.0f, 2.0f, 32);
+                break;
+            case rude::PrimitiveType::Torus:
+                mesh = MeshGenerator::generateTorus(1.0f, 0.3f, 32, 16);
+                break;
+            case rude::PrimitiveType::Icosphere:
+                mesh = MeshGenerator::generateIcosphere(1.0f, 2);
+                break;
+            default:
+                break;
+        }
+        
+        // Assign the mesh to the entity
+        if (mesh) {
+            entity->setMesh(mesh);
+            qDebug() << "[SceneManager] Created" << typeStr.c_str() << "primitive with mesh assigned";
+        } else {
+            qDebug() << "[SceneManager] Failed to create mesh for" << typeStr.c_str() << "primitive";
+        }
+    }
+    
     emit entityCreated(entity);
     return entity;
 }

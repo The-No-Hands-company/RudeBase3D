@@ -1002,7 +1002,9 @@ void MainWindow::setupModernPanels()
     
     // Connect panel signals to appropriate slots
     connect(m_outlinerPanel, &OutlinerPanel::selectionChanged, this, [this, selectionManager](rude::Entity* entity) {
+        qDebug() << "[MainWindow] OutlinerPanel selectionChanged signal received. Entity:" << entity;
         if (selectionManager && entity) {
+            qDebug() << "[MainWindow] Processing entity selection. Name:" << QString::fromStdString(entity->getName()) << "ID:" << entity->getId();
             // Update selection in the selection manager
             // This is a temporary solution during the transition period
             // We'll need to adapt the selection system properly
@@ -1014,8 +1016,13 @@ void MainWindow::setupModernPanels()
             
             // Also update properties panel
             if (m_modernPropertiesPanel) {
+                qDebug() << "[MainWindow] Calling setEntity on properties panel";
                 m_modernPropertiesPanel->setEntity(entity);
+            } else {
+                qDebug() << "[MainWindow] Properties panel is null!";
             }
+        } else {
+            qDebug() << "[MainWindow] Selection cleared or selectionManager is null";
         }
     });
     
@@ -1155,10 +1162,10 @@ void MainWindow::setupModernToolbars()
     
     // Connect primitives toolbar to create functions
     if (primitivesToolbar) {
-        // These connections would be implemented to hook up primitive creation
-        // to existing create methods
-        // connect(primitivesToolbar, &PrimitivesToolbar::createPrimitiveRequested, 
-        //         this, &MainWindow::handlePrimitiveCreation);
+        qDebug() << "[MAIN DEBUG] Connecting primitives toolbar signals...";
+        connect(primitivesToolbar, &PrimitivesToolbar::primitiveRequested, 
+                this, &MainWindow::onPrimitiveRequested);
+        qDebug() << "[MAIN DEBUG] Primitives toolbar connected successfully";
     }
     
     // Connect selection toolbar to selection system
@@ -1232,10 +1239,71 @@ void MainWindow::addTestPrimitive()
         auto* testCube = coreSceneManager->createPrimitive("cube", "TestCube");
         if (testCube) {
             qDebug() << "Test cube created successfully - Entity ID:" << testCube->getId();
+            
+            // Position the cube in front of the camera for better visibility
+            // Camera is at (10, 8, 10) looking at origin, so put cube at (0, 0, -5)
+            testCube->getTransform().setPosition(glm::vec3(0.0f, 0.0f, -5.0f));
+            testCube->getTransform().setScale(glm::vec3(2.0f, 2.0f, 2.0f)); // Make it bigger
+            qDebug() << "TestCube positioned at (0, 0, -5) with scale (2, 2, 2)";
+            
+            // Update the outliner panel to show the new entity
+            if (m_outlinerPanel) {
+                m_outlinerPanel->updateEntityList();
+            }
+            
+            // Reset camera to ensure the cube is visible
+            qDebug() << "Resetting camera to ensure cube visibility";
+            resetCamera();
+            
+            // Mark scene as modified and update UI
+            m_sceneModified = true;
+            updateUI();
         } else {
             qDebug() << "Failed to create test cube";
         }
     } else {
         qDebug() << "No scene manager available for test cube";
+    }
+}
+
+void MainWindow::onPrimitiveRequested(const QString& primitiveType)
+{
+    qDebug() << "[MainWindow] Primitive requested from toolbar:" << primitiveType;
+    
+    // Create the primitive using the CoreSystem
+    auto* coreSceneManager = CoreSystem::getInstance().getSceneManager();
+    if (coreSceneManager) {
+        // Generate a unique name for the primitive
+        QString primitiveName = QString("%1_%2").arg(primitiveType.left(1).toUpper() + primitiveType.mid(1)).arg(QDateTime::currentMSecsSinceEpoch());
+        
+        qDebug() << "[MainWindow] Creating primitive:" << primitiveType << "with name:" << primitiveName;
+        
+        auto* newEntity = coreSceneManager->createPrimitive(primitiveType.toStdString(), primitiveName.toStdString());
+        if (newEntity) {
+            qDebug() << "[MainWindow] Successfully created" << primitiveType << "- Entity ID:" << newEntity->getId();
+            
+            // Update the UI to reflect the new entity
+            m_sceneModified = true;
+            updateUI();
+            
+            // Update the outliner panel if it exists
+            if (m_outlinerPanel) {
+                m_outlinerPanel->updateEntityList();
+            }
+            
+            // Select the new entity (if selection system is available)
+            auto* selectionManager = CoreSystem::getInstance().getSelectionManager();
+            if (selectionManager) {
+                selectionManager->clearSelection();
+                // TODO: Connect entity selection when entity types are unified
+                // selectionManager->selectEntity(newEntity, rude::SelectionMode::Replace);
+            }
+            
+            qDebug() << "[MainWindow] Primitive creation complete and UI updated";
+        } else {
+            qWarning() << "[MainWindow] Failed to create primitive:" << primitiveType;
+        }
+    } else {
+        qWarning() << "[MainWindow] No scene manager available for primitive creation";
     }
 }
