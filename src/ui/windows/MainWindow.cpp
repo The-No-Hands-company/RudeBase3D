@@ -1057,47 +1057,88 @@ void MainWindow::setupModernToolbars()
     auto* selectionToolbar = m_toolbarManager->getSelectionToolbar();
     auto* transformToolbar = m_toolbarManager->getTransformToolbar();
     
-    // Connect main toolbar signals
+    // Connect main toolbar signals (view modes and camera controls)
     if (mainToolbar) {
-        connect(mainToolbar, &MainToolbar::selectionToolChanged, this, [this](const QString& tool) {
-            qDebug() << "Selection tool changed to:" << tool;
-            // Update selection mode in core system
-            auto* selectionManager = CoreSystem::getInstance().getSelectionManager();
-            if (selectionManager) {
-                // Map tool name to selection component type
-                rude::ComponentType componentType = rude::ComponentType::Entity;
-                if (tool == "vertex") componentType = rude::ComponentType::Vertex;
-                else if (tool == "edge") componentType = rude::ComponentType::Edge;
-                else if (tool == "face") componentType = rude::ComponentType::Face;
-                
-                // Update selection panel to reflect the change
-                if (m_selectionPanel) {
-                    m_selectionPanel->setCurrentMode(componentType);
-                }
-            }
-        });
-        
-        connect(mainToolbar, &MainToolbar::transformToolChanged, this, [this](const QString& tool) {
-            qDebug() << "Transform tool changed to:" << tool;
-            // Update gizmo type in viewport
+        connect(mainToolbar, &MainToolbar::viewModeChanged, this, [this](const QString& mode) {
+            qDebug() << "View mode changed to:" << mode;
+            // Update viewport rendering mode
             if (m_viewportManager) {
-                // Map tool name to gizmo type
-                GizmoType gizmoType = GizmoType::Translate;
-                if (tool == "rotate") gizmoType = GizmoType::Rotate;
-                else if (tool == "scale") gizmoType = GizmoType::Scale;
+                // Map string mode to RenderMode enum
+                RenderMode renderMode = RenderMode::Solid;
+                if (mode == "wireframe") {
+                    renderMode = RenderMode::Wireframe;
+                } else if (mode == "solid") {
+                    renderMode = RenderMode::Solid;
+                } else if (mode == "material" || mode == "rendered") {
+                    renderMode = RenderMode::SolidWireframe;  // Use combined mode for advanced views
+                }
                 
-                // Update all viewports with new gizmo type
                 for (int i = 0; i < m_viewportManager->getViewportCount(); ++i) {
                     auto* viewport = m_viewportManager->getViewport(i);
                     if (viewport) {
-                        auto* gizmoManager = viewport->getGizmoManager();
-                        if (gizmoManager) {
-                            gizmoManager->setActiveGizmo(gizmoType);
-                        }
+                        viewport->setRenderMode(renderMode);
                     }
                 }
             }
         });
+        
+        connect(mainToolbar, &MainToolbar::cameraResetRequested, this, [this]() {
+            qDebug() << "Camera reset requested";
+            if (m_viewportManager) {
+                auto* viewport = m_viewportManager->getActiveViewport();
+                if (viewport) {
+                    viewport->resetCamera();
+                }
+            }
+        });
+        
+        connect(mainToolbar, &MainToolbar::frameSelectedRequested, this, [this]() {
+            qDebug() << "Frame selected requested";
+            if (m_viewportManager) {
+                auto* viewport = m_viewportManager->getActiveViewport();
+                if (viewport) {
+                    viewport->frameSelection();
+                }
+            }
+        });
+        
+        connect(mainToolbar, &MainToolbar::frameSceneRequested, this, [this]() {
+            qDebug() << "Frame scene requested";
+            if (m_viewportManager) {
+                auto* viewport = m_viewportManager->getActiveViewport();
+                if (viewport) {
+                    viewport->frameScene();
+                }
+            }
+        });
+        
+        connect(mainToolbar, &MainToolbar::gridToggleRequested, this, [this]() {
+            qDebug() << "Grid toggle requested";
+            if (m_viewportManager) {
+                for (int i = 0; i < m_viewportManager->getViewportCount(); ++i) {
+                    auto* viewport = m_viewportManager->getViewport(i);
+                    if (viewport) {
+                        // Toggle grid visibility - need to track current state
+                        static bool gridVisible = true;
+                        gridVisible = !gridVisible;
+                        viewport->setShowGrid(gridVisible);
+                    }
+                }
+            }
+        });
+    }
+    
+    // Connect selection toolbar signals (selection and component modes)
+    if (selectionToolbar) {
+        // These connections will be implemented once SelectionToolbar is refactored
+        // connect(selectionToolbar, &SelectionToolbar::selectionModeChanged, ...);
+        // connect(selectionToolbar, &SelectionToolbar::selectionToolChanged, ...);
+    }
+    
+    // Connect transform toolbar signals (transformation tools)
+    if (transformToolbar) {
+        // These connections will be implemented once TransformToolbar is refactored
+        // connect(transformToolbar, &TransformToolbar::transformToolChanged, ...);
     }
     
     // Connect primitives toolbar to create functions

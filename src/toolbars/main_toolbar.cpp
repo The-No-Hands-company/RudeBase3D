@@ -3,8 +3,6 @@
 
 MainToolbar::MainToolbar(QMainWindow* parent)
     : BaseToolbar("Main", parent)
-    , m_activeSelectionTool("select")
-    , m_activeTransformTool("move")
     , m_activeViewMode("solid")
 {
     qDebug() << "[MainToolbar] Constructor started";
@@ -13,21 +11,21 @@ MainToolbar::MainToolbar(QMainWindow* parent)
     qDebug() << "[MainToolbar] About to call initialize()";
     initialize();
     qDebug() << "[MainToolbar] initialize() completed";
-    updateToolStates();
+    updateViewModeStates();
     qDebug() << "[MainToolbar] Constructor completed";
 }
 
 void MainToolbar::createActions()
 {
     qDebug() << "[MainToolbar] createActions() started";
-    createSelectionActions();
-    qDebug() << "[MainToolbar] Selection actions created";
-    addToolbarSeparator();
-    createTransformActions();
-    qDebug() << "[MainToolbar] Transform actions created";
+    createFileActions();
+    qDebug() << "[MainToolbar] File actions created";
     addToolbarSeparator();
     createViewActions();
     qDebug() << "[MainToolbar] View actions created";
+    addToolbarSeparator();
+    createCameraActions();
+    qDebug() << "[MainToolbar] Camera actions created";
     qDebug() << "[MainToolbar] createActions() completed";
 }
 
@@ -40,39 +38,30 @@ void MainToolbar::connectSignals()
 {
     // Connect to base toolbar action signal
     connect(this, &BaseToolbar::actionTriggered,
-            this, &MainToolbar::onSelectionToolTriggered);
-    connect(this, &BaseToolbar::actionTriggered,
-            this, &MainToolbar::onTransformToolTriggered);
-    connect(this, &BaseToolbar::actionTriggered,
             this, &MainToolbar::onViewModeTriggered);
+    connect(this, &BaseToolbar::actionTriggered,
+            this, &MainToolbar::onCameraActionTriggered);
 }
 
-void MainToolbar::createSelectionActions()
+void MainToolbar::createFileActions()
 {
-    // Selection tools
-    QAction* selectAction = createAction("select", "Select", "Select objects and components", true);
-    selectAction->setCheckable(true);
-    selectAction->setChecked(true);
-    
-    QAction* boxSelectAction = createAction("box_select", "Box Select", "Select objects in a box region", true);
-    boxSelectAction->setCheckable(true);
-    
-    QAction* lassoSelectAction = createAction("lasso_select", "Lasso Select", "Select objects with lasso", true);
-    lassoSelectAction->setCheckable(true);
+    // File operations
+    QAction* newAction = createAction("new", "New", "Create a new project", true);
+    QAction* openAction = createAction("open", "Open", "Open an existing project", true);
+    QAction* saveAction = createAction("save", "Save", "Save current project", true);
+    QAction* undoAction = createAction("undo", "Undo", "Undo last action", true);
+    QAction* redoAction = createAction("redo", "Redo", "Redo last action", true);
 }
 
-void MainToolbar::createTransformActions()
+void MainToolbar::createCameraActions()
 {
-    // Transform tools
-    QAction* moveAction = createAction("move", "Move", "Move selected objects", true);
-    moveAction->setCheckable(true);
-    moveAction->setChecked(true);
-    
-    QAction* rotateAction = createAction("rotate", "Rotate", "Rotate selected objects", true);
-    rotateAction->setCheckable(true);
-    
-    QAction* scaleAction = createAction("scale", "Scale", "Scale selected objects", true);
-    scaleAction->setCheckable(true);
+    // Camera controls
+    QAction* resetCameraAction = createAction("reset_camera", "Reset Camera", "Reset camera to default view", true);
+    QAction* frameSelectedAction = createAction("frame_selected", "Frame Selected", "Frame selected objects in view", true);
+    QAction* frameSceneAction = createAction("frame_scene", "Frame Scene", "Frame entire scene in view", true);
+    QAction* gridAction = createAction("grid", "Grid", "Toggle viewport grid", true);
+    gridAction->setCheckable(true);
+    gridAction->setChecked(true);
 }
 
 void MainToolbar::createViewActions()
@@ -92,46 +81,6 @@ void MainToolbar::createViewActions()
     renderedAction->setCheckable(true);
 }
 
-void MainToolbar::setActiveSelectionTool(const QString& tool)
-{
-    if (m_activeSelectionTool != tool) {
-        m_activeSelectionTool = tool;
-        updateToolStates();
-        emit selectionToolChanged(tool);
-    }
-}
-
-void MainToolbar::setActiveTransformTool(const QString& tool)
-{
-    if (m_activeTransformTool != tool) {
-        m_activeTransformTool = tool;
-        updateToolStates();
-        emit transformToolChanged(tool);
-    }
-}
-
-void MainToolbar::onSelectionToolTriggered()
-{
-    QString actionId = qobject_cast<QObject*>(sender())->property("actionId").toString();
-    
-    // Check if it's a selection tool
-    QStringList selectionTools = {"select", "box_select", "lasso_select"};
-    if (selectionTools.contains(actionId)) {
-        setActiveSelectionTool(actionId);
-    }
-}
-
-void MainToolbar::onTransformToolTriggered()
-{
-    QString actionId = qobject_cast<QObject*>(sender())->property("actionId").toString();
-    
-    // Check if it's a transform tool
-    QStringList transformTools = {"move", "rotate", "scale"};
-    if (transformTools.contains(actionId)) {
-        setActiveTransformTool(actionId);
-    }
-}
-
 void MainToolbar::onViewModeTriggered()
 {
     QString actionId = qobject_cast<QObject*>(sender())->property("actionId").toString();
@@ -140,34 +89,45 @@ void MainToolbar::onViewModeTriggered()
     QStringList viewModes = {"solid", "wireframe", "material", "rendered"};
     if (viewModes.contains(actionId)) {
         m_activeViewMode = actionId;
-        updateToolStates();
+        updateViewModeStates();
         emit viewModeChanged(actionId);
     }
 }
 
-void MainToolbar::updateToolStates()
+void MainToolbar::onCameraActionTriggered()
 {
-    // Update selection tool states
-    QStringList selectionTools = {"select", "box_select", "lasso_select"};
-    for (const QString& tool : selectionTools) {
-        if (m_actionMap.contains(tool)) {
-            m_actionMap[tool]->setChecked(tool == m_activeSelectionTool);
-        }
-    }
+    QString actionId = qobject_cast<QObject*>(sender())->property("actionId").toString();
     
-    // Update transform tool states
-    QStringList transformTools = {"move", "rotate", "scale"};
-    for (const QString& tool : transformTools) {
-        if (m_actionMap.contains(tool)) {
-            m_actionMap[tool]->setChecked(tool == m_activeTransformTool);
-        }
+    // Handle camera actions
+    if (actionId == "reset_camera") {
+        emit cameraResetRequested();
+    } else if (actionId == "frame_selected") {
+        emit frameSelectedRequested();
+    } else if (actionId == "frame_scene") {
+        emit frameSceneRequested();
+    } else if (actionId == "grid") {
+        emit gridToggleRequested();
     }
-    
-    // Update view mode states
+}
+
+void MainToolbar::setActiveViewMode(const QString& mode)
+{
+    if (m_activeViewMode != mode) {
+        m_activeViewMode = mode;
+        updateViewModeStates();
+        emit viewModeChanged(mode);
+    }
+}
+
+void MainToolbar::updateViewModeStates()
+{
+    // Update view mode button states
     QStringList viewModes = {"solid", "wireframe", "material", "rendered"};
+    
     for (const QString& mode : viewModes) {
         if (m_actionMap.contains(mode)) {
-            m_actionMap[mode]->setChecked(mode == m_activeViewMode);
+            QAction* action = m_actionMap[mode];
+            action->setChecked(mode == m_activeViewMode);
         }
     }
 }

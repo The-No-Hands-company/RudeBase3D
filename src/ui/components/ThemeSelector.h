@@ -70,6 +70,12 @@ public:
      */
     bool isAutoDetectEnabled() const;
 
+signals:
+    /**
+     * @brief Emitted when theme selection changes
+     */
+    void themeChanged(const QString& themeId);
+
 protected:
     void applyTheme() override;
 

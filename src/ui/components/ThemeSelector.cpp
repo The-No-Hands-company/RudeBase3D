@@ -122,6 +122,7 @@ void ThemeSelector::onThemeChanged(int index)
         }
         
         m_themeManager->applyTheme(themeId);
+        emit themeChanged(themeId);
     }
 }
 

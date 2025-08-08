@@ -10,11 +10,11 @@ ToolbarManager::ToolbarManager(QMainWindow* mainWindow, QObject* parent)
     : QObject(parent)
     , m_mainWindow(mainWindow)
 {
-    // Setup default configuration
-    m_defaultConfig["main"] = {Qt::TopToolBarArea, true, false};
-    m_defaultConfig["primitives"] = {Qt::TopToolBarArea, true, false};
-    m_defaultConfig["selection"] = {Qt::LeftToolBarArea, true, false};
-    m_defaultConfig["transform"] = {Qt::LeftToolBarArea, true, false};
+    // Setup default configuration with professional layout
+    m_defaultConfig["main"] = {Qt::TopToolBarArea, true, false};           // File/View operations at top
+    m_defaultConfig["selection"] = {Qt::LeftToolBarArea, true, false};     // Selection tools on left side  
+    m_defaultConfig["transform"] = {Qt::LeftToolBarArea, true, true};      // Transform tools on left with break
+    m_defaultConfig["primitives"] = {Qt::RightToolBarArea, true, false};   // Creation tools on right side
 }
 
 ToolbarManager::~ToolbarManager()
@@ -24,25 +24,33 @@ ToolbarManager::~ToolbarManager()
 
 void ToolbarManager::createAllToolbars()
 {
-    // Create main toolbar
+    qDebug() << "[ToolbarManager] Creating all toolbars...";
+    
+    // Create main toolbar - File operations and viewport controls
     auto mainToolbar = new MainToolbar(m_mainWindow);
     m_mainToolbar = std::unique_ptr<MainToolbar>(mainToolbar);
     registerToolbar("main", m_mainToolbar.get());
+    qDebug() << "[ToolbarManager] Main toolbar created successfully";
     
-    // Create primitives toolbar
+    // Create selection toolbar - Selection modes and tools
+    auto selection = new SelectionToolbar(m_mainWindow);
+    m_selectionToolbar = std::unique_ptr<SelectionToolbar>(selection);
+    registerToolbar("selection", m_selectionToolbar.get());
+    qDebug() << "[ToolbarManager] Selection toolbar created successfully";
+    
+    // Create primitives toolbar - Object creation tools  
     auto primitives = new PrimitivesToolbar(m_mainWindow);
     m_primitivesToolbar = std::unique_ptr<PrimitivesToolbar>(primitives);
     registerToolbar("primitives", m_primitivesToolbar.get());
+    qDebug() << "[ToolbarManager] Primitives toolbar created successfully";
     
-    // Create selection toolbar - TEMPORARILY DISABLED
-    // auto selection = new SelectionToolbar(m_mainWindow);
-    // m_selectionToolbar = std::unique_ptr<SelectionToolbar>(selection);
-    // registerToolbar("selection", m_selectionToolbar.get());
+    // Create transform toolbar - Transform operations and constraints
+    auto transform = new TransformToolbar(m_mainWindow);
+    m_transformToolbar = std::unique_ptr<TransformToolbar>(transform);
+    registerToolbar("transform", m_transformToolbar.get());
+    qDebug() << "[ToolbarManager] Transform toolbar created successfully";
     
-    // Create transform toolbar - TEMPORARILY DISABLED
-    // auto transform = new TransformToolbar(m_mainWindow);
-    // m_transformToolbar = std::unique_ptr<TransformToolbar>(transform);
-    // registerToolbar("transform", m_transformToolbar.get());
+    qDebug() << "[ToolbarManager] All toolbars created successfully";
 }
 
 void ToolbarManager::setupToolbarLayout()
